@@ -1,0 +1,145 @@
+drop database if exists inventario;
+create database inventario;
+use inventario;
+
+create table Sistema_Operativo (
+	id_sistemaoperativo int auto_increment primary key,
+    nombre varchar(20)
+);
+
+create table Version_SO (
+	id_versionso int auto_increment primary key,
+    nombre varchar(20) not null,
+    id_sistemaoperativo int not null,
+    
+    foreign key (id_sistemaoperativo) references Sistema_Operativo(id_sistemaoperativo)
+);
+
+create table Version_Office (
+	id_versionoffice int auto_increment primary key,
+    nombre varchar(20) not null
+);
+
+create table Ram (
+	id_ram int auto_increment primary key,
+    tipo varchar(6) not null,
+    capacidad varchar(6) not null
+);
+
+create table Disco (
+	id_disco int auto_increment primary key,
+    capacidad varchar(10) not null
+);
+
+create table Antivirus (
+	id_antivirus int auto_increment primary key,
+    estado varchar(11) not null
+);
+
+create table Usuario (
+	id_usuario  int auto_increment primary key,
+    nombre varchar(30) not null,
+    tipo varchar(20) not null
+);
+
+create table Clasificacion (
+	id_clasificacion int auto_increment primary key
+);
+
+create table Inventario (
+	id_inventario int auto_increment primary key,
+    nombre varchar(20)    
+);
+
+create table Serie (
+	id_serie int auto_increment primary key,
+    nombre varchar(20),
+	id_inventario int not null,
+    
+	foreign key (id_inventario) references Inventario(id_inventario)
+);
+
+create table Modelo (
+	id_modelo int auto_increment primary key,
+    nombre varchar(20),
+	id_serie int not null,
+    
+	foreign key (id_serie) references Serie(id_serie)
+);
+
+create table Marca (
+	id_marca int auto_increment primary key,
+    nombre varchar(20),
+	id_modelo int not null,
+    
+	foreign key (id_modelo) references Modelo(id_modelo)
+);
+
+create table Periferico (
+	id_periferico int auto_increment primary key,
+    nombre varchar(20),
+	id_marca int not null,
+    
+	foreign key (id_marca) references Marca(id_marca)
+);
+
+create table Equipo (
+	id_equipo int auto_increment primary key,
+    id_periferico int not null,
+    id_clasificacion int not null,
+    
+    foreign key (id_clasificacion) references Clasificacion(id_clasificacion),
+	foreign key (id_periferico) references Periferico(id_periferico)
+);
+
+create table Computadora (
+	id_computadora int primary key,
+    nombre_equipo varchar(20) not null,
+    dominio varchar(20),
+    direccion_ip varchar(20),
+    id_versionso int not null,
+    id_versionoffice int not null,
+    id_ram int not null,
+    id_disco int not null,
+    id_antivirus int not null,
+    
+    foreign key (id_computadora) references Equipo(id_equipo),
+    foreign key (id_versionso) references Version_SO(id_versionso),
+    foreign key (id_versionoffice) references Version_Office(id_versionoffice),
+    foreign key (id_ram) references Ram(id_ram),
+    foreign key (id_disco) references Disco(id_disco),
+    foreign key (id_antivirus) references Antivirus(id_antivirus)
+    
+);
+
+create table Componente (
+	id_componente int primary key,
+    id_computadora int not null,
+    
+    foreign key (id_componente) references Equipo(id_equipo),
+    foreign key (id_computadora) references Computadora(id_computadora)
+);
+
+create table Equipo_Activo (
+	id_activo int primary key,
+    imagen mediumblob not null,
+    edificio varchar(5) not null,
+    aula varchar(5) not null,
+	id_usuario int not null,
+    
+    foreign key (id_usuario) references Usuario(id_usuario),
+    foreign key (id_activo) references Clasificacion(id_clasificacion)
+);
+
+create table Equipo_Bodega (
+	id_eqbodega int primary key,
+    
+    foreign key (id_eqbodega) references Clasificacion(id_clasificacion)
+);
+
+create table Equipo_Baja (
+	id_eqbaja int primary key,
+    
+    foreign key (id_eqbaja) references Clasificacion(id_clasificacion)
+);
+
