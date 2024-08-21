@@ -1,11 +1,11 @@
 // config/dbConfig.js
 
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: 'LabFCSH2024?',
+  password: 'Perla06',
   database: 'inventario'
 };
 

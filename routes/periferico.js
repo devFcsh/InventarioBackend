@@ -2,10 +2,10 @@ var express = require('express');
 var router = express.Router();
 
 const sequelize = require('../models/index.js').sequelize;
-var initModels = require("../models/init-models");
+var initModels = require("../models/init-models.js");
 var models = initModels(sequelize);
 
-router.get('/perifericos', async function(req, res, next) {
+router.get('/', async function(req, res, next) {
   try {
     let perifericosCollection = await models.periferico.findAll();
     res.json(perifericosCollection); // Enviamos la colección de marcas como respuesta en formato JSON

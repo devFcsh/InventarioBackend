@@ -19,4 +19,25 @@ async function getMarcasByPeriferico(perifericoId) {
   }
 }
 
-module.exports = { getMarcasByPeriferico };
+async function obtenerMarcasPorPeriferico(idPeriferico) {
+  try {
+      const periferico = await Periferico.findByPk(idPeriferico, {
+          include: {
+              model: Marca,
+              attributes: ['id_marca', 'nombre']
+          }
+      });
+
+      if (!periferico) {
+          throw new Error('Periférico no encontrado');
+      }
+
+      console.log(periferico.Marca); // Esto devolverá la marca asociada al periférico
+      return periferico.Marca;
+
+  } catch (error) {
+      console.error('Error al obtener las marcas:', error);
+  }
+}
+
+module.exports = { getMarcasByPeriferico, obtenerMarcasPorPeriferico };
