@@ -1,4 +1,5 @@
-const { Marca, Periferico } = require('../models');
+const { sequelize } = require('../models'); // Asegúrate de que la ruta sea correcta
+
 
 // Obtener las marcas para un cierto periférico
 async function getMarcasByPeriferico(perifericoId) {
@@ -21,23 +22,27 @@ async function getMarcasByPeriferico(perifericoId) {
 
 async function obtenerMarcasPorPeriferico(idPeriferico) {
   try {
-      const periferico = await Periferico.findByPk(idPeriferico, {
-          include: {
-              model: Marca,
-              attributes: ['id_marca', 'nombre']
-          }
-      });
-
-      if (!periferico) {
-          throw new Error('Periférico no encontrado');
+    const [results, metadata] = await sequelize.query(
+      `SELECT m.id_marca, m.nombre
+       FROM periferico p
+       JOIN marca m ON p.id_marca = m.id_marca
+       WHERE p.id_periferico = :idPeriferico`, 
+      {
+        replacements: { idPeriferico }, // Sustituye los parámetros
+        type: sequelize.QueryTypes.SELECT // Tipo de query
       }
+    );
 
-      console.log(periferico.Marca); // Esto devolverá la marca asociada al periférico
-      return periferico.Marca;
+    if (results.length === 0) {
+      throw new Error('Periférico no encontrado');
+    }
+
+    return results; // Retorna los resultados de la consulta
 
   } catch (error) {
-      console.error('Error al obtener las marcas:', error);
+    console.error('Error al obtener las marcas:', error);
+    return { error: 'Error al obtener las marcas' };
   }
 }
 
-module.exports = { getMarcasByPeriferico, obtenerMarcasPorPeriferico };
+module.exports = { obtenerMarcasPorPeriferico };
