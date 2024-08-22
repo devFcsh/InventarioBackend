@@ -8,10 +8,12 @@ var _equipo = require("./equipo");
 var _equipo_activo = require("./equipo_activo");
 var _equipo_baja = require("./equipo_baja");
 var _equipo_bodega = require("./equipo_bodega");
-var _inventario = require("./inventario");
-var _marca = require("./Marca");
+var _marca = require("./marca");
+var _marca_modelo = require("./marca_modelo");
+var _marca_periferico = require("./marca_periferico");
 var _modelo = require("./modelo");
-var _periferico = require("./Periferico");
+var _modelo_serie = require("./modelo_serie");
+var _periferico = require("./periferico");
 var _ram = require("./ram");
 var _serie = require("./serie");
 var _sistema_operativo = require("./sistema_operativo");
@@ -29,9 +31,11 @@ function initModels(sequelize) {
   var equipo_activo = _equipo_activo(sequelize, DataTypes);
   var equipo_baja = _equipo_baja(sequelize, DataTypes);
   var equipo_bodega = _equipo_bodega(sequelize, DataTypes);
-  var inventario = _inventario(sequelize, DataTypes);
   var marca = _marca(sequelize, DataTypes);
+  var marca_modelo = _marca_modelo(sequelize, DataTypes);
+  var marca_periferico = _marca_periferico(sequelize, DataTypes);
   var modelo = _modelo(sequelize, DataTypes);
+  var modelo_serie = _modelo_serie(sequelize, DataTypes);
   var periferico = _periferico(sequelize, DataTypes);
   var ram = _ram(sequelize, DataTypes);
   var serie = _serie(sequelize, DataTypes);
@@ -40,6 +44,12 @@ function initModels(sequelize) {
   var version_office = _version_office(sequelize, DataTypes);
   var version_so = _version_so(sequelize, DataTypes);
 
+  marca.belongsToMany(modelo, { as: 'id_modelo_modelos', through: marca_modelo, foreignKey: "id_marca", otherKey: "id_modelo" });
+  marca.belongsToMany(periferico, { as: 'id_periferico_perifericos', through: marca_periferico, foreignKey: "id_marca", otherKey: "id_periferico" });
+  modelo.belongsToMany(marca, { as: 'id_marca_marcas', through: marca_modelo, foreignKey: "id_modelo", otherKey: "id_marca" });
+  modelo.belongsToMany(serie, { as: 'id_serie_series', through: modelo_serie, foreignKey: "id_modelo", otherKey: "id_serie" });
+  periferico.belongsToMany(marca, { as: 'id_marca_marca_marca_perifericos', through: marca_periferico, foreignKey: "id_periferico", otherKey: "id_marca" });
+  serie.belongsToMany(modelo, { as: 'id_modelo_modelo_modelo_series', through: modelo_serie, foreignKey: "id_serie", otherKey: "id_modelo" });
   computadora.belongsTo(antivirus, { as: "id_antivirus_antivirus", foreignKey: "id_antivirus"});
   antivirus.hasMany(computadora, { as: "computadoras", foreignKey: "id_antivirus"});
   equipo.belongsTo(clasificacion, { as: "id_clasificacion_clasificacion", foreignKey: "id_clasificacion"});
@@ -58,18 +68,24 @@ function initModels(sequelize) {
   equipo.hasOne(componente, { as: "componente", foreignKey: "id_componente"});
   computadora.belongsTo(equipo, { as: "id_computadora_equipo", foreignKey: "id_computadora"});
   equipo.hasOne(computadora, { as: "computadora", foreignKey: "id_computadora"});
-  serie.belongsTo(inventario, { as: "id_inventario_inventario", foreignKey: "id_inventario"});
-  inventario.hasMany(serie, { as: "series", foreignKey: "id_inventario"});
-  periferico.belongsTo(marca, { as: "id_marca_marca", foreignKey: "id_marca"});
-  marca.hasMany(periferico, { as: "perifericos", foreignKey: "id_marca"});
-  marca.belongsTo(modelo, { as: "id_modelo_modelo", foreignKey: "id_modelo"});
-  modelo.hasMany(marca, { as: "marcas", foreignKey: "id_modelo"});
-  equipo.belongsTo(periferico, { as: "id_periferico_periferico", foreignKey: "id_periferico"});
-  periferico.hasMany(equipo, { as: "equipos", foreignKey: "id_periferico"});
+  marca_modelo.belongsTo(marca, { as: "id_marca_marca", foreignKey: "id_marca"});
+  marca.hasMany(marca_modelo, { as: "marca_modelos", foreignKey: "id_marca"});
+  marca_periferico.belongsTo(marca, { as: "id_marca_marca", foreignKey: "id_marca"});
+  marca.hasMany(marca_periferico, { as: "marca_perifericos", foreignKey: "id_marca"});
+  marca_modelo.belongsTo(modelo, { as: "id_modelo_modelo", foreignKey: "id_modelo"});
+  modelo.hasMany(marca_modelo, { as: "marca_modelos", foreignKey: "id_modelo"});
+  modelo_serie.belongsTo(modelo, { as: "id_modelo_modelo", foreignKey: "id_modelo"});
+  modelo.hasMany(modelo_serie, { as: "modelo_series", foreignKey: "id_modelo"});
+  serie.belongsTo(modelo, { as: "id_modelo_modelo", foreignKey: "id_modelo"});
+  modelo.hasMany(serie, { as: "series", foreignKey: "id_modelo"});
+  computadora.belongsTo(periferico, { as: "id_periferico_periferico", foreignKey: "id_periferico"});
+  periferico.hasMany(computadora, { as: "computadoras", foreignKey: "id_periferico"});
+  marca_periferico.belongsTo(periferico, { as: "id_periferico_periferico", foreignKey: "id_periferico"});
+  periferico.hasMany(marca_periferico, { as: "marca_perifericos", foreignKey: "id_periferico"});
   computadora.belongsTo(ram, { as: "id_ram_ram", foreignKey: "id_ram"});
   ram.hasMany(computadora, { as: "computadoras", foreignKey: "id_ram"});
-  modelo.belongsTo(serie, { as: "id_serie_serie", foreignKey: "id_serie"});
-  serie.hasMany(modelo, { as: "modelos", foreignKey: "id_serie"});
+  modelo_serie.belongsTo(serie, { as: "id_serie_serie", foreignKey: "id_serie"});
+  serie.hasMany(modelo_serie, { as: "modelo_series", foreignKey: "id_serie"});
   version_so.belongsTo(sistema_operativo, { as: "id_sistemaoperativo_sistema_operativo", foreignKey: "id_sistemaoperativo"});
   sistema_operativo.hasMany(version_so, { as: "version_sos", foreignKey: "id_sistemaoperativo"});
   equipo_activo.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
@@ -89,9 +105,11 @@ function initModels(sequelize) {
     equipo_activo,
     equipo_baja,
     equipo_bodega,
-    inventario,
     marca,
+    marca_modelo,
+    marca_periferico,
     modelo,
+    modelo_serie,
     periferico,
     ram,
     serie,

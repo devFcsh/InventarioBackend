@@ -7,14 +7,6 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false,
       primaryKey: true
     },
-    id_periferico: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'periferico',
-        key: 'id_periferico'
-      }
-    },
     id_clasificacion: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -22,6 +14,10 @@ module.exports = function(sequelize, DataTypes) {
         model: 'clasificacion',
         key: 'id_clasificacion'
       }
+    },
+    inventario: {
+      type: DataTypes.STRING(15),
+      allowNull: true
     }
   }, {
     sequelize,
@@ -41,13 +37,6 @@ module.exports = function(sequelize, DataTypes) {
         using: "BTREE",
         fields: [
           { name: "id_clasificacion" },
-        ]
-      },
-      {
-        name: "id_periferico",
-        using: "BTREE",
-        fields: [
-          { name: "id_periferico" },
         ]
       },
     ]

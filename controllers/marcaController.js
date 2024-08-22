@@ -1,48 +1,38 @@
-const { sequelize } = require('../models'); // Asegúrate de que la ruta sea correcta
+const { sequelize } = require('../models'); 
 
-
-// Obtener las marcas para un cierto periférico
-async function getMarcasByPeriferico(perifericoId) {
+async function obtenerMarcasPorPeriferico(req, res) {
+  const { perifericoId } = req.params;
+  
   try {
-    const periferico = await Periferico.findOne({
-      where: { id_periferico: perifericoId },
-      include: [{ model: Marca }]
-    });
-
-    if (periferico) {
-      return periferico.marca;
-    } else {
-      return { error: "Periférico no encontrado" };
-    }
-  } catch (error) {
-    console.error("Error al obtener las marcas:", error);
-    return { error: "Error al obtener las marcas" };
-  }
-}
-
-async function obtenerMarcasPorPeriferico(idPeriferico) {
-  try {
-    const [results, metadata] = await sequelize.query(
+    const results = await sequelize.query(
       `SELECT m.id_marca, m.nombre
-       FROM periferico p
-       JOIN marca m ON p.id_marca = m.id_marca
+       FROM marca m
+       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+       JOIN periferico p ON mp.id_periferico = p.id_periferico
        WHERE p.id_periferico = :idPeriferico`, 
       {
-        replacements: { idPeriferico }, // Sustituye los parámetros
-        type: sequelize.QueryTypes.SELECT // Tipo de query
+        replacements: { idPeriferico: perifericoId }, 
+        type: sequelize.QueryTypes.SELECT
       }
     );
 
-    if (results.length === 0) {
-      throw new Error('Periférico no encontrado');
+    // Asegúrate de que 'results' sea un arreglo antes de enviarlo como respuesta
+    if (!Array.isArray(results)) {
+      return res.status(500).json({ error: 'Unexpected response format' });
     }
 
-    return results; // Retorna los resultados de la consulta
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Periférico no encontrado' });
+    }
+
+    return res.json(results); 
 
   } catch (error) {
     console.error('Error al obtener las marcas:', error);
-    return { error: 'Error al obtener las marcas' };
+    return res.status(500).json({ error: 'Error al obtener las marcas' });
   }
 }
 
-module.exports = { obtenerMarcasPorPeriferico };
+module.exports = {
+    obtenerMarcasPorPeriferico,
+  };

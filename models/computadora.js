@@ -61,6 +61,14 @@ module.exports = function(sequelize, DataTypes) {
         model: 'antivirus',
         key: 'id_antivirus'
       }
+    },
+    id_periferico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'periferico',
+        key: 'id_periferico'
+      }
     }
   }, {
     sequelize,
@@ -108,6 +116,13 @@ module.exports = function(sequelize, DataTypes) {
         using: "BTREE",
         fields: [
           { name: "id_antivirus" },
+        ]
+      },
+      {
+        name: "id_periferico",
+        using: "BTREE",
+        fields: [
+          { name: "id_periferico" },
         ]
       },
     ]

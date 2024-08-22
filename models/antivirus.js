@@ -8,7 +8,7 @@ module.exports = function(sequelize, DataTypes) {
       primaryKey: true
     },
     estado: {
-      type: DataTypes.STRING(11),
+      type: DataTypes.ENUM('Activado','Desactivado'),
       allowNull: false
     }
   }, {

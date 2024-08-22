@@ -1,11 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-const equipoRoutes = require('./equipoRoutes');
-const perifericos = require('./periferico');
-const marcas = require('./marca');
+const perifericos = require('./perifericoRoutes');
+const marcas = require('./marcaRoutes');
 
-router.use('/equipos', equipoRoutes);
 router.use('/perifericos', perifericos);
 router.use('/marcas', marcas);
 
