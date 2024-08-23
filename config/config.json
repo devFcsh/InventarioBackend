@@ -1,7 +1,7 @@
 {
   "development": {
     "username": "root",
-    "password": "Perla06",
+    "password": "LabFCSH2024?",
     "database": "inventario",
     "host": "127.0.0.1",
     "dialect": "mysql"

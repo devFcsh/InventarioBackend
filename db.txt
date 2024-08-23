@@ -285,7 +285,7 @@ INSERT INTO modelo_serie (id_modelo, id_serie) VALUES
 
 -- Insertar datos en Equipo (incluye equipos sin computadora y con)
 INSERT INTO equipo (id_clasificacion, inventario, id_periferico) VALUES 
-(1, 'INV009', 1),  -- Computadora
+(1, 'INV012', 1),  -- Computadora
 (1, 'INV001', 1),  -- Computadora
 (2, 'INV002', 2),  -- Laptop
 (3, 'INV003', 3),  -- Teclado
@@ -304,12 +304,12 @@ INSERT INTO componente (id_componente, id_computadora) VALUES
 (5, 1);  -- Mouse en Computadora 1
 
 -- Insertar datos en equipo_Activo
--- INSERT INTO equipo_Activo (id_activo, imagen, edificio, aula, id_usuario) VALUES 
--- (1, LOAD_FILE('/path/to/image1.jpg'), 'A', '101', 1), 
--- (2, LOAD_FILE('/path/to/image2.jpg'), 'B', '102', 2), 
--- (3, LOAD_FILE('/path/to/image3.jpg'), 'C', '103', 3), 
--- (4, LOAD_FILE('/path/to/image4.jpg'), 'D', '104', 4), 
--- (5, LOAD_FILE('/path/to/image5.jpg'), 'E', '105', 5);
+INSERT INTO equipo_Activo (id_activo, imagen, edificio, aula, id_usuario) VALUES
+(1, '0x', '9B', '101', 1),
+(2, '0x', '9C', '102', 2),
+(3, '0x', '9F', '103', 3),
+(4, '0x', '9A', '104', 4),
+(5, '0x', '9B', '105', 5);
 
 -- Insertar datos en equipo_Bodega
 INSERT INTO equipo_Bodega (id_eqbodega) VALUES 
