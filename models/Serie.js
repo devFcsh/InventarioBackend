@@ -10,14 +10,6 @@ module.exports = function(sequelize, DataTypes) {
     nombre: {
       type: DataTypes.STRING(20),
       allowNull: true
-    },
-    id_modelo: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'modelo',
-        key: 'id_modelo'
-      }
     }
   }, {
     sequelize,
@@ -30,13 +22,6 @@ module.exports = function(sequelize, DataTypes) {
         using: "BTREE",
         fields: [
           { name: "id_serie" },
-        ]
-      },
-      {
-        name: "id_modelo",
-        using: "BTREE",
-        fields: [
-          { name: "id_modelo" },
         ]
       },
     ]

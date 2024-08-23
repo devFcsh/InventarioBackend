@@ -18,6 +18,14 @@ module.exports = function(sequelize, DataTypes) {
     inventario: {
       type: DataTypes.STRING(15),
       allowNull: true
+    },
+    id_periferico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'periferico',
+        key: 'id_periferico'
+      }
     }
   }, {
     sequelize,
@@ -30,6 +38,13 @@ module.exports = function(sequelize, DataTypes) {
         using: "BTREE",
         fields: [
           { name: "id_equipo" },
+        ]
+      },
+      {
+        name: "id_periferico",
+        using: "BTREE",
+        fields: [
+          { name: "id_periferico" },
         ]
       },
       {

@@ -76,10 +76,8 @@ function initModels(sequelize) {
   modelo.hasMany(marca_modelo, { as: "marca_modelos", foreignKey: "id_modelo"});
   modelo_serie.belongsTo(modelo, { as: "id_modelo_modelo", foreignKey: "id_modelo"});
   modelo.hasMany(modelo_serie, { as: "modelo_series", foreignKey: "id_modelo"});
-  serie.belongsTo(modelo, { as: "id_modelo_modelo", foreignKey: "id_modelo"});
-  modelo.hasMany(serie, { as: "series", foreignKey: "id_modelo"});
-  computadora.belongsTo(periferico, { as: "id_periferico_periferico", foreignKey: "id_periferico"});
-  periferico.hasMany(computadora, { as: "computadoras", foreignKey: "id_periferico"});
+  equipo.belongsTo(periferico, { as: "id_periferico_periferico", foreignKey: "id_periferico"});
+  periferico.hasMany(equipo, { as: "equipos", foreignKey: "id_periferico"});
   marca_periferico.belongsTo(periferico, { as: "id_periferico_periferico", foreignKey: "id_periferico"});
   periferico.hasMany(marca_periferico, { as: "marca_perifericos", foreignKey: "id_periferico"});
   computadora.belongsTo(ram, { as: "id_ram_ram", foreignKey: "id_ram"});

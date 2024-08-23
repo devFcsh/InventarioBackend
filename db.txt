@@ -1,0 +1,328 @@
+-- Eliminar la base de datos si existe
+DROP DATABASE IF EXISTS inventario;
+
+-- Crear la base de datos
+CREATE DATABASE inventario;
+USE inventario;
+
+-- Tabla sistema operativo
+CREATE TABLE sistema_Operativo (
+    id_sistemaoperativo INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20)
+);
+
+-- Tabla versión de sistema operativo
+CREATE TABLE version_SO (
+    id_versionso INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20) NOT NULL,
+    id_sistemaoperativo INT NOT NULL,
+    FOREIGN KEY (id_sistemaoperativo) REFERENCES sistema_Operativo(id_sistemaoperativo)
+);
+
+-- Tabla versión de Office
+CREATE TABLE version_Office (
+    id_versionoffice INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20) NOT NULL
+);
+
+-- Tabla RAM
+CREATE TABLE ram (
+    id_ram INT AUTO_INCREMENT PRIMARY KEY,
+    tipo VARCHAR(6) NOT NULL,
+    capacidad VARCHAR(6) NOT NULL
+);
+
+-- Tabla Disco
+CREATE TABLE disco (
+    id_disco INT AUTO_INCREMENT PRIMARY KEY,
+    capacidad VARCHAR(10) NOT NULL
+);
+
+-- Tabla Antivirus
+CREATE TABLE antivirus (
+    id_antivirus INT AUTO_INCREMENT PRIMARY KEY,
+    estado ENUM('Activado', 'Desactivado') NOT NULL
+);
+
+-- Tabla Usuario
+CREATE TABLE usuario (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(30) NOT NULL,
+    tipo VARCHAR(20) NOT NULL
+);
+
+-- Tabla Clasificación
+CREATE TABLE clasificacion (
+    id_clasificacion INT AUTO_INCREMENT PRIMARY KEY
+);
+
+-- Tabla Marca
+CREATE TABLE marca (
+    id_marca INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20)
+);
+
+-- Tabla Modelo
+CREATE TABLE modelo (
+    id_modelo INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20)
+);
+
+-- Tabla Periférico
+CREATE TABLE periferico (
+    id_periferico INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20)
+);
+
+-- Tabla intermedia entre Marca y Periférico
+CREATE TABLE marca_periferico (
+    id_marca INT NOT NULL,
+    id_periferico INT NOT NULL,
+    PRIMARY KEY (id_marca, id_periferico),
+    FOREIGN KEY (id_marca) REFERENCES marca(id_marca),
+    FOREIGN KEY (id_periferico) REFERENCES periferico(id_periferico)
+);
+
+-- Tabla intermedia entre Marca y Modelo
+CREATE TABLE marca_modelo (
+    id_marca INT NOT NULL,
+    id_modelo INT NOT NULL,
+    PRIMARY KEY (id_marca, id_modelo),
+    FOREIGN KEY (id_marca) REFERENCES marca(id_marca),
+    FOREIGN KEY (id_modelo) REFERENCES modelo(id_modelo)
+);
+
+-- Tabla Serie
+CREATE TABLE serie (
+    id_serie INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20)
+);
+
+-- Tabla intermedia entre Modelo y Serie
+CREATE TABLE modelo_serie (
+    id_modelo INT NOT NULL,
+    id_serie INT NOT NULL,
+    PRIMARY KEY (id_modelo, id_serie),
+    FOREIGN KEY (id_modelo) REFERENCES modelo(id_modelo),
+    FOREIGN KEY (id_serie) REFERENCES serie(id_serie)
+);
+
+-- Tabla Equipo
+CREATE TABLE equipo (
+    id_equipo INT AUTO_INCREMENT PRIMARY KEY,
+    id_clasificacion INT NOT NULL,
+    inventario VARCHAR(15),
+	id_periferico INT NOT NULL,
+    
+    FOREIGN KEY (id_periferico) REFERENCES periferico(id_periferico),
+    FOREIGN KEY (id_clasificacion) REFERENCES clasificacion(id_clasificacion)
+);
+
+-- Tabla Computadora
+CREATE TABLE computadora (
+    id_computadora INT PRIMARY KEY,
+    nombre_equipo VARCHAR(20) NOT NULL,
+    dominio VARCHAR(20),
+    direccion_ip VARCHAR(20),
+    id_versionso INT NOT NULL,
+    id_versionoffice INT NOT NULL,
+    id_ram INT NOT NULL,
+    id_disco INT NOT NULL,
+    id_antivirus INT NOT NULL,
+    FOREIGN KEY (id_computadora) REFERENCES equipo(id_equipo),
+    FOREIGN KEY (id_versionso) REFERENCES version_SO(id_versionso),
+    FOREIGN KEY (id_versionoffice) REFERENCES version_Office(id_versionoffice),
+    FOREIGN KEY (id_ram) REFERENCES ram(id_ram),
+    FOREIGN KEY (id_disco) REFERENCES disco(id_disco),
+    FOREIGN KEY (id_antivirus) REFERENCES antivirus(id_antivirus)
+);
+
+-- Tabla Componente
+CREATE TABLE componente (
+    id_componente INT PRIMARY KEY,
+    id_computadora INT NOT NULL,
+    FOREIGN KEY (id_componente) REFERENCES equipo(id_equipo),
+    FOREIGN KEY (id_computadora) REFERENCES computadora(id_computadora)
+);
+
+-- Tabla Equipo Activo
+CREATE TABLE equipo_Activo (
+    id_activo INT PRIMARY KEY,
+    imagen MEDIUMBLOB NOT NULL,
+    edificio VARCHAR(5) NOT NULL,
+    aula VARCHAR(5) NOT NULL,
+    id_usuario INT NOT NULL,
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
+    FOREIGN KEY (id_activo) REFERENCES clasificacion(id_clasificacion)
+);
+
+-- Tabla Equipo Bodega
+CREATE TABLE equipo_Bodega (
+    id_eqbodega INT PRIMARY KEY,
+    FOREIGN KEY (id_eqbodega) REFERENCES clasificacion(id_clasificacion)
+);
+
+-- Tabla Equipo Baja
+CREATE TABLE equipo_Baja (
+    id_eqbaja INT PRIMARY KEY,
+    FOREIGN KEY (id_eqbaja) REFERENCES clasificacion(id_clasificacion)
+);
+
+-- Insertar datos en sistema operativo
+INSERT INTO sistema_Operativo (nombre) VALUES 
+('Windows'), 
+('Linux'), 
+('macOS'), 
+('Ubuntu'), 
+('Fedora');
+
+-- Insertar datos en version_SO
+INSERT INTO version_SO (nombre, id_sistemaoperativo) VALUES 
+('Windows 10', 1), 
+('Ubuntu 20.04', 4), 
+('Fedora 34', 5), 
+('Windows 11', 1), 
+('macOS Ventura', 3);
+
+-- Insertar datos en version_Office
+INSERT INTO version_Office (nombre) VALUES 
+('Office 2016'), 
+('Office 2019'), 
+('Office 365'), 
+('LibreOffice 7.0'), 
+('WPS Office');
+
+-- Insertar datos en RAM
+INSERT INTO ram (tipo, capacidad) VALUES 
+('DDR4', '8GB'), 
+('DDR3', '4GB'), 
+('DDR4', '16GB'), 
+('DDR3', '8GB'), 
+('DDR5', '32GB');
+
+-- Insertar datos en Disco
+INSERT INTO disco (capacidad) VALUES 
+('500GB'), 
+('1TB'), 
+('256GB'), 
+('2TB'), 
+('128GB');
+
+-- Insertar datos en Antivirus
+INSERT INTO antivirus (estado) VALUES 
+('Activado'), 
+('Desactivado'), 
+('Activado'), 
+('Desactivado'), 
+('Activado');
+
+-- Insertar datos en Usuario
+INSERT INTO usuario (nombre, tipo) VALUES 
+('Juan Perez', 'Administrador'), 
+('Maria Garcia', 'Usuario Final'), 
+('Carlos Lopez', 'Técnico'), 
+('Ana Martinez', 'Usuario Final'), 
+('Jose Gomez', 'Administrador');
+
+-- Insertar datos en Clasificación
+INSERT INTO clasificacion () VALUES (), (), (), (), ();
+
+-- Insertar datos en Marca
+INSERT INTO marca (nombre) VALUES 
+('HP'), 
+('Dell'), 
+('Lenovo'), 
+('Asus'), 
+('Acer');
+
+-- Insertar datos en Modelo
+INSERT INTO modelo (nombre) VALUES 
+('Inspiron'), 
+('Pavilion'), 
+('ThinkPad'), 
+('ZenBook'), 
+('Aspire');
+
+-- Insertar datos en Periférico
+INSERT INTO periferico (nombre) VALUES 
+('Computadora'), 
+('Laptop'), 
+('Teclado'), 
+('Monitor'), 
+('Mouse');
+
+-- Insertar datos en marca_periferico
+INSERT INTO marca_periferico (id_marca, id_periferico) VALUES 
+(1, 1), 
+(2, 2), 
+(3, 3), 
+(4, 4), 
+(5, 5);
+
+-- Insertar datos en marca_modelo
+INSERT INTO marca_modelo (id_marca, id_modelo) VALUES 
+(1, 2), 
+(2, 1), 
+(3, 3), 
+(4, 4), 
+(5, 5);
+
+-- Insertar datos en Serie
+INSERT INTO serie (nombre) VALUES 
+('X12345'), 
+('Y54321'), 
+('Z98765'), 
+('A123B5'), 
+('C34567');
+
+-- Insertar datos en modelo_serie
+INSERT INTO modelo_serie (id_modelo, id_serie) VALUES 
+(1, 1), 
+(2, 2), 
+(3, 3), 
+(4, 4), 
+(5, 5);
+
+-- Insertar datos en Equipo (incluye equipos sin computadora y con)
+INSERT INTO equipo (id_clasificacion, inventario, id_periferico) VALUES 
+(1, 'INV009', 1),  -- Computadora
+(1, 'INV001', 1),  -- Computadora
+(2, 'INV002', 2),  -- Laptop
+(3, 'INV003', 3),  -- Teclado
+(4, 'INV004', 4),  -- Monitor
+(5, 'INV005', 5);  -- Mouse
+
+-- Insertar datos en Computadora (solo para Computadora y Laptop)
+INSERT INTO computadora (id_computadora, nombre_equipo, dominio, direccion_ip, id_versionso, id_versionoffice, id_ram, id_disco, id_antivirus) VALUES 
+(1, 'Comp1', 'domain.local', '192.168.0.2', 1, 1, 1, 1, 1), -- Computadora con id 1
+(2, 'Laptop1', 'domain.local', '192.168.0.3', 2, 2, 2, 2, 2); -- Laptop con id 2
+
+-- Insertar datos en Componente (Teclado, Monitor, Mouse como componentes de una computadora)
+INSERT INTO componente (id_componente, id_computadora) VALUES 
+(3, 1),  -- Teclado en Computadora 1
+(4, 1),  -- Monitor en Computadora 1
+(5, 1);  -- Mouse en Computadora 1
+
+-- Insertar datos en equipo_Activo
+-- INSERT INTO equipo_Activo (id_activo, imagen, edificio, aula, id_usuario) VALUES 
+-- (1, LOAD_FILE('/path/to/image1.jpg'), 'A', '101', 1), 
+-- (2, LOAD_FILE('/path/to/image2.jpg'), 'B', '102', 2), 
+-- (3, LOAD_FILE('/path/to/image3.jpg'), 'C', '103', 3), 
+-- (4, LOAD_FILE('/path/to/image4.jpg'), 'D', '104', 4), 
+-- (5, LOAD_FILE('/path/to/image5.jpg'), 'E', '105', 5);
+
+-- Insertar datos en equipo_Bodega
+INSERT INTO equipo_Bodega (id_eqbodega) VALUES 
+(1), 
+(2), 
+(3), 
+(4), 
+(5);
+
+-- Insertar datos en equipo_Baja
+INSERT INTO equipo_Baja (id_eqbaja) VALUES 
+(1), 
+(2), 
+(3), 
+(4), 
+(5);
