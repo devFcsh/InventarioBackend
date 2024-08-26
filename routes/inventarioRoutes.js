@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const inventarioController = require('../controllers/inventarioController'); // Importa el objeto completo
+const inventarioController = require('../controllers/inventarioController'); 
 
 router.get('/inventariosPorSerie', inventarioController.inventarioPorSerie);
 

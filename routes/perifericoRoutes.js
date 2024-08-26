@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const perifericoController = require('../controllers/perifericoController'); // Importa el objeto completo
+const perifericoController = require('../controllers/perifericoController');
 
 router.get('/', perifericoController.obtenerPerifericos);
 
