@@ -118,9 +118,9 @@ async function eliminarEquipo(req, res) {
   }
 
   try {
-    const result = await sequelize.transaction(async (t) => {
+    await sequelize.transaction(async (t) => {
       await sequelize.query(
-        `DELETE FROM computadora WHERE id_computadora IN (
+        `DELETE FROM componente WHERE id_computadora IN (
           SELECT id_computadora FROM equipo WHERE id_equipo = :idEquipo
         )`, 
         { 
@@ -131,8 +131,8 @@ async function eliminarEquipo(req, res) {
       );
 
       await sequelize.query(
-        `DELETE FROM componente WHERE id_componente IN (
-          SELECT id_equipo FROM equipo WHERE id_equipo = :idEquipo
+        `DELETE FROM computadora WHERE id_computadora IN (
+          SELECT id_computadora FROM equipo WHERE id_equipo = :idEquipo
         )`, 
         { 
           replacements: { idEquipo }, 
@@ -163,7 +163,6 @@ async function eliminarEquipo(req, res) {
         }
       );
 
-      // Paso 5: Eliminar el registro del equipo en la tabla 'equipo'
       await sequelize.query(
         `DELETE FROM equipo WHERE id_equipo = :idEquipo`, 
         { 
@@ -172,16 +171,17 @@ async function eliminarEquipo(req, res) {
           transaction: t
         }
       );
-      
+
       return { success: true };
     });
 
-    res.json(result);
+    res.json({ success: true });
   } catch (error) {
     console.error("Error al eliminar equipo:", error);
     res.status(500).json({ error: "Error al eliminar equipo" });
   }
 }
+
 
 
 module.exports = {
