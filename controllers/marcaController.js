@@ -16,7 +16,6 @@ async function obtenerMarcasPorPeriferico(req, res) {
       }
     );
 
-    // Asegúrate de que 'results' sea un arreglo antes de enviarlo como respuesta
     if (!Array.isArray(results)) {
       return res.status(500).json({ error: 'Unexpected response format' });
     }

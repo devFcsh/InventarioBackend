@@ -1,39 +1,24 @@
 const Sequelize = require('sequelize');
 module.exports = function(sequelize, DataTypes) {
-  return sequelize.define('usuario', {
-    id_usuario: {
+  return sequelize.define('uso', {
+    id_uso: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
     },
     nombre: {
-      type: DataTypes.STRING(30),
+      type: DataTypes.STRING(20),
       allowNull: false
-    },
-    id_uso: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'uso',
-        key: 'id_uso'
-      }
     }
   }, {
     sequelize,
-    tableName: 'usuario',
+    tableName: 'uso',
     timestamps: false,
     indexes: [
       {
         name: "PRIMARY",
         unique: true,
-        using: "BTREE",
-        fields: [
-          { name: "id_usuario" },
-        ]
-      },
-      {
-        name: "id_uso",
         using: "BTREE",
         fields: [
           { name: "id_uso" },

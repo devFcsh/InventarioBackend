@@ -17,6 +17,7 @@ var _periferico = require("./periferico");
 var _ram = require("./ram");
 var _serie = require("./serie");
 var _sistema_operativo = require("./sistema_operativo");
+var _uso = require("./uso");
 var _usuario = require("./usuario");
 var _version_office = require("./version_office");
 var _version_so = require("./version_so");
@@ -40,6 +41,7 @@ function initModels(sequelize) {
   var ram = _ram(sequelize, DataTypes);
   var serie = _serie(sequelize, DataTypes);
   var sistema_operativo = _sistema_operativo(sequelize, DataTypes);
+  var uso = _uso(sequelize, DataTypes);
   var usuario = _usuario(sequelize, DataTypes);
   var version_office = _version_office(sequelize, DataTypes);
   var version_so = _version_so(sequelize, DataTypes);
@@ -86,6 +88,8 @@ function initModels(sequelize) {
   serie.hasMany(modelo_serie, { as: "modelo_series", foreignKey: "id_serie"});
   version_so.belongsTo(sistema_operativo, { as: "id_sistemaoperativo_sistema_operativo", foreignKey: "id_sistemaoperativo"});
   sistema_operativo.hasMany(version_so, { as: "version_sos", foreignKey: "id_sistemaoperativo"});
+  usuario.belongsTo(uso, { as: "id_uso_uso", foreignKey: "id_uso"});
+  uso.hasMany(usuario, { as: "usuarios", foreignKey: "id_uso"});
   equipo_activo.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
   usuario.hasMany(equipo_activo, { as: "equipo_activos", foreignKey: "id_usuario"});
   computadora.belongsTo(version_office, { as: "id_versionoffice_version_office", foreignKey: "id_versionoffice"});
@@ -112,6 +116,7 @@ function initModels(sequelize) {
     ram,
     serie,
     sistema_operativo,
+    uso,
     usuario,
     version_office,
     version_so,
