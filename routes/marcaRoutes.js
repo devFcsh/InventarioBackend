@@ -1,7 +1,8 @@
 const express = require('express');
-const marca = require('../controllers/marcaController'); 
+const marcaController = require('../controllers/marcaController'); 
 const router = express.Router();
 
-router.get('/marcasPorPeriferico/:perifericoId', marca.obtenerMarcasPorPeriferico);
+router.get('/', marcaController.obtenerMarcas);
+router.get('/marcasPorPeriferico/:perifericoId', marcaController.obtenerMarcasPorPeriferico);
 
 module.exports = router;

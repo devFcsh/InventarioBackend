@@ -1,13 +1,16 @@
-const sequelize = require('../models/index.js').sequelize;
-var initModels = require("../models/init-models.js");
-var models = initModels(sequelize);
+const { periferico } = require('../models'); 
 
-async function obtenerPerifericos(req, res, next) {
+async function obtenerPerifericos(req, res) {
   try {
-    let perifericosCollection = await models.periferico.findAll();
-    res.json(perifericosCollection); 
+    const perifericos = await periferico.findAll({
+      attributes: ['id_periferico', 'nombre'] 
+    });
+
+    return res.json(perifericos);
+
   } catch (error) {
-    next(error); 
+    console.error('Error al obtener los perifericos:', error);
+    return res.status(500).json({ error: 'Error al obtener los perifericos' });
   }
 }
 

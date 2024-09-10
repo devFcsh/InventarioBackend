@@ -1,6 +1,4 @@
 const sequelize = require('../models/index.js').sequelize;
-var initModels = require("../models/init-models.js");
-var models = initModels(sequelize);
 
 async function inventarioPorSerie(req, res) {
     const { perifericoId, marcaId, modeloId, serieId } = req.query;

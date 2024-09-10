@@ -1,6 +1,19 @@
 const sequelize = require('../models/index.js').sequelize;
-var initModels = require("../models/init-models.js");
-var models = initModels(sequelize);
+const { modelo } = require('../models'); 
+
+async function obtenerModelos(req, res) {
+    try {
+      const modelos = await modelo.findAll({
+        attributes: ['id_modelo', 'nombre'] 
+      });
+  
+      return res.json(modelos);
+  
+    } catch (error) {
+      console.error('Error al obtener los modelos:', error);
+      return res.status(500).json({ error: 'Error al obtener los modelos' });
+    }
+}
 
 async function modelosPorMarcaPeriferico(req, res) {
   const { marcaId, perifericoId } = req.query;
@@ -32,4 +45,5 @@ async function modelosPorMarcaPeriferico(req, res) {
 
 module.exports = {
   modelosPorMarcaPeriferico,
+  obtenerModelos,
   };

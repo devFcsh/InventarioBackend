@@ -1,6 +1,19 @@
 const sequelize = require('../models/index.js').sequelize;
-var initModels = require("../models/init-models.js");
-var models = initModels(sequelize);
+const { serie } = require('../models'); 
+
+async function obtenerSeries(req, res) {
+  try {
+    const series = await serie.findAll({
+      attributes: ['id_serie', 'nombre'] 
+    });
+
+    return res.json(series);
+
+  } catch (error) {
+    console.error('Error al obtener las series:', error);
+    return res.status(500).json({ error: 'Error al obtener las series' });
+  }
+}
 
 async function seriesPorModelo(req, res) {
     const { perifericoId, marcaId, modeloId } = req.query;
@@ -35,4 +48,5 @@ async function seriesPorModelo(req, res) {
 
 module.exports = {
     seriesPorModelo,
+    obtenerSeries,
   };

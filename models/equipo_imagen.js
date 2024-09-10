@@ -1,34 +1,27 @@
 const Sequelize = require('sequelize');
 module.exports = function(sequelize, DataTypes) {
-  return sequelize.define('equipo_activo', {
-    id_activo: {
+  return sequelize.define('equipo_imagen', {
+    id_equipo: {
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
       references: {
-        model: 'clasificacion',
-        key: 'id_clasificacion'
+        model: 'equipo_activo',
+        key: 'id_activo'
       }
     },
-    edificio: {
-      type: DataTypes.STRING(5),
-      allowNull: false
-    },
-    aula: {
-      type: DataTypes.STRING(5),
-      allowNull: false
-    },
-    id_usuario: {
+    id_imagen: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
       references: {
-        model: 'usuario',
-        key: 'id_usuario'
+        model: 'imagen',
+        key: 'id_imagen'
       }
     }
   }, {
     sequelize,
-    tableName: 'equipo_activo',
+    tableName: 'equipo_imagen',
     timestamps: false,
     indexes: [
       {
@@ -36,14 +29,15 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "id_activo" },
+          { name: "id_equipo" },
+          { name: "id_imagen" },
         ]
       },
       {
-        name: "id_usuario",
+        name: "id_imagen",
         using: "BTREE",
         fields: [
-          { name: "id_usuario" },
+          { name: "id_imagen" },
         ]
       },
     ]

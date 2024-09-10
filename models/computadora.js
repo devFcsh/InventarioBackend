@@ -14,10 +14,6 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.STRING(20),
       allowNull: false
     },
-    dominio: {
-      type: DataTypes.STRING(20),
-      allowNull: true
-    },
     direccion_ip: {
       type: DataTypes.STRING(20),
       allowNull: true
@@ -60,6 +56,14 @@ module.exports = function(sequelize, DataTypes) {
       references: {
         model: 'antivirus',
         key: 'id_antivirus'
+      }
+    },
+    id_dominio: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'dominio',
+        key: 'id_dominio'
       }
     }
   }, {
@@ -108,6 +112,13 @@ module.exports = function(sequelize, DataTypes) {
         using: "BTREE",
         fields: [
           { name: "id_antivirus" },
+        ]
+      },
+      {
+        name: "id_dominio",
+        using: "BTREE",
+        fields: [
+          { name: "id_dominio" },
         ]
       },
     ]

@@ -1,4 +1,19 @@
 const { sequelize } = require('../models'); 
+const { marca } = require('../models'); 
+
+async function obtenerMarcas(req, res) {
+  try {
+    const marcas = await marca.findAll({
+      attributes: ['id_marca', 'nombre'] 
+    });
+
+    return res.json(marcas);
+
+  } catch (error) {
+    console.error('Error al obtener las marcas:', error);
+    return res.status(500).json({ error: 'Error al obtener las marcas' });
+  }
+}
 
 async function obtenerMarcasPorPeriferico(req, res) {
   const { perifericoId } = req.params;
@@ -34,4 +49,5 @@ async function obtenerMarcasPorPeriferico(req, res) {
 
 module.exports = {
     obtenerMarcasPorPeriferico,
+    obtenerMarcas,
   };

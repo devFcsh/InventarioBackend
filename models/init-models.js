@@ -4,10 +4,13 @@ var _clasificacion = require("./clasificacion");
 var _componente = require("./componente");
 var _computadora = require("./computadora");
 var _disco = require("./disco");
+var _dominio = require("./dominio");
 var _equipo = require("./equipo");
 var _equipo_activo = require("./equipo_activo");
 var _equipo_baja = require("./equipo_baja");
 var _equipo_bodega = require("./equipo_bodega");
+var _equipo_imagen = require("./equipo_imagen");
+var _imagen = require("./imagen");
 var _marca = require("./marca");
 var _marca_modelo = require("./marca_modelo");
 var _marca_periferico = require("./marca_periferico");
@@ -28,10 +31,13 @@ function initModels(sequelize) {
   var componente = _componente(sequelize, DataTypes);
   var computadora = _computadora(sequelize, DataTypes);
   var disco = _disco(sequelize, DataTypes);
+  var dominio = _dominio(sequelize, DataTypes);
   var equipo = _equipo(sequelize, DataTypes);
   var equipo_activo = _equipo_activo(sequelize, DataTypes);
   var equipo_baja = _equipo_baja(sequelize, DataTypes);
   var equipo_bodega = _equipo_bodega(sequelize, DataTypes);
+  var equipo_imagen = _equipo_imagen(sequelize, DataTypes);
+  var imagen = _imagen(sequelize, DataTypes);
   var marca = _marca(sequelize, DataTypes);
   var marca_modelo = _marca_modelo(sequelize, DataTypes);
   var marca_periferico = _marca_periferico(sequelize, DataTypes);
@@ -46,6 +52,8 @@ function initModels(sequelize) {
   var version_office = _version_office(sequelize, DataTypes);
   var version_so = _version_so(sequelize, DataTypes);
 
+  equipo_activo.belongsToMany(imagen, { as: 'id_imagen_imagens', through: equipo_imagen, foreignKey: "id_equipo", otherKey: "id_imagen" });
+  imagen.belongsToMany(equipo_activo, { as: 'id_equipo_equipo_activos', through: equipo_imagen, foreignKey: "id_imagen", otherKey: "id_equipo" });
   marca.belongsToMany(modelo, { as: 'id_modelo_modelos', through: marca_modelo, foreignKey: "id_marca", otherKey: "id_modelo" });
   marca.belongsToMany(periferico, { as: 'id_periferico_perifericos', through: marca_periferico, foreignKey: "id_marca", otherKey: "id_periferico" });
   modelo.belongsToMany(marca, { as: 'id_marca_marcas', through: marca_modelo, foreignKey: "id_modelo", otherKey: "id_marca" });
@@ -66,10 +74,16 @@ function initModels(sequelize) {
   computadora.hasMany(componente, { as: "componentes", foreignKey: "id_computadora"});
   computadora.belongsTo(disco, { as: "id_disco_disco", foreignKey: "id_disco"});
   disco.hasMany(computadora, { as: "computadoras", foreignKey: "id_disco"});
+  computadora.belongsTo(dominio, { as: "id_dominio_dominio", foreignKey: "id_dominio"});
+  dominio.hasMany(computadora, { as: "computadoras", foreignKey: "id_dominio"});
   componente.belongsTo(equipo, { as: "id_componente_equipo", foreignKey: "id_componente"});
   equipo.hasOne(componente, { as: "componente", foreignKey: "id_componente"});
   computadora.belongsTo(equipo, { as: "id_computadora_equipo", foreignKey: "id_computadora"});
   equipo.hasOne(computadora, { as: "computadora", foreignKey: "id_computadora"});
+  equipo_imagen.belongsTo(equipo_activo, { as: "id_equipo_equipo_activo", foreignKey: "id_equipo"});
+  equipo_activo.hasMany(equipo_imagen, { as: "equipo_imagens", foreignKey: "id_equipo"});
+  equipo_imagen.belongsTo(imagen, { as: "id_imagen_imagen", foreignKey: "id_imagen"});
+  imagen.hasMany(equipo_imagen, { as: "equipo_imagens", foreignKey: "id_imagen"});
   marca_modelo.belongsTo(marca, { as: "id_marca_marca", foreignKey: "id_marca"});
   marca.hasMany(marca_modelo, { as: "marca_modelos", foreignKey: "id_marca"});
   marca_periferico.belongsTo(marca, { as: "id_marca_marca", foreignKey: "id_marca"});
@@ -103,10 +117,13 @@ function initModels(sequelize) {
     componente,
     computadora,
     disco,
+    dominio,
     equipo,
     equipo_activo,
     equipo_baja,
     equipo_bodega,
+    equipo_imagen,
+    imagen,
     marca,
     marca_modelo,
     marca_periferico,
