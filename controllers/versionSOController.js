@@ -1,9 +1,14 @@
-const { version_so } = require('../models'); 
+const { version_so } = require('../models');
 
 async function obtenerVersionesSO(req, res) {
+  const { id_sistemaoperativo } = req.params; 
+
   try {
     const versionesSO = await version_so.findAll({
-      attributes: ['id_versionso', 'nombre'] 
+      attributes: ['id_versionso', 'nombre'],
+      where: {
+        id_sistemaoperativo: id_sistemaoperativo, 
+      },
     });
 
     return res.json(versionesSO);
