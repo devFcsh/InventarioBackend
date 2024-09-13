@@ -14,6 +14,9 @@ const dominios = require('./dominioRoutes');
 const ram = require('./ramRoutes'); 
 const sistemasoperativos = require('./sistemaOperativoRoutes'); 
 const versionesSO = require('./versionSORoutes'); 
+const versionesOffice = require('./versionOfficeRoutes'); 
+const edificios = require('./edificioRoutes'); 
+const aulas = require('./aulaRoutes'); 
 
 router.use('/perifericos', perifericos);
 router.use('/marcas', marcas);
@@ -28,5 +31,8 @@ router.use('/dominios', dominios);
 router.use('/ram', ram); 
 router.use('/sistemasoperativos', sistemasoperativos);
 router.use('/versionesSO', versionesSO);  
+router.use('/versionesOffice', versionesOffice);  
+router.use('/edificios', edificios);  
+router.use('/aulas', aulas);  
 
 module.exports = router;

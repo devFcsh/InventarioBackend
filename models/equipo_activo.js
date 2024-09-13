@@ -10,13 +10,13 @@ module.exports = function(sequelize, DataTypes) {
         key: 'id_clasificacion'
       }
     },
-    edificio: {
-      type: DataTypes.STRING(5),
-      allowNull: false
-    },
-    aula: {
-      type: DataTypes.STRING(5),
-      allowNull: false
+    id_aula: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'aula',
+        key: 'id_aula'
+      }
     },
     id_usuario: {
       type: DataTypes.INTEGER,
@@ -37,6 +37,13 @@ module.exports = function(sequelize, DataTypes) {
         using: "BTREE",
         fields: [
           { name: "id_activo" },
+        ]
+      },
+      {
+        name: "id_aula",
+        using: "BTREE",
+        fields: [
+          { name: "id_aula" },
         ]
       },
       {

@@ -323,7 +323,13 @@ async function agregarActivoComputadora(req, res) {
   }
 }
 
-
+async function subirImagen(req, res) {
+  try {
+    res.json({ imagePath: `/uploads/${req.file.filename}` });
+  } catch (error) {
+    res.status(500).json({ error: "Error al cargar la imagen" });
+  }
+};
 
 module.exports = {
   contarEquipos,
@@ -331,5 +337,6 @@ module.exports = {
   eliminarActivoComputadora,
   eliminarActivoComponente,
   eliminarActivoOtro,
-  agregarActivoComputadora
+  agregarActivoComputadora,
+  subirImagen
 };

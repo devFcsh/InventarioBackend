@@ -1,10 +1,12 @@
 var DataTypes = require("sequelize").DataTypes;
 var _antivirus = require("./antivirus");
+var _aula = require("./aula");
 var _clasificacion = require("./clasificacion");
 var _componente = require("./componente");
 var _computadora = require("./computadora");
 var _disco = require("./disco");
 var _dominio = require("./dominio");
+var _edificio = require("./edificio");
 var _equipo = require("./equipo");
 var _equipo_activo = require("./equipo_activo");
 var _equipo_baja = require("./equipo_baja");
@@ -27,11 +29,13 @@ var _version_so = require("./version_so");
 
 function initModels(sequelize) {
   var antivirus = _antivirus(sequelize, DataTypes);
+  var aula = _aula(sequelize, DataTypes);
   var clasificacion = _clasificacion(sequelize, DataTypes);
   var componente = _componente(sequelize, DataTypes);
   var computadora = _computadora(sequelize, DataTypes);
   var disco = _disco(sequelize, DataTypes);
   var dominio = _dominio(sequelize, DataTypes);
+  var edificio = _edificio(sequelize, DataTypes);
   var equipo = _equipo(sequelize, DataTypes);
   var equipo_activo = _equipo_activo(sequelize, DataTypes);
   var equipo_baja = _equipo_baja(sequelize, DataTypes);
@@ -62,6 +66,8 @@ function initModels(sequelize) {
   serie.belongsToMany(modelo, { as: 'id_modelo_modelo_modelo_series', through: modelo_serie, foreignKey: "id_serie", otherKey: "id_modelo" });
   computadora.belongsTo(antivirus, { as: "id_antivirus_antivirus", foreignKey: "id_antivirus"});
   antivirus.hasMany(computadora, { as: "computadoras", foreignKey: "id_antivirus"});
+  equipo_activo.belongsTo(aula, { as: "id_aula_aula", foreignKey: "id_aula"});
+  aula.hasMany(equipo_activo, { as: "equipo_activos", foreignKey: "id_aula"});
   equipo.belongsTo(clasificacion, { as: "id_clasificacion_clasificacion", foreignKey: "id_clasificacion"});
   clasificacion.hasMany(equipo, { as: "equipos", foreignKey: "id_clasificacion"});
   equipo_activo.belongsTo(clasificacion, { as: "id_activo_clasificacion", foreignKey: "id_activo"});
@@ -76,6 +82,8 @@ function initModels(sequelize) {
   disco.hasMany(computadora, { as: "computadoras", foreignKey: "id_disco"});
   computadora.belongsTo(dominio, { as: "id_dominio_dominio", foreignKey: "id_dominio"});
   dominio.hasMany(computadora, { as: "computadoras", foreignKey: "id_dominio"});
+  aula.belongsTo(edificio, { as: "id_edificio_edificio", foreignKey: "id_edificio"});
+  edificio.hasMany(aula, { as: "aulas", foreignKey: "id_edificio"});
   componente.belongsTo(equipo, { as: "id_componente_equipo", foreignKey: "id_componente"});
   equipo.hasOne(componente, { as: "componente", foreignKey: "id_componente"});
   computadora.belongsTo(equipo, { as: "id_computadora_equipo", foreignKey: "id_computadora"});
@@ -113,11 +121,13 @@ function initModels(sequelize) {
 
   return {
     antivirus,
+    aula,
     clasificacion,
     componente,
     computadora,
     disco,
     dominio,
+    edificio,
     equipo,
     equipo_activo,
     equipo_baja,
