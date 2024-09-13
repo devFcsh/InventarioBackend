@@ -15,13 +15,13 @@ async function contarEquipos(req, res) {
 SELECT 
     COUNT(e.id_equipo) AS total
 FROM equipo e
-JOIN periferico p ON e.id_periferico = p.id_periferico
-JOIN marca_periferico mp ON p.id_periferico = mp.id_periferico
-JOIN marca m ON mp.id_marca = m.id_marca
-JOIN marca_modelo mm ON m.id_marca = mm.id_marca
-JOIN modelo mo ON mm.id_modelo = mo.id_modelo
-JOIN modelo_serie ms ON mo.id_modelo = ms.id_modelo
-JOIN serie s ON ms.id_serie = s.id_serie
+JOIN serie s ON e.id_serie = s.id_serie
+JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+JOIN marca m ON mm.id_marca = m.id_marca
+JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+JOIN periferico p ON mp.id_periferico = p.id_periferico
 JOIN clasificacion c ON e.id_clasificacion = c.id_clasificacion
 JOIN equipo_Activo ea ON c.id_clasificacion = ea.id_activo
 JOIN usuario u ON ea.id_usuario = u.id_usuario
@@ -72,13 +72,13 @@ SELECT
     uso.nombre AS uso, 
     ea.edificio
 FROM equipo e
-JOIN periferico p ON e.id_periferico = p.id_periferico
-JOIN marca_periferico mp ON p.id_periferico = mp.id_periferico
-JOIN marca m ON mp.id_marca = m.id_marca
-JOIN marca_modelo mm ON m.id_marca = mm.id_marca
-JOIN modelo mo ON mm.id_modelo = mo.id_modelo
-JOIN modelo_serie ms ON mo.id_modelo = ms.id_modelo
-JOIN serie s ON ms.id_serie = s.id_serie
+JOIN serie s ON e.id_serie = s.id_serie
+JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+JOIN marca m ON mm.id_marca = m.id_marca
+JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+JOIN periferico p ON mp.id_periferico = p.id_periferico
 JOIN clasificacion c ON e.id_clasificacion = c.id_clasificacion
 JOIN equipo_Activo ea ON c.id_clasificacion = ea.id_activo
 JOIN usuario u ON ea.id_usuario = u.id_usuario
@@ -251,11 +251,85 @@ async function eliminarActivoOtro(req, res) {
   }
 }
 
+async function agregarActivoComputadora(req, res) {
+  const {
+    clasificacion,
+    inventario,
+    serie,
+    nombreEquipo,
+    direccionIp,
+    versionso,
+    versionoffice,
+    ram,
+    disco,
+    antivirus,
+    dominio,
+    tieneComponentes,
+    componentes,
+    edificio,
+    aula,
+    idUsuario,
+    imagenRuta,
+  } = req.body;
+
+  try {
+    const result = await sequelize.query(
+      `CALL agregar_equipo_computadora(
+        :clasificacion,
+        :inventario,
+        :serie,
+        :nombreEquipo,
+        :direccionIp,
+        :versionso,
+        :versionoffice,
+        :ram,
+        :disco,
+        :antivirus,
+        :dominio,
+        :tieneComponentes,
+        :componentes,
+        :edificio,
+        :aula,
+        :idUsuario,
+        :imagenRuta
+      );`,
+      {
+        replacements: {
+          clasificacion,
+          inventario,
+          serie,
+          nombreEquipo,
+          direccionIp,
+          versionso,
+          versionoffice,
+          ram,
+          disco,
+          antivirus,
+          dominio,
+          tieneComponentes: tieneComponentes ? 1 : 0, 
+          componentes: JSON.stringify(componentes), 
+          edificio,
+          aula,
+          idUsuario,
+          imagenRuta,
+        },
+      }
+    );
+
+    res.json({ message: "Equipo agregado correctamente", result });
+  } catch (error) {
+    console.error("Error al agregar equipo:", error);
+    res.status(500).json({ error: "Error al agregar equipo" });
+  }
+}
+
+
 
 module.exports = {
   contarEquipos,
   obtenerEquipos,
   eliminarActivoComputadora,
   eliminarActivoComponente,
-  eliminarActivoOtro
+  eliminarActivoOtro,
+  agregarActivoComputadora
 };

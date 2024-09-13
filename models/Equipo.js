@@ -19,12 +19,12 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.STRING(15),
       allowNull: true
     },
-    id_periferico: {
+    id_serie: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'periferico',
-        key: 'id_periferico'
+        model: 'serie',
+        key: 'id_serie'
       }
     }
   }, {
@@ -41,10 +41,10 @@ module.exports = function(sequelize, DataTypes) {
         ]
       },
       {
-        name: "id_periferico",
+        name: "id_serie",
         using: "BTREE",
         fields: [
-          { name: "id_periferico" },
+          { name: "id_serie" },
         ]
       },
       {
