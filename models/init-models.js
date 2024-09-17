@@ -1,7 +1,6 @@
 var DataTypes = require("sequelize").DataTypes;
 var _antivirus = require("./antivirus");
 var _aula = require("./aula");
-var _clasificacion = require("./clasificacion");
 var _componente = require("./componente");
 var _computadora = require("./computadora");
 var _disco = require("./disco");
@@ -30,7 +29,6 @@ var _version_so = require("./version_so");
 function initModels(sequelize) {
   var antivirus = _antivirus(sequelize, DataTypes);
   var aula = _aula(sequelize, DataTypes);
-  var clasificacion = _clasificacion(sequelize, DataTypes);
   var componente = _componente(sequelize, DataTypes);
   var computadora = _computadora(sequelize, DataTypes);
   var disco = _disco(sequelize, DataTypes);
@@ -56,8 +54,8 @@ function initModels(sequelize) {
   var version_office = _version_office(sequelize, DataTypes);
   var version_so = _version_so(sequelize, DataTypes);
 
-  equipo_activo.belongsToMany(imagen, { as: 'id_imagen_imagens', through: equipo_imagen, foreignKey: "id_equipo", otherKey: "id_imagen" });
-  imagen.belongsToMany(equipo_activo, { as: 'id_equipo_equipo_activos', through: equipo_imagen, foreignKey: "id_imagen", otherKey: "id_equipo" });
+  equipo.belongsToMany(imagen, { as: 'id_imagen_imagens', through: equipo_imagen, foreignKey: "id_equipo", otherKey: "id_imagen" });
+  imagen.belongsToMany(equipo, { as: 'id_equipo_equipos', through: equipo_imagen, foreignKey: "id_imagen", otherKey: "id_equipo" });
   marca.belongsToMany(modelo, { as: 'id_modelo_modelos', through: marca_modelo, foreignKey: "id_marca", otherKey: "id_modelo" });
   marca.belongsToMany(periferico, { as: 'id_periferico_perifericos', through: marca_periferico, foreignKey: "id_marca", otherKey: "id_periferico" });
   modelo.belongsToMany(marca, { as: 'id_marca_marcas', through: marca_modelo, foreignKey: "id_modelo", otherKey: "id_marca" });
@@ -68,14 +66,6 @@ function initModels(sequelize) {
   antivirus.hasMany(computadora, { as: "computadoras", foreignKey: "id_antivirus"});
   equipo_activo.belongsTo(aula, { as: "id_aula_aula", foreignKey: "id_aula"});
   aula.hasMany(equipo_activo, { as: "equipo_activos", foreignKey: "id_aula"});
-  equipo.belongsTo(clasificacion, { as: "id_clasificacion_clasificacion", foreignKey: "id_clasificacion"});
-  clasificacion.hasMany(equipo, { as: "equipos", foreignKey: "id_clasificacion"});
-  equipo_activo.belongsTo(clasificacion, { as: "id_activo_clasificacion", foreignKey: "id_activo"});
-  clasificacion.hasOne(equipo_activo, { as: "equipo_activo", foreignKey: "id_activo"});
-  equipo_baja.belongsTo(clasificacion, { as: "id_eqbaja_clasificacion", foreignKey: "id_eqbaja"});
-  clasificacion.hasOne(equipo_baja, { as: "equipo_baja", foreignKey: "id_eqbaja"});
-  equipo_bodega.belongsTo(clasificacion, { as: "id_eqbodega_clasificacion", foreignKey: "id_eqbodega"});
-  clasificacion.hasOne(equipo_bodega, { as: "equipo_bodega", foreignKey: "id_eqbodega"});
   componente.belongsTo(computadora, { as: "id_computadora_computadora", foreignKey: "id_computadora"});
   computadora.hasMany(componente, { as: "componentes", foreignKey: "id_computadora"});
   computadora.belongsTo(disco, { as: "id_disco_disco", foreignKey: "id_disco"});
@@ -88,8 +78,14 @@ function initModels(sequelize) {
   equipo.hasOne(componente, { as: "componente", foreignKey: "id_componente"});
   computadora.belongsTo(equipo, { as: "id_computadora_equipo", foreignKey: "id_computadora"});
   equipo.hasOne(computadora, { as: "computadora", foreignKey: "id_computadora"});
-  equipo_imagen.belongsTo(equipo_activo, { as: "id_equipo_equipo_activo", foreignKey: "id_equipo"});
-  equipo_activo.hasMany(equipo_imagen, { as: "equipo_imagens", foreignKey: "id_equipo"});
+  equipo_activo.belongsTo(equipo, { as: "id_equipo_equipo", foreignKey: "id_equipo"});
+  equipo.hasOne(equipo_activo, { as: "equipo_activo", foreignKey: "id_equipo"});
+  equipo_baja.belongsTo(equipo, { as: "id_equipo_equipo", foreignKey: "id_equipo"});
+  equipo.hasOne(equipo_baja, { as: "equipo_baja", foreignKey: "id_equipo"});
+  equipo_bodega.belongsTo(equipo, { as: "id_equipo_equipo", foreignKey: "id_equipo"});
+  equipo.hasOne(equipo_bodega, { as: "equipo_bodega", foreignKey: "id_equipo"});
+  equipo_imagen.belongsTo(equipo, { as: "id_equipo_equipo", foreignKey: "id_equipo"});
+  equipo.hasMany(equipo_imagen, { as: "equipo_imagens", foreignKey: "id_equipo"});
   equipo_imagen.belongsTo(imagen, { as: "id_imagen_imagen", foreignKey: "id_imagen"});
   imagen.hasMany(equipo_imagen, { as: "equipo_imagens", foreignKey: "id_imagen"});
   marca_modelo.belongsTo(marca, { as: "id_marca_marca", foreignKey: "id_marca"});
@@ -122,7 +118,6 @@ function initModels(sequelize) {
   return {
     antivirus,
     aula,
-    clasificacion,
     componente,
     computadora,
     disco,
