@@ -317,42 +317,226 @@ async function eliminarEquipo(req, res) {
   const { equipoId } = req.params;
 
   try {
-    await sequelize.query(`DELETE FROM equipo_Activo WHERE id_equipo = :equipoId`, {
-      replacements: { equipoId },
-      type: sequelize.QueryTypes.DELETE,
-    });
+      const equipo = await sequelize.query(
+          `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
+          {
+              replacements: { equipoId },
+              type: sequelize.QueryTypes.SELECT,
+          }
+      );
 
-    await sequelize.query(`DELETE FROM equipo_Bodega WHERE id_equipo = :equipoId`, {
-      replacements: { equipoId },
-      type: sequelize.QueryTypes.DELETE,
-    });
+      if (!equipo.length) {
+          return res.status(400).json({ error: 'El equipo no existe.' });
+      }
 
-    await sequelize.query(`DELETE FROM equipo_Baja WHERE id_equipo = :equipoId`, {
-      replacements: { equipoId },
-      type: sequelize.QueryTypes.DELETE,
-    });
+      const computadora = await sequelize.query(
+        `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
+        {
+            replacements: { equipoId },
+            type: sequelize.QueryTypes.SELECT,
+        }
+    );
 
-    await sequelize.query(`DELETE FROM componente WHERE id_computadora = :equipoId`, {
-      replacements: { equipoId },
-      type: sequelize.QueryTypes.DELETE,
-    });
+    if (computadora.length) {
+        
+      const componentes = await sequelize.query(
+        `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
+        {
+            replacements: { equipoId },
+            type: sequelize.QueryTypes.SELECT,
+        }
+    );
 
-    await sequelize.query(`DELETE FROM computadora WHERE id_computadora = :equipoId`, {
-      replacements: { equipoId },
-      type: sequelize.QueryTypes.DELETE,
-    });
+    const componenteIds = componentes.map(comp => comp.id_componente);
 
-    await sequelize.query(`DELETE FROM equipo WHERE id_equipo = :equipoId`, {
-      replacements: { equipoId },
-      type: sequelize.QueryTypes.DELETE,
-    });
+    await sequelize.query(
+        `DELETE FROM componente WHERE id_computadora = :equipoId`,
+        {
+            replacements: { equipoId },
+            type: sequelize.QueryTypes.DELETE,
+        }
+    );
 
-    res.json({ message: 'Equipo y sus componentes eliminados con éxito' });
+    if (componenteIds.length > 0) {
+        await sequelize.query(
+            `DELETE FROM equipo WHERE id_equipo IN (:componenteIds)`,
+            {
+                replacements: { componenteIds },
+                type: sequelize.QueryTypes.DELETE,
+            }
+        );
+    }
+
+
+    }
+
+     
+      await sequelize.query(
+          `DELETE FROM equipo WHERE id_equipo = :equipoId`,
+          {
+              replacements: { equipoId },
+              type: sequelize.QueryTypes.DELETE,
+          }
+      );
+
+      res.json({ message: 'Equipo y sus componentes eliminados con éxito' });
   } catch (error) {
-    console.error("Error al eliminar equipo y componentes:", error);
-    res.status(500).json({ error: 'Error al eliminar equipo y componentes' });
+      console.error("Error al eliminar equipo y componentes:", error);
+      res.status(500).json({ error: 'Error al eliminar equipo y componentes' });
   }
 }
+
+const path = require('path');
+const fs = require('fs');
+
+async function darDeBajaEquipo(req, res) {
+    const { equipoId } = req.params;
+
+    try {
+        const equipo = await sequelize.query(
+            `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
+            {
+                replacements: { equipoId },
+                type: sequelize.QueryTypes.SELECT,
+            }
+        );
+
+        if (!equipo.length) {
+            return res.status(400).json({ error: 'El equipo no existe.' });
+        }
+
+        const imagen = await sequelize.query(
+            `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+            {
+                replacements: { equipoId },
+                type: sequelize.QueryTypes.SELECT,
+            }
+        );
+
+        if (imagen.length) {
+            await sequelize.query(
+                `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`,
+                {
+                    replacements: { equipoId },
+                    type: sequelize.QueryTypes.DELETE,
+                }
+            );
+
+            await sequelize.query(
+                `DELETE FROM imagen WHERE id_imagen = :idImagen`,
+                {
+                    replacements: { idImagen: imagen[0].id_imagen },
+                    type: sequelize.QueryTypes.DELETE,
+                }
+            );
+
+            const imagePath = path.join(__dirname, '..', imagen[0].ruta);
+            if (fs.existsSync(imagePath)) {
+                fs.unlinkSync(imagePath); 
+            }
+        }
+
+        const computadora = await sequelize.query(
+            `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
+            {
+                replacements: { equipoId },
+                type: sequelize.QueryTypes.SELECT,
+            }
+        );
+
+        if (computadora.length) {
+            const componentes = await sequelize.query(
+                `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
+                {
+                    replacements: { equipoId },
+                    type: sequelize.QueryTypes.SELECT,
+                }
+            );
+
+            const componenteIds = componentes.map(comp => comp.id_componente);
+            if (componenteIds.length > 0) {
+                await sequelize.query(
+                    `INSERT INTO equipo_baja (id_equipo)
+                    SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
+                    {
+                        replacements: { equipoId },
+                        type: sequelize.QueryTypes.INSERT,
+                    }
+                );
+
+                await sequelize.query(
+                    `DELETE FROM componente WHERE id_computadora = :equipoId`,
+                    {
+                        replacements: { equipoId },
+                        type: sequelize.QueryTypes.DELETE,
+                    }
+                );
+
+                await sequelize.query(
+                    `DELETE FROM equipo_activo WHERE id_equipo IN (:componenteIds)`,
+                    {
+                        replacements: { componenteIds },
+                        type: sequelize.QueryTypes.DELETE,
+                    }
+                );
+
+                await sequelize.query(
+                    `DELETE FROM equipo_bodega WHERE id_equipo IN (:componenteIds)`,
+                    {
+                        replacements: { componenteIds },
+                        type: sequelize.QueryTypes.DELETE,
+                    }
+                );
+            }
+
+            await sequelize.query(
+                `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
+                {
+                    replacements: { equipoId },
+                    type: sequelize.QueryTypes.INSERT,
+                }
+            );
+
+            await sequelize.query(
+                `DELETE FROM computadora WHERE id_computadora = :equipoId`,
+                {
+                    replacements: { equipoId },
+                    type: sequelize.QueryTypes.DELETE,
+                }
+            );
+        } else {
+            await sequelize.query(
+                `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
+                {
+                    replacements: { equipoId },
+                    type: sequelize.QueryTypes.INSERT,
+                }
+            );
+        }
+
+        await sequelize.query(
+            `DELETE FROM equipo_activo WHERE id_equipo = :equipoId`,
+            {
+                replacements: { equipoId },
+                type: sequelize.QueryTypes.DELETE,
+            }
+        );
+
+        await sequelize.query(
+            `DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`,
+            {
+                replacements: { equipoId },
+                type: sequelize.QueryTypes.DELETE,
+            }
+        );
+
+        res.json({ message: 'Equipo dado de baja con éxito' });
+    } catch (error) {
+        console.error("Error al dar de baja el equipo:", error);
+        res.status(500).json({ error: 'Error al dar de baja el equipo' });
+    }
+}
+
 
 
 async function agregarEquipo(req, res) {
@@ -533,11 +717,6 @@ async function agregarComponentes(req, res) {
   }
 }
 
-
-
-const path = require('path');
-const fs = require('fs');
-
 async function uploadImage(req, res) {
   if (!req.file) {
     return res.status(400).send('No image uploaded.');
@@ -548,6 +727,77 @@ async function uploadImage(req, res) {
   res.json({ imagePath });
 }
 
+const obtenerComputadora = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const equipo = await sequelize.query(
+      `SELECT 
+         e.id_equipo,
+         e.inventario,
+         e.id_serie,
+         ea.id_usuario,
+         u.id_uso,
+         c.direccion_ip,
+         c.id_versionso,
+         c.id_versionoffice,
+         c.id_ram,
+         c.id_disco,
+         c.id_antivirus,
+         c.id_dominio,
+         p.id_periferico,
+         u.nombre AS nombre_usuario, 
+         us.nombre AS nombre_uso,
+         p.nombre AS nombre_periferico
+       FROM equipo e
+       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+       LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
+       LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
+       LEFT JOIN uso us ON u.id_uso = us.id_uso
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       LEFT JOIN marca m ON mm.id_marca = m.id_marca
+       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico       WHERE e.id_equipo = :id`,
+      {
+        replacements: { id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    const componentes = []
+
+    /* 
+    const componentes = await sequelize.query(
+      `SELECT c.*, 
+              p.nombre AS periferico, 
+              m.nombre AS marca, 
+              mo.nombre AS modelo, 
+              s.nombre AS serie 
+       FROM componente c
+       JOIN periferico p ON c.id_periferico = p.id_periferico
+       JOIN marca m ON c.id_marca = m.id_marca
+       JOIN modelo mo ON c.id_modelo = mo.id_modelo
+       JOIN serie s ON c.id_serie = s.id_serie
+       WHERE c.id_computadora = :id`,
+      {
+        replacements: { id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );*/
+
+    res.json({ equipo: equipo[0], componentes });
+  } catch (error) {
+    console.error('Error al obtener la computadora:', error);
+    res.status(500).json({ error: 'Error al obtener la computadora' });
+  }
+};
+
+
 
 module.exports = {
   contarEquiposActivos,
@@ -556,9 +806,11 @@ module.exports = {
   obtenerEquiposActivos,
   obtenerEquiposBodega,
   obtenerEquiposBaja,
+  darDeBajaEquipo,
   eliminarEquipo,
   agregarEquipo,
   actualizarEquipo,
   agregarComponentes,
-  uploadImage
+  uploadImage,
+  obtenerComputadora
 };
