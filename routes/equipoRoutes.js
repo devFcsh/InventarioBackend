@@ -11,5 +11,6 @@ router.put('/darDeBajaEquipo/:equipoId', equipoController.darDeBajaEquipo);
 router.put('/editarEquipo/:equipoId', equipoController.editarEquipo);
 router.post("/agregarActivoComputadora", equipoController.agregarEquipo);
 router.post("/agregarComponentes", equipoController.agregarComponentes);
+router.post("/gestionarComponentes", equipoController.gestionarComponentesEditados);
 router.post("/upload", upload.single("image"), equipoController.uploadImage);
 module.exports = router;

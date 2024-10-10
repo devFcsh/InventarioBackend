@@ -626,7 +626,7 @@ async function actualizarEquipo(req, res) {
 
   try {
     await sequelize.query(
-      `UPDATE equipo SET inventario = :inventario, id_serie = :serie WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
       {
         replacements: { equipoId, inventario, serie },
         type: sequelize.QueryTypes.UPDATE,
@@ -660,6 +660,88 @@ async function actualizarEquipo(req, res) {
     res.status(500).json({ error: 'Error al actualizar equipo' });
   }
 }
+
+
+
+const obtenerComputadora = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const equipo = await sequelize.query(
+      `SELECT 
+         e.id_equipo,
+         e.inventario,
+         e.id_serie,
+         ea.id_usuario,
+         u.id_uso,
+         c.nombre_equipo,
+         c.direccion_ip,
+         c.id_versionso,
+         c.id_versionoffice,
+         c.id_ram,
+         c.id_disco,
+         c.id_antivirus,
+         c.id_dominio,
+         p.id_periferico,
+         m.id_marca,
+         s.id_serie,
+         mm.id_modelo,
+         a.id_aula,
+         a.id_edificio,
+         i.ruta AS imagenRuta,
+         vso.id_sistemaoperativo
+       FROM equipo e
+       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+       LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
+       LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
+       LEFT JOIN uso us ON u.id_uso = us.id_uso
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       LEFT JOIN marca m ON mm.id_marca = m.id_marca
+       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       JOIN version_SO vso ON vso.id_versionso = c.id_versionso
+       JOIN aula a ON ea.id_aula = a.id_aula
+       JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
+       JOIN imagen i ON i.id_imagen = ei.id_imagen
+       WHERE e.id_equipo = :id`,
+      {
+        replacements: { id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    const componentes = await sequelize.query(
+      `SELECT c.id_componente, 
+              e.inventario, 
+              p.nombre AS periferico, 
+              m.nombre AS marca, 
+              mo.nombre AS modelo, 
+              s.nombre AS serie 
+       FROM componente c
+       JOIN equipo e ON c.id_componente = e.id_equipo
+       JOIN periferico p ON e.id_serie = p.id_periferico
+       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       JOIN marca m ON mm.id_marca = m.id_marca
+       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
+       JOIN serie s ON e.id_serie = s.id_serie
+       WHERE c.id_computadora = :id`,
+      {
+        replacements: { id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    
+    res.json({ equipo: equipo[0], componentes });
+  } catch (error) {
+    console.error('Error al obtener la computadora:', error);
+    res.status(500).json({ error: 'Error al obtener la computadora' });
+  }
+};
 
 async function agregarComponentes(req, res) {
   const { equipoId, componentes, aulaId, usuarioId, imagenRuta } = req.body;
@@ -727,86 +809,6 @@ async function uploadImage(req, res) {
   res.json({ imagePath });
 }
 
-const obtenerComputadora = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const equipo = await sequelize.query(
-      `SELECT 
-         e.id_equipo,
-         e.inventario,
-         e.id_serie,
-         ea.id_usuario,
-         u.id_uso,
-         c.nombre_equipo,
-         c.direccion_ip,
-         c.id_versionso,
-         c.id_versionoffice,
-         c.id_ram,
-         c.id_disco,
-         c.id_antivirus,
-         c.id_dominio,
-         p.id_periferico,
-         m.id_marca,
-         s.id_serie,
-         mm.id_modelo,
-         a.id_aula,
-         a.id_edificio,
-         i.ruta,
-         vso.id_sistemaoperativo
-       FROM equipo e
-       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
-       LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
-       LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
-       LEFT JOIN uso us ON u.id_uso = us.id_uso
-       LEFT JOIN serie s ON e.id_serie = s.id_serie
-       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       LEFT JOIN marca m ON mm.id_marca = m.id_marca
-       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
-       JOIN version_SO vso ON vso.id_versionso = c.id_versionso
-       JOIN aula a ON ea.id_aula = a.id_aula
-       JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
-       JOIN imagen i ON i.id_imagen = ei.id_imagen
-       WHERE e.id_equipo = :id`,
-      {
-        replacements: { id },
-        type: sequelize.QueryTypes.SELECT,
-      }
-    );
-
-    if (!equipo.length) {
-      return res.status(404).json({ error: 'Equipo no encontrado' });
-    }
-
-    const componentes = await sequelize.query(
-      `SELECT c.id_componente, 
-              e.inventario, 
-              p.nombre AS periferico, 
-              m.nombre AS marca, 
-              mo.nombre AS modelo, 
-              s.nombre AS serie 
-       FROM componente c
-       JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN periferico p ON e.id_serie = p.id_periferico
-       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
-       JOIN serie s ON e.id_serie = s.id_serie
-       WHERE c.id_computadora = :id`,
-      {
-        replacements: { id },
-        type: sequelize.QueryTypes.SELECT,
-      }
-    );
-    
-    res.json({ equipo: equipo[0], componentes });
-  } catch (error) {
-    console.error('Error al obtener la computadora:', error);
-    res.status(500).json({ error: 'Error al obtener la computadora' });
-  }
-};
-
 async function editarEquipo(req, res) {
     const { equipoId } = req.params;
     const {
@@ -816,12 +818,13 @@ async function editarEquipo(req, res) {
         id_versionoffice,
         id_antivirus,
         id_dominio,
+        id_serie,
+        inventario,
         nombre_equipo,
-        direccion_ip, 
+        direccion_ip,
         id_usuario,
         id_aula,
-        componentes,
-        nuevaImagen 
+        imagenRuta 
     } = req.body;
 
     try {
@@ -837,7 +840,7 @@ async function editarEquipo(req, res) {
             return res.status(400).json({ error: 'El equipo no existe.' });
         }
 
-        if (nuevaImagen) {
+        if (imagenRuta) {
             const imagenActual = await sequelize.query(
                 `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
                 {
@@ -848,9 +851,9 @@ async function editarEquipo(req, res) {
 
             if (imagenActual.length) {
                 await sequelize.query(
-                    `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`,
+                    `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
                     {
-                        replacements: { equipoId },
+                        replacements: { idImagen: imagenActual[0].id_imagen },
                         type: sequelize.QueryTypes.DELETE,
                     }
                 );
@@ -870,9 +873,9 @@ async function editarEquipo(req, res) {
             }
 
             const [result] = await sequelize.query(
-                `INSERT INTO imagen (ruta) VALUES (:ruta)`,
+                `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
                 {
-                    replacements: { ruta: nuevaImagen },
+                    replacements: { imagenRuta },
                     type: sequelize.QueryTypes.INSERT,
                 }
             );
@@ -889,9 +892,17 @@ async function editarEquipo(req, res) {
         }
 
         await sequelize.query(
+            `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
+            {
+                replacements: { equipoId, inventario, id_serie },
+                type: sequelize.QueryTypes.UPDATE,
+            }
+        );
+
+        await sequelize.query(
             `UPDATE computadora SET
                 nombre_equipo = :nombre_equipo,
-                direccion_ip = :direccion_ip, -- Dejar vacío si es dinámica
+                direccion_ip = :direccion_ip,
                 id_versionso = :id_versionso,
                 id_versionoffice = :id_versionoffice,
                 id_ram = :id_ram,
@@ -930,76 +941,103 @@ async function editarEquipo(req, res) {
             }
         );
 
-        const componentesActuales = await sequelize.query(
-            `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
-            {
-                replacements: { equipoId },
-                type: sequelize.QueryTypes.SELECT,
-            }
-        );
-
-        const componentesIdsActuales = componentesActuales.map(comp => comp.id_componente);
-        const componentesIdsNuevos = componentes.map(comp => comp.id_componente);
-
-        const idsAEliminar = componentesIdsActuales.filter(id => !componentesIdsNuevos.includes(id));
-
-        if (idsAEliminar.length > 0) {
-            await sequelize.query(
-                `DELETE FROM componente WHERE id_componente IN (:idsAEliminar)`,
-                {
-                    replacements: { idsAEliminar },
-                    type: sequelize.QueryTypes.DELETE,
-                }
-            );
-        }
-
-        for (const componente of componentes) {
-            if (componente.id_componente) {
-                await sequelize.query(
-                    `UPDATE componente SET
-                        id_periferico = :id_periferico,
-                        id_marca = :id_marca,
-                        id_modelo = :id_modelo,
-                        id_serie = :id_serie,
-                        inventario = :inventario
-                    WHERE id_componente = :id_componente`,
-                    {
-                        replacements: {
-                            id_componente: componente.id_componente,
-                            id_periferico: componente.periferico.id_periferico,
-                            id_marca: componente.marca.id_marca,
-                            id_modelo: componente.modelo.id_modelo,
-                            id_serie: componente.serie.id_serie,
-                            inventario: componente.inventario
-                        },
-                        type: sequelize.QueryTypes.UPDATE,
-                    }
-                );
-            } else {
-                await sequelize.query(
-                    `INSERT INTO componente (id_computadora, id_periferico, id_marca, id_modelo, id_serie, inventario)
-                    VALUES (:equipoId, :id_periferico, :id_marca, :id_modelo, :id_serie, :inventario)`,
-                    {
-                        replacements: {
-                            equipoId,
-                            id_periferico: componente.periferico.id_periferico,
-                            id_marca: componente.marca.id_marca,
-                            id_modelo: componente.modelo.id_modelo,
-                            id_serie: componente.serie.id_serie,
-                            inventario: componente.inventario
-                        },
-                        type: sequelize.QueryTypes.INSERT,
-                    }
-                );
-            }
-        }
-
         res.json({ message: 'Equipo actualizado con éxito' });
     } catch (error) {
         console.error("Error al actualizar el equipo:", error);
         res.status(500).json({ error: 'Error al actualizar el equipo' });
     }
 }
+
+async function gestionarComponentesEditados(req, res) {
+  const { equipoId, componentes, aulaId, usuarioId, imagenRuta } = req.body;
+
+  try {
+    const componentesActuales = await sequelize.query(
+      `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    console.log(componentes)
+
+    const componentesIdsActuales = componentesActuales.map(comp => comp.id_componente);
+    const componentesIdsNuevos = componentes.map(comp => comp.id_componente).filter(id => id !== undefined);
+
+    const idsAEliminar = componentesIdsActuales.filter(id => !componentesIdsNuevos.includes(id));
+
+    console.log(componentes)
+    console.log(componentesIdsActuales)
+    console.log(componentesIdsNuevos)
+    console.log(idsAEliminar)
+
+    if (idsAEliminar.length > 0) {
+      await sequelize.query(
+        `DELETE FROM componente WHERE id_componente IN (:idsAEliminar)`,
+        {
+          replacements: { idsAEliminar },
+          type: sequelize.QueryTypes.DELETE,
+        }
+      );
+    }
+    for (const componente of componentes) {
+      if (componente.id_componente) {
+        // Componente existente
+      } else {
+        const result = await sequelize.query(
+          `INSERT INTO equipo (inventario, id_serie) VALUES (:inventario, :serieId)`,
+          {
+            replacements: {
+              inventario: componente.inventario,
+              serieId: componente.serieId,
+            },
+          }
+        );
+
+        const idComponente = result[0];
+
+        await sequelize.query(
+          `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId)`,
+          {
+            replacements: {
+              idComponente,
+              equipoId,
+            },
+          }
+        );
+
+        await sequelize.query(
+          `INSERT INTO equipo_activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId)`,
+          {
+            replacements: {
+              idComponente,
+              aulaId,
+              usuarioId,
+            },
+          }
+        );
+
+        await sequelize.query(
+          `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta))`,
+          {
+            replacements: {
+              idComponente,
+              imagenRuta,
+            },
+          }
+        );
+      }
+    }
+
+    res.json({ message: "Componentes gestionados correctamente" });
+  } catch (error) {
+    console.error("Error al gestionar componentes:", error);
+    res.status(500).json({ error: "Error al gestionar componentes" });
+  }
+}
+
+
 
 
 module.exports = {
@@ -1016,5 +1054,6 @@ module.exports = {
   agregarComponentes,
   uploadImage,
   obtenerComputadora,
-  editarEquipo
+  editarEquipo,
+  gestionarComponentesEditados
 };
