@@ -1,4 +1,4 @@
-const sequelize = require("../models/index.js").sequelize;
+import { sequelize } from "../models/index.js";
 
 async function contarEquiposActivos(req, res) {
   const {
@@ -386,8 +386,8 @@ async function eliminarEquipo(req, res) {
   }
 }
 
-const path = require('path');
-const fs = require('fs');
+import { join } from 'path';
+import { existsSync, unlinkSync } from 'fs';
 
 async function darDeBajaEquipo(req, res) {
     const { equipoId } = req.params;
@@ -430,9 +430,9 @@ async function darDeBajaEquipo(req, res) {
                 }
             );
 
-            const imagePath = path.join(__dirname, '..', imagen[0].ruta);
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath); 
+            const imagePath = join(__dirname, '..', imagen[0].ruta);
+            if (existsSync(imagePath)) {
+                unlinkSync(imagePath); 
             }
         }
 
@@ -804,7 +804,7 @@ async function uploadImage(req, res) {
     return res.status(400).send('No image uploaded.');
   }
 
-  const imagePath = path.join('/uploads', req.file.filename);
+  const imagePath = join('/uploads', req.file.filename);
 
   res.json({ imagePath });
 }
@@ -866,9 +866,9 @@ async function editarEquipo(req, res) {
                     }
                 );
 
-                const imagePath = path.join(__dirname, '..', imagenActual[0].ruta);
-                if (fs.existsSync(imagePath)) {
-                    fs.unlinkSync(imagePath);
+                const imagePath = join(__dirname, '..', imagenActual[0].ruta);
+                if (existsSync(imagePath)) {
+                    unlinkSync(imagePath);
                 }
             }
 
@@ -1040,7 +1040,7 @@ async function gestionarComponentesEditados(req, res) {
 
 
 
-module.exports = {
+export default {
   contarEquiposActivos,
   contarEquiposBodega,
   contarEquiposBaja,

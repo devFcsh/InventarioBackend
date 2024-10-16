@@ -1,4 +1,4 @@
-const { periferico } = require('../models'); 
+import { periferico } from '../models'; 
 
 async function obtenerPerifericos(req, res) {
   try {
@@ -14,6 +14,6 @@ async function obtenerPerifericos(req, res) {
   }
 }
 
-module.exports = {
+export default {
   obtenerPerifericos,
 };

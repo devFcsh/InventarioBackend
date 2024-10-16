@@ -1,5 +1,5 @@
-const sequelize = require('../models/index.js').sequelize;
-const { modelo } = require('../models'); 
+import { sequelize } from '../models/index.js';
+import { modelo } from '../models'; 
 
 async function obtenerModelos(req, res) {
     try {
@@ -43,7 +43,7 @@ async function modelosPorMarcaPeriferico(req, res) {
   }
 };
 
-module.exports = {
+export default {
   modelosPorMarcaPeriferico,
   obtenerModelos,
   };

@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const perifericoController = require('../controllers/perifericoController');
+import { Router } from 'express';
+const router = Router();
+import { obtenerPerifericos } from '../controllers/perifericoController';
 
-router.get('/', perifericoController.obtenerPerifericos);
+router.get('/', obtenerPerifericos);
 
-module.exports = router;
+export default router;

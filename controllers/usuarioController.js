@@ -1,4 +1,4 @@
-const { sequelize } = require('../models');
+import { sequelize } from '../models';
 
 async function obtenerUsuariosPorUso(req, res) {
   const { idUso } = req.params;
@@ -30,6 +30,6 @@ async function obtenerUsuariosPorUso(req, res) {
   }
 }
 
-module.exports = {
+export default {
   obtenerUsuariosPorUso,
 };

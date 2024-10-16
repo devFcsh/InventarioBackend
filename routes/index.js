@@ -1,22 +1,22 @@
-const express = require('express');
-const router = express.Router();
+import { Router } from 'express';
+const router = Router();
 
-const perifericos = require('./perifericoRoutes');
-const marcas = require('./marcaRoutes');
-const modelos = require('./modeloRoutes');
-const series = require('./serieRoutes');
-const inventarios = require('./inventarioRoutes');
-const equipos = require('./equipoRoutes');
-const usos = require('./usoRoutes'); 
-const usuarios = require('./usuarioRoutes'); 
-const discos = require('./discoRoutes'); 
-const dominios = require('./dominioRoutes'); 
-const ram = require('./ramRoutes'); 
-const sistemasoperativos = require('./sistemaOperativoRoutes'); 
-const versionesSO = require('./versionSORoutes'); 
-const versionesOffice = require('./versionOfficeRoutes'); 
-const edificios = require('./edificioRoutes'); 
-const aulas = require('./aulaRoutes'); 
+import perifericos from './perifericoRoutes';
+import marcas from './marcaRoutes';
+import modelos from './modeloRoutes';
+import series from './serieRoutes';
+import inventarios from './inventarioRoutes';
+import equipos from './equipoRoutes';
+import usos from './usoRoutes'; 
+import usuarios from './usuarioRoutes'; 
+import discos from './discoRoutes'; 
+import dominios from './dominioRoutes'; 
+import ram from './ramRoutes'; 
+import sistemasoperativos from './sistemaOperativoRoutes'; 
+import versionesSO from './versionSORoutes'; 
+import versionesOffice from './versionOfficeRoutes'; 
+import edificios from './edificioRoutes'; 
+import aulas from './aulaRoutes'; 
 
 router.use('/perifericos', perifericos);
 router.use('/marcas', marcas);
@@ -35,4 +35,4 @@ router.use('/versionesOffice', versionesOffice);
 router.use('/edificios', edificios);  
 router.use('/aulas', aulas);  
 
-module.exports = router;
+export default router;

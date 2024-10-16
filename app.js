@@ -1,7 +1,7 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const routes = require('./routes');
+import express from 'express';
+import { json } from 'body-parser';
+import cors from 'cors';
+import routes from './routes';
 
 const app = express(); 
 
@@ -9,12 +9,12 @@ app.use(cors({
   origin: 'http://localhost:5173',
 }));
 
-app.use(bodyParser.json());
+app.use(json());
 
 app.use('/api', routes);
 
-const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+import { join } from 'path';
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
 
-module.exports = app;
+export default app;

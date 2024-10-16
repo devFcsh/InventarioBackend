@@ -1,4 +1,4 @@
-const { version_office } = require('../models');
+import { version_office } from '../models';
 
 async function obtenerVersionesOffice(req, res) {
 
@@ -15,6 +15,6 @@ async function obtenerVersionesOffice(req, res) {
   }
 }
 
-module.exports = {
+export default {
     obtenerVersionesOffice,
 };

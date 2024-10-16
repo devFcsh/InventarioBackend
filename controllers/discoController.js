@@ -1,4 +1,4 @@
-const { disco } = require('../models'); 
+import { disco } from '../models'; 
 
 async function obtenerDiscos(req, res) {
   try {
@@ -14,6 +14,6 @@ async function obtenerDiscos(req, res) {
   }
 }
 
-module.exports = {
+export default {
   obtenerDiscos,
 };

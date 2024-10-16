@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const inventarioController = require('../controllers/inventarioController'); 
+import { Router } from 'express';
+const router = Router();
+import { inventarioPorSerie } from '../controllers/inventarioController'; 
 
-router.get('/inventariosPorSerie', inventarioController.inventarioPorSerie);
+router.get('/inventariosPorSerie', inventarioPorSerie);
 
-module.exports = router;
+export default router;

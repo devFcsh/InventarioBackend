@@ -1,4 +1,4 @@
-const { sistema_operativo } = require('../models'); 
+import { sistema_operativo } from '../models'; 
 
 async function obtenerSO(req, res) {
   try {
@@ -14,6 +14,6 @@ async function obtenerSO(req, res) {
   }
 }
 
-module.exports = {
+export default {
     obtenerSO,
 };

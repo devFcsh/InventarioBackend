@@ -1,4 +1,4 @@
-const { dominio } = require('../models'); 
+import { dominio } from '../models'; 
 
 async function obtenerDominios(req, res) {
   try {
@@ -14,6 +14,6 @@ async function obtenerDominios(req, res) {
   }
 }
 
-module.exports = {
+export default {
     obtenerDominios,
 };

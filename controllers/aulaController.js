@@ -1,4 +1,4 @@
-const { aula } = require('../models');
+import { aula } from '../models';
 
 async function obtenerAulas(req, res) {
   const { id_edificio } = req.params; 
@@ -19,6 +19,6 @@ async function obtenerAulas(req, res) {
   }
 }
 
-module.exports = {
+export default {
     obtenerAulas,
 };

@@ -1,4 +1,4 @@
-const sequelize = require('../models/index.js').sequelize;
+import { sequelize } from '../models/index.js';
 
 async function inventarioPorSerie(req, res) {
     const { perifericoId, marcaId, modeloId, serieId } = req.query;
@@ -34,6 +34,6 @@ AND (:serieId IS NULL OR ms.id_serie = :serieId);
     }
   };
 
-module.exports = {
+export default {
     inventarioPorSerie,
   };

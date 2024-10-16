@@ -1,4 +1,4 @@
-const { edificio } = require('../models');
+import { edificio } from '../models';
 
 async function obtenerEdificios(req, res) {
 
@@ -15,6 +15,6 @@ async function obtenerEdificios(req, res) {
   }
 }
 
-module.exports = {
+export default {
     obtenerEdificios,
 };

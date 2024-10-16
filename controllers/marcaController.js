@@ -1,5 +1,5 @@
-const { sequelize } = require('../models'); 
-const { marca } = require('../models'); 
+import { sequelize } from '../models'; 
+import { marca } from '../models'; 
 
 async function obtenerMarcas(req, res) {
   try {
@@ -47,7 +47,7 @@ async function obtenerMarcasPorPeriferico(req, res) {
   }
 }
 
-module.exports = {
+export default {
     obtenerMarcasPorPeriferico,
     obtenerMarcas,
   };

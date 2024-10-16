@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const versionOfficeController = require('../controllers/versionOfficeController');
+import { Router } from 'express';
+const router = Router();
+import { obtenerVersionesOffice } from '../controllers/versionOfficeController';
 
-router.get('/', versionOfficeController.obtenerVersionesOffice);
+router.get('/', obtenerVersionesOffice);
 
-module.exports = router;
+export default router;

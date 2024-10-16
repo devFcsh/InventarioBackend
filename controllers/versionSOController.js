@@ -1,4 +1,4 @@
-const { version_so } = require('../models');
+import { version_so } from '../models';
 
 async function obtenerVersionesSO(req, res) {
   const { id_sistemaoperativo } = req.params; 
@@ -19,6 +19,6 @@ async function obtenerVersionesSO(req, res) {
   }
 }
 
-module.exports = {
+export default {
     obtenerVersionesSO,
 };

@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const discoController = require('../controllers/discoController');
+import { Router } from 'express';
+const router = Router();
+import { obtenerDiscos } from '../controllers/discoController';
 
-router.get('/', discoController.obtenerDiscos);
+router.get('/', obtenerDiscos);
 
-module.exports = router;
+export default router;

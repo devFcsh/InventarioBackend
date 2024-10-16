@@ -1,4 +1,4 @@
-const { sequelize } = require('../models');
+import { sequelize } from '../models';
 
 async function obtenerUsos(req, res) {
   try {
@@ -18,6 +18,6 @@ async function obtenerUsos(req, res) {
   }
 }
 
-module.exports = {
+export default {
   obtenerUsos,
 };

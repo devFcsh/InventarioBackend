@@ -1,8 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const serieController = require('../controllers/serieController'); 
+import { Router } from 'express';
+const router = Router();
+import { obtenerSeries, seriesPorModelo } from '../controllers/serieController'; 
 
-router.get('/', serieController.obtenerSeries);
-router.get('/seriesPorModelo', serieController.seriesPorModelo);
+router.get('/', obtenerSeries);
+router.get('/seriesPorModelo', seriesPorModelo);
 
-module.exports = router;
+export default router;

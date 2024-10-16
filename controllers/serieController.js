@@ -1,5 +1,5 @@
-const sequelize = require('../models/index.js').sequelize;
-const { serie } = require('../models'); 
+import { sequelize } from '../models/index.js';
+import { serie } from '../models'; 
 
 async function obtenerSeries(req, res) {
   try {
@@ -46,7 +46,7 @@ async function seriesPorModelo(req, res) {
     }
   };  
 
-module.exports = {
+export default {
     seriesPorModelo,
     obtenerSeries,
   };

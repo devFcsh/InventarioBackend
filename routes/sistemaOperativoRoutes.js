@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const sistemaOperativoController = require('../controllers/sistemaOperativoController');
+import { Router } from 'express';
+const router = Router();
+import { obtenerSO } from '../controllers/sistemaOperativoController';
 
-router.get('/', sistemaOperativoController.obtenerSO);
+router.get('/', obtenerSO);
 
-module.exports = router;
+export default router;

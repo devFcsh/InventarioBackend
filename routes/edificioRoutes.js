@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const edificioController = require('../controllers/edificioController');
+import { Router } from 'express';
+const router = Router();
+import { obtenerEdificios } from '../controllers/edificioController';
 
-router.get('/', edificioController.obtenerEdificios);
+router.get('/', obtenerEdificios);
 
-module.exports = router;
+export default router;

@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const ramController = require('../controllers/ramController');
+import { Router } from 'express';
+const router = Router();
+import { obtenerRAM } from '../controllers/ramController';
 
-router.get('/', ramController.obtenerRAM);
+router.get('/', obtenerRAM);
 
-module.exports = router;
+export default router;

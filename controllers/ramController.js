@@ -1,4 +1,4 @@
-const { ram } = require('../models'); 
+import { ram } from '../models'; 
 
 async function obtenerRAM(req, res) {
   try {
@@ -14,6 +14,6 @@ async function obtenerRAM(req, res) {
   }
 }
 
-module.exports = {
+export default {
   obtenerRAM,
 };

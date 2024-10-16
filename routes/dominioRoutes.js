@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const dominioController = require('../controllers/dominioController');
+import { Router } from 'express';
+const router = Router();
+import { obtenerDominios } from '../controllers/dominioController';
 
-router.get('/', dominioController.obtenerDominios);
+router.get('/', obtenerDominios);
 
-module.exports = router;
+export default router;

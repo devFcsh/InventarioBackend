@@ -1,8 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const modeloController = require('../controllers/modeloController'); 
+import { Router } from 'express';
+const router = Router();
+import { obtenerModelos, modelosPorMarcaPeriferico } from '../controllers/modeloController'; 
 
-router.get('/', modeloController.obtenerModelos);
-router.get('/modelosPorMarcaPeriferico', modeloController.modelosPorMarcaPeriferico);
+router.get('/', obtenerModelos);
+router.get('/modelosPorMarcaPeriferico', modelosPorMarcaPeriferico);
 
-module.exports = router;
+export default router;
