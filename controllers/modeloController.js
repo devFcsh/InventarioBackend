@@ -1,7 +1,8 @@
-import { sequelize } from '../models/index.js';
-import { modelo } from '../models'; 
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
+import  modelo  from '../models/modelo.js'; 
 
-async function obtenerModelos(req, res) {
+export async function obtenerModelos(req, res) {
     try {
       const modelos = await modelo.findAll({
         attributes: ['id_modelo', 'nombre'] 
@@ -15,11 +16,11 @@ async function obtenerModelos(req, res) {
     }
 }
 
-async function modelosPorMarcaPeriferico(req, res) {
+export async function modelosPorMarcaPeriferico(req, res) {
   const { marcaId, perifericoId } = req.query;
 
   try {
-      const modelos = await sequelize.query(
+      const modelos = await db.query(
           `SELECT mo.id_modelo, mo.nombre 
           FROM modelo mo
           JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
@@ -27,7 +28,7 @@ async function modelosPorMarcaPeriferico(req, res) {
           WHERE mp.id_marca = :marcaId AND mp.id_periferico = :perifericoId`,
           {
               replacements: { marcaId, perifericoId },
-              type: sequelize.QueryTypes.SELECT
+              type: QueryTypes.SELECT
           }
       );
 
@@ -43,7 +44,3 @@ async function modelosPorMarcaPeriferico(req, res) {
   }
 };
 
-export default {
-  modelosPorMarcaPeriferico,
-  obtenerModelos,
-  };

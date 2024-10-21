@@ -1,6 +1,6 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerDiscos } from '../controllers/discoController';
+import { obtenerDiscos } from '../controllers/discoController.js';
 
 router.get('/', obtenerDiscos);
 

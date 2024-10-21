@@ -1,6 +1,7 @@
-import { sequelize } from '../models/index.js';
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 
-async function inventarioPorSerie(req, res) {
+export async function inventarioPorSerie(req, res) {
     const { perifericoId, marcaId, modeloId, serieId } = req.query;
 
     try {
@@ -17,14 +18,14 @@ AND (:modeloId IS NULL OR mm.id_modelo = :modeloId)
 AND (:serieId IS NULL OR ms.id_serie = :serieId);
       `;
   
-      const inventarios = await sequelize.query(query, {
+      const inventarios = await db.query(query, {
         replacements: {
           perifericoId: perifericoId || null,
           marcaId: marcaId || null,
           modeloId: modeloId || null,
           serieId: serieId || null,
         },
-        type: sequelize.QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
       });
   
       res.json(inventarios);
@@ -32,8 +33,4 @@ AND (:serieId IS NULL OR ms.id_serie = :serieId);
       console.error('Error al obtener inventarios:', error);
       res.status(500).json({ error: 'Error al obtener inventarios' });
     }
-  };
-
-export default {
-    inventarioPorSerie,
   };

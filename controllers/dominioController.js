@@ -1,6 +1,6 @@
-import { dominio } from '../models'; 
+import  dominio  from '../models/dominio.js'; 
 
-async function obtenerDominios(req, res) {
+export async function obtenerDominios(req, res) {
   try {
     const dominios = await dominio.findAll({
       attributes: ['id_dominio', 'nombre'] 
@@ -14,6 +14,3 @@ async function obtenerDominios(req, res) {
   }
 }
 
-export default {
-    obtenerDominios,
-};

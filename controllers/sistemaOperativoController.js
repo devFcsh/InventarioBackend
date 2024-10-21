@@ -1,6 +1,6 @@
-import { sistema_operativo } from '../models'; 
+import  sistema_operativo  from '../models/sistema_operativo.js'; 
 
-async function obtenerSO(req, res) {
+export async function obtenerSO(req, res) {
   try {
     const SOs = await sistema_operativo.findAll({
       attributes: ['id_sistemaoperativo', 'nombre'] 
@@ -14,6 +14,3 @@ async function obtenerSO(req, res) {
   }
 }
 
-export default {
-    obtenerSO,
-};

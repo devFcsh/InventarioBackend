@@ -1,5 +1,6 @@
-const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+import { DataTypes } from 'sequelize';
+
+export default (sequelize) => {
   return sequelize.define('computadora', {
     id_computadora: {
       type: DataTypes.INTEGER,

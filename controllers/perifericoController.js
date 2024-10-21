@@ -1,8 +1,8 @@
-import { periferico } from '../models'; 
+import  periferico_modelo  from '../models/periferico_modelo.js'; 
 
-async function obtenerPerifericos(req, res) {
+export async function obtenerPerifericos(req, res) {
   try {
-    const perifericos = await periferico.findAll({
+    const perifericos = await periferico_modelo.findAll({
       attributes: ['id_periferico', 'nombre'] 
     });
 
@@ -13,7 +13,3 @@ async function obtenerPerifericos(req, res) {
     return res.status(500).json({ error: 'Error al obtener los perifericos' });
   }
 }
-
-export default {
-  obtenerPerifericos,
-};

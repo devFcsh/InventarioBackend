@@ -1,6 +1,7 @@
-import { sequelize } from "../models/index.js";
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 
-async function contarEquiposActivos(req, res) {
+export async function contarEquiposActivos(req, res) {
   const {
     perifericoId,
     marcaId,
@@ -29,7 +30,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   AND (:serieId IS NULL OR s.id_serie = :serieId)
   AND (:inventario IS NULL OR e.inventario = :inventario);`;
 
-    const equipos = await sequelize.query(query, {
+    const equipos = await db.query(query, {
       replacements: {
         perifericoId: perifericoId || null,
         marcaId: marcaId || null,
@@ -37,7 +38,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
         serieId: serieId || null,
         inventario: inventario || null,
       },
-      type: sequelize.QueryTypes.SELECT,
+      type: QueryTypes.SELECT,
     });
 
     res.json(equipos);
@@ -47,7 +48,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   }
 }
 
-async function contarEquiposBodega(req, res) {
+export async function contarEquiposBodega(req, res) {
   const {
     perifericoId,
     marcaId,
@@ -75,7 +76,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   AND (:serieId IS NULL OR s.id_serie = :serieId)
   AND (:inventario IS NULL OR e.inventario = :inventario);`;
 
-    const equipos = await sequelize.query(query, {
+    const equipos = await db.query(query, {
       replacements: {
         perifericoId: perifericoId || null,
         marcaId: marcaId || null,
@@ -83,7 +84,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
         serieId: serieId || null,
         inventario: inventario || null,
       },
-      type: sequelize.QueryTypes.SELECT,
+      type: QueryTypes.SELECT,
     });
 
     res.json(equipos);
@@ -93,7 +94,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   }
 }
 
-async function contarEquiposBaja(req, res) {
+export async function contarEquiposBaja(req, res) {
   const {
     perifericoId,
     marcaId,
@@ -121,7 +122,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   AND (:serieId IS NULL OR s.id_serie = :serieId)
   AND (:inventario IS NULL OR e.inventario = :inventario);`;
 
-    const equipos = await sequelize.query(query, {
+    const equipos = await db.query(query, {
       replacements: {
         perifericoId: perifericoId || null,
         marcaId: marcaId || null,
@@ -129,7 +130,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
         serieId: serieId || null,
         inventario: inventario || null,
       },
-      type: sequelize.QueryTypes.SELECT,
+      type: QueryTypes.SELECT,
     });
 
     res.json(equipos);
@@ -139,7 +140,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   }
 }
 
-async function obtenerEquiposActivos(req, res) {
+export async function obtenerEquiposActivos(req, res) {
   const {
     perifericoId,
     marcaId,
@@ -183,7 +184,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
 LIMIT :limit OFFSET :offset;
 `;
 
-    const equipos = await sequelize.query(query, {
+    const equipos = await db.query(query, {
       replacements: {
         perifericoId: perifericoId || null,
         marcaId: marcaId || null,
@@ -193,7 +194,7 @@ LIMIT :limit OFFSET :offset;
         limit: parseInt(limit, 10) || 10,
         offset: parseInt(offset, 10) || 0,
       },
-      type: sequelize.QueryTypes.SELECT,
+      type: QueryTypes.SELECT,
     });
 
     res.json(equipos);
@@ -203,7 +204,7 @@ LIMIT :limit OFFSET :offset;
   }
 }
 
-async function obtenerEquiposBodega(req, res) {
+export async function obtenerEquiposBodega(req, res) {
   const {
     perifericoId,
     marcaId,
@@ -238,7 +239,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   AND (:inventario IS NULL OR e.inventario = :inventario)
 LIMIT :limit OFFSET :offset;`;
 
-    const equipos = await sequelize.query(query, {
+    const equipos = await db.query(query, {
       replacements: {
         perifericoId: perifericoId || null,
         marcaId: marcaId || null,
@@ -248,7 +249,7 @@ LIMIT :limit OFFSET :offset;`;
         limit: parseInt(limit, 10) || 10,
         offset: parseInt(offset, 10) || 0,
       },
-      type: sequelize.QueryTypes.SELECT,
+      type: QueryTypes.SELECT,
     });
 
     res.json(equipos);
@@ -258,7 +259,7 @@ LIMIT :limit OFFSET :offset;`;
   }
 }
 
-async function obtenerEquiposBaja(req, res) {
+export async function obtenerEquiposBaja(req, res) {
   const {
     perifericoId,
     marcaId,
@@ -293,7 +294,7 @@ WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
   AND (:inventario IS NULL OR e.inventario = :inventario)
 LIMIT :limit OFFSET :offset;`;
 
-    const equipos = await sequelize.query(query, {
+    const equipos = await db.query(query, {
       replacements: {
         perifericoId: perifericoId || null,
         marcaId: marcaId || null,
@@ -303,7 +304,7 @@ LIMIT :limit OFFSET :offset;`;
         limit: parseInt(limit, 10) || 10,
         offset: parseInt(offset, 10) || 0,
       },
-      type: sequelize.QueryTypes.SELECT,
+      type: QueryTypes.SELECT,
     });
 
     res.json(equipos);
@@ -313,15 +314,15 @@ LIMIT :limit OFFSET :offset;`;
   }
 }
 
-async function eliminarEquipo(req, res) {
+export async function eliminarEquipo(req, res) {
   const { equipoId } = req.params;
 
   try {
-      const equipo = await sequelize.query(
+      const equipo = await db.query(
           `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
           {
               replacements: { equipoId },
-              type: sequelize.QueryTypes.SELECT,
+              type: QueryTypes.SELECT,
           }
       );
 
@@ -329,40 +330,40 @@ async function eliminarEquipo(req, res) {
           return res.status(400).json({ error: 'El equipo no existe.' });
       }
 
-      const computadora = await sequelize.query(
+      const computadora = await db.query(
         `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
         {
             replacements: { equipoId },
-            type: sequelize.QueryTypes.SELECT,
+            type: QueryTypes.SELECT,
         }
     );
 
     if (computadora.length) {
         
-      const componentes = await sequelize.query(
+      const componentes = await db.query(
         `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
         {
             replacements: { equipoId },
-            type: sequelize.QueryTypes.SELECT,
+            type: QueryTypes.SELECT,
         }
     );
 
     const componenteIds = componentes.map(comp => comp.id_componente);
 
-    await sequelize.query(
+    await db.query(
         `DELETE FROM componente WHERE id_computadora = :equipoId`,
         {
             replacements: { equipoId },
-            type: sequelize.QueryTypes.DELETE,
+            type: QueryTypes.DELETE,
         }
     );
 
     if (componenteIds.length > 0) {
-        await sequelize.query(
+        await db.query(
             `DELETE FROM equipo WHERE id_equipo IN (:componenteIds)`,
             {
                 replacements: { componenteIds },
-                type: sequelize.QueryTypes.DELETE,
+                type: QueryTypes.DELETE,
             }
         );
     }
@@ -371,11 +372,11 @@ async function eliminarEquipo(req, res) {
     }
 
      
-      await sequelize.query(
+      await db.query(
           `DELETE FROM equipo WHERE id_equipo = :equipoId`,
           {
               replacements: { equipoId },
-              type: sequelize.QueryTypes.DELETE,
+              type: QueryTypes.DELETE,
           }
       );
 
@@ -389,15 +390,15 @@ async function eliminarEquipo(req, res) {
 import { join } from 'path';
 import { existsSync, unlinkSync } from 'fs';
 
-async function darDeBajaEquipo(req, res) {
+export async function darDeBajaEquipo(req, res) {
     const { equipoId } = req.params;
 
     try {
-        const equipo = await sequelize.query(
+        const equipo = await db.query(
             `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
             {
                 replacements: { equipoId },
-                type: sequelize.QueryTypes.SELECT,
+                type: QueryTypes.SELECT,
             }
         );
 
@@ -405,28 +406,28 @@ async function darDeBajaEquipo(req, res) {
             return res.status(400).json({ error: 'El equipo no existe.' });
         }
 
-        const imagen = await sequelize.query(
+        const imagen = await db.query(
             `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
             {
                 replacements: { equipoId },
-                type: sequelize.QueryTypes.SELECT,
+                type: QueryTypes.SELECT,
             }
         );
 
         if (imagen.length) {
-            await sequelize.query(
+            await db.query(
                 `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`,
                 {
                     replacements: { equipoId },
-                    type: sequelize.QueryTypes.DELETE,
+                    type: QueryTypes.DELETE,
                 }
             );
 
-            await sequelize.query(
+            await db.query(
                 `DELETE FROM imagen WHERE id_imagen = :idImagen`,
                 {
                     replacements: { idImagen: imagen[0].id_imagen },
-                    type: sequelize.QueryTypes.DELETE,
+                    type: QueryTypes.DELETE,
                 }
             );
 
@@ -436,97 +437,97 @@ async function darDeBajaEquipo(req, res) {
             }
         }
 
-        const computadora = await sequelize.query(
+        const computadora = await db.query(
             `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
             {
                 replacements: { equipoId },
-                type: sequelize.QueryTypes.SELECT,
+                type: QueryTypes.SELECT,
             }
         );
 
         if (computadora.length) {
-            const componentes = await sequelize.query(
+            const componentes = await db.query(
                 `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
                 {
                     replacements: { equipoId },
-                    type: sequelize.QueryTypes.SELECT,
+                    type: QueryTypes.SELECT,
                 }
             );
 
             const componenteIds = componentes.map(comp => comp.id_componente);
             if (componenteIds.length > 0) {
-                await sequelize.query(
+                await db.query(
                     `INSERT INTO equipo_baja (id_equipo)
                     SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
                     {
                         replacements: { equipoId },
-                        type: sequelize.QueryTypes.INSERT,
+                        type: QueryTypes.INSERT,
                     }
                 );
 
-                await sequelize.query(
+                await db.query(
                     `DELETE FROM componente WHERE id_computadora = :equipoId`,
                     {
                         replacements: { equipoId },
-                        type: sequelize.QueryTypes.DELETE,
+                        type: QueryTypes.DELETE,
                     }
                 );
 
-                await sequelize.query(
+                await db.query(
                     `DELETE FROM equipo_activo WHERE id_equipo IN (:componenteIds)`,
                     {
                         replacements: { componenteIds },
-                        type: sequelize.QueryTypes.DELETE,
+                        type: QueryTypes.DELETE,
                     }
                 );
 
-                await sequelize.query(
+                await db.query(
                     `DELETE FROM equipo_bodega WHERE id_equipo IN (:componenteIds)`,
                     {
                         replacements: { componenteIds },
-                        type: sequelize.QueryTypes.DELETE,
+                        type: QueryTypes.DELETE,
                     }
                 );
             }
 
-            await sequelize.query(
+            await db.query(
                 `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
                 {
                     replacements: { equipoId },
-                    type: sequelize.QueryTypes.INSERT,
+                    type: QueryTypes.INSERT,
                 }
             );
 
-            await sequelize.query(
+            await db.query(
                 `DELETE FROM computadora WHERE id_computadora = :equipoId`,
                 {
                     replacements: { equipoId },
-                    type: sequelize.QueryTypes.DELETE,
+                    type: QueryTypes.DELETE,
                 }
             );
         } else {
-            await sequelize.query(
+            await db.query(
                 `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
                 {
                     replacements: { equipoId },
-                    type: sequelize.QueryTypes.INSERT,
+                    type: QueryTypes.INSERT,
                 }
             );
         }
 
-        await sequelize.query(
+        await db.query(
             `DELETE FROM equipo_activo WHERE id_equipo = :equipoId`,
             {
                 replacements: { equipoId },
-                type: sequelize.QueryTypes.DELETE,
+                type: QueryTypes.DELETE,
             }
         );
 
-        await sequelize.query(
+        await db.query(
             `DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`,
             {
                 replacements: { equipoId },
-                type: sequelize.QueryTypes.DELETE,
+                type: QueryTypes.DELETE,
             }
         );
 
@@ -539,7 +540,7 @@ async function darDeBajaEquipo(req, res) {
 
 
 
-async function agregarEquipo(req, res) {
+export async function agregarEquipo(req, res) {
   const {
     tipo,
     inventario,
@@ -558,7 +559,7 @@ async function agregarEquipo(req, res) {
   } = req.body;
 
   try {
-    const result = await sequelize.query(
+    const result = await db.query(
       `CALL agregar_equipo(
         :tipo,
         :inventario,
@@ -609,7 +610,7 @@ async function agregarEquipo(req, res) {
 
 
 
-async function actualizarEquipo(req, res) {
+export async function actualizarEquipo(req, res) {
   const { equipoId } = req.params;
   const {
     inventario,
@@ -625,15 +626,15 @@ async function actualizarEquipo(req, res) {
   } = req.body;
 
   try {
-    await sequelize.query(
+    await db.query(
       `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
       {
         replacements: { equipoId, inventario, serie },
-        type: sequelize.QueryTypes.UPDATE,
+        type: QueryTypes.UPDATE,
       }
     );
 
-    await sequelize.query(
+    await db.query(
       `UPDATE computadora SET nombre_equipo = :nombreEquipo, direccion_ip = :direccionIp, 
       id_versionso = :versionso, id_versionoffice = :versionoffice, id_ram = :ram, 
       id_disco = :disco, id_antivirus = :antivirus, id_dominio = :dominio 
@@ -650,7 +651,7 @@ async function actualizarEquipo(req, res) {
           antivirus,
           dominio,
         },
-        type: sequelize.QueryTypes.UPDATE,
+        type: QueryTypes.UPDATE,
       }
     );
 
@@ -663,11 +664,11 @@ async function actualizarEquipo(req, res) {
 
 
 
-const obtenerComputadora = async (req, res) => {
+export const obtenerComputadora = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const equipo = await sequelize.query(
+    const equipo = await db.query(
       `SELECT 
          e.id_equipo,
          e.inventario,
@@ -707,7 +708,7 @@ const obtenerComputadora = async (req, res) => {
        WHERE e.id_equipo = :id`,
       {
         replacements: { id },
-        type: sequelize.QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
       }
     );
 
@@ -715,7 +716,7 @@ const obtenerComputadora = async (req, res) => {
       return res.status(404).json({ error: 'Equipo no encontrado' });
     }
 
-    const componentes = await sequelize.query(
+    const componentes = await db.query(
       `SELECT c.id_componente, 
               e.inventario, 
               p.nombre AS periferico, 
@@ -732,7 +733,7 @@ const obtenerComputadora = async (req, res) => {
        WHERE c.id_computadora = :id`,
       {
         replacements: { id },
-        type: sequelize.QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
       }
     );
     
@@ -743,12 +744,12 @@ const obtenerComputadora = async (req, res) => {
   }
 };
 
-async function agregarComponentes(req, res) {
+export async function agregarComponentes(req, res) {
   const { equipoId, componentes, aulaId, usuarioId, imagenRuta } = req.body;
 
   try {
     for (const componente of componentes) {
-      const result = await sequelize.query(
+      const result = await db.query(
         `INSERT INTO equipo (inventario, id_serie) VALUES (:inventario, :serieId);`,
         {
           replacements: {
@@ -760,7 +761,7 @@ async function agregarComponentes(req, res) {
 
       const idComponente = result[0];
 
-      await sequelize.query(
+      await db.query(
         `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId);`,
         {
           replacements: {
@@ -770,7 +771,7 @@ async function agregarComponentes(req, res) {
         }
       );
 
-      await sequelize.query(
+      await db.query(
         `INSERT INTO equipo_Activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId);`,
         {
           replacements: {
@@ -781,7 +782,7 @@ async function agregarComponentes(req, res) {
         }
       );
 
-      await sequelize.query(
+      await db.query(
         `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta));`,
         {
           replacements: {
@@ -799,7 +800,7 @@ async function agregarComponentes(req, res) {
   }
 }
 
-async function uploadImage(req, res) {
+export async function uploadImage(req, res) {
   if (!req.file) {
     return res.status(400).send('No image uploaded.');
   }
@@ -809,7 +810,7 @@ async function uploadImage(req, res) {
   res.json({ imagePath });
 }
 
-async function editarEquipo(req, res) {
+export async function editarEquipo(req, res) {
     const { equipoId } = req.params;
     const {
         id_ram,
@@ -828,11 +829,11 @@ async function editarEquipo(req, res) {
     } = req.body;
 
     try {
-        const equipo = await sequelize.query(
+        const equipo = await db.query(
             `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
             {
                 replacements: { equipoId },
-                type: sequelize.QueryTypes.SELECT,
+                type: QueryTypes.SELECT,
             }
         );
 
@@ -841,28 +842,28 @@ async function editarEquipo(req, res) {
         }
 
         if (imagenRuta) {
-            const imagenActual = await sequelize.query(
+            const imagenActual = await db.query(
                 `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
                 {
                     replacements: { equipoId },
-                    type: sequelize.QueryTypes.SELECT,
+                    type: QueryTypes.SELECT,
                 }
             );
 
             if (imagenActual.length) {
-                await sequelize.query(
+                await db.query(
                     `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
                     {
                         replacements: { idImagen: imagenActual[0].id_imagen },
-                        type: sequelize.QueryTypes.DELETE,
+                        type: QueryTypes.DELETE,
                     }
                 );
 
-                await sequelize.query(
+                await db.query(
                     `DELETE FROM imagen WHERE id_imagen = :idImagen`,
                     {
                         replacements: { idImagen: imagenActual[0].id_imagen },
-                        type: sequelize.QueryTypes.DELETE,
+                        type: QueryTypes.DELETE,
                     }
                 );
 
@@ -872,34 +873,34 @@ async function editarEquipo(req, res) {
                 }
             }
 
-            const [result] = await sequelize.query(
+            const [result] = await db.query(
                 `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
                 {
                     replacements: { imagenRuta },
-                    type: sequelize.QueryTypes.INSERT,
+                    type: QueryTypes.INSERT,
                 }
             );
 
             const imagenId = result;
 
-            await sequelize.query(
+            await db.query(
                 `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
                 {
                     replacements: { equipoId, imagenId },
-                    type: sequelize.QueryTypes.INSERT,
+                    type: QueryTypes.INSERT,
                 }
             );
         }
 
-        await sequelize.query(
+        await db.query(
             `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
             {
                 replacements: { equipoId, inventario, id_serie },
-                type: sequelize.QueryTypes.UPDATE,
+                type: QueryTypes.UPDATE,
             }
         );
 
-        await sequelize.query(
+        await db.query(
             `UPDATE computadora SET
                 nombre_equipo = :nombre_equipo,
                 direccion_ip = :direccion_ip,
@@ -922,11 +923,11 @@ async function editarEquipo(req, res) {
                     id_antivirus,
                     id_dominio
                 },
-                type: sequelize.QueryTypes.UPDATE,
+                type: QueryTypes.UPDATE,
             }
         );
 
-        await sequelize.query(
+        await db.query(
             `UPDATE equipo_activo SET
                 id_usuario = :id_usuario,
                 id_aula = :id_aula
@@ -937,7 +938,7 @@ async function editarEquipo(req, res) {
                     id_usuario,
                     id_aula
                 },
-                type: sequelize.QueryTypes.UPDATE,
+                type: QueryTypes.UPDATE,
             }
         );
 
@@ -948,15 +949,15 @@ async function editarEquipo(req, res) {
     }
 }
 
-async function gestionarComponentesEditados(req, res) {
+export async function gestionarComponentesEditados(req, res) {
   const { equipoId, componentes, aulaId, usuarioId, imagenRuta } = req.body;
 
   try {
-    const componentesActuales = await sequelize.query(
+    const componentesActuales = await db.query(
       `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
       {
         replacements: { equipoId },
-        type: sequelize.QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
       }
     );
 
@@ -973,7 +974,7 @@ async function gestionarComponentesEditados(req, res) {
     console.log(idsAEliminar)
 
     if (idsAEliminar.length > 0) {
-      await sequelize.query(
+      await db.query(
         `DELETE FROM componente WHERE id_componente IN (:idsAEliminar)`,
         {
           replacements: { idsAEliminar },
@@ -985,7 +986,7 @@ async function gestionarComponentesEditados(req, res) {
       if (componente.id_componente) {
         // Componente existente
       } else {
-        const result = await sequelize.query(
+        const result = await db.query(
           `INSERT INTO equipo (inventario, id_serie) VALUES (:inventario, :serieId)`,
           {
             replacements: {
@@ -997,7 +998,7 @@ async function gestionarComponentesEditados(req, res) {
 
         const idComponente = result[0];
 
-        await sequelize.query(
+        await db.query(
           `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId)`,
           {
             replacements: {
@@ -1007,7 +1008,7 @@ async function gestionarComponentesEditados(req, res) {
           }
         );
 
-        await sequelize.query(
+        await db.query(
           `INSERT INTO equipo_activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId)`,
           {
             replacements: {
@@ -1018,7 +1019,7 @@ async function gestionarComponentesEditados(req, res) {
           }
         );
 
-        await sequelize.query(
+        await db.query(
           `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta))`,
           {
             replacements: {
@@ -1038,22 +1039,3 @@ async function gestionarComponentesEditados(req, res) {
 }
 
 
-
-
-export default {
-  contarEquiposActivos,
-  contarEquiposBodega,
-  contarEquiposBaja,
-  obtenerEquiposActivos,
-  obtenerEquiposBodega,
-  obtenerEquiposBaja,
-  darDeBajaEquipo,
-  eliminarEquipo,
-  agregarEquipo,
-  actualizarEquipo,
-  agregarComponentes,
-  uploadImage,
-  obtenerComputadora,
-  editarEquipo,
-  gestionarComponentesEditados
-};

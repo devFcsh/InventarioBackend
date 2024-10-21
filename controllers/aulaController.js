@@ -1,6 +1,6 @@
-import { aula } from '../models';
+import  aula  from '../models/aula.js';
 
-async function obtenerAulas(req, res) {
+export async function obtenerAulas(req, res) {
   const { id_edificio } = req.params; 
 
   try {
@@ -19,6 +19,3 @@ async function obtenerAulas(req, res) {
   }
 }
 
-export default {
-    obtenerAulas,
-};

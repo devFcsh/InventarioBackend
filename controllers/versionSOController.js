@@ -1,6 +1,6 @@
-import { version_so } from '../models';
+import  version_so  from '../models/version_so.js';
 
-async function obtenerVersionesSO(req, res) {
+export async function obtenerVersionesSO(req, res) {
   const { id_sistemaoperativo } = req.params; 
 
   try {
@@ -19,6 +19,3 @@ async function obtenerVersionesSO(req, res) {
   }
 }
 
-export default {
-    obtenerVersionesSO,
-};

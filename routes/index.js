@@ -1,22 +1,22 @@
 import { Router } from 'express';
 const router = Router();
 
-import perifericos from './perifericoRoutes';
-import marcas from './marcaRoutes';
-import modelos from './modeloRoutes';
-import series from './serieRoutes';
-import inventarios from './inventarioRoutes';
-import equipos from './equipoRoutes';
-import usos from './usoRoutes'; 
-import usuarios from './usuarioRoutes'; 
-import discos from './discoRoutes'; 
-import dominios from './dominioRoutes'; 
-import ram from './ramRoutes'; 
-import sistemasoperativos from './sistemaOperativoRoutes'; 
-import versionesSO from './versionSORoutes'; 
-import versionesOffice from './versionOfficeRoutes'; 
-import edificios from './edificioRoutes'; 
-import aulas from './aulaRoutes'; 
+import perifericos from './perifericoRoutes.js';
+import marcas from './marcaRoutes.js';
+import modelos from './modeloRoutes.js';
+import series from './serieRoutes.js';
+import inventarios from './inventarioRoutes.js';
+import equipos from './equipoRoutes.js';
+import usos from './usoRoutes.js'; 
+import usuarios from './usuarioRoutes.js'; 
+import discos from './discoRoutes.js'; 
+import dominios from './dominioRoutes.js'; 
+import ram from './ramRoutes.js'; 
+import sistemasoperativos from './sistemaOperativoRoutes.js'; 
+import versionesSO from './versionSORoutes.js'; 
+import versionesOffice from './versionOfficeRoutes.js'; 
+import edificios from './edificioRoutes.js'; 
+import aulas from './aulaRoutes.js'; 
 
 router.use('/perifericos', perifericos);
 router.use('/marcas', marcas);

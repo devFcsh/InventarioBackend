@@ -1,7 +1,8 @@
-import { sequelize } from '../models/index.js';
-import { serie } from '../models'; 
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
+import  serie  from '../models/serie.js'; 
 
-async function obtenerSeries(req, res) {
+export async function obtenerSeries(req, res) {
   try {
     const series = await serie.findAll({
       attributes: ['id_serie', 'nombre'] 
@@ -15,7 +16,7 @@ async function obtenerSeries(req, res) {
   }
 }
 
-async function seriesPorModelo(req, res) {
+export async function seriesPorModelo(req, res) {
     const { perifericoId, marcaId, modeloId } = req.query;
 
     try {
@@ -30,13 +31,13 @@ async function seriesPorModelo(req, res) {
         AND (:modeloId IS NULL OR ms.id_modelo = :modeloId);
       `;
   
-      const series = await sequelize.query(query, {
+      const series = await db.query(query, {
         replacements: {
           perifericoId: perifericoId || null,
           marcaId: marcaId || null,
           modeloId: modeloId || null,
         },
-        type: sequelize.QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
       });
   
       res.json(series);
@@ -46,7 +47,3 @@ async function seriesPorModelo(req, res) {
     }
   };  
 
-export default {
-    seriesPorModelo,
-    obtenerSeries,
-  };

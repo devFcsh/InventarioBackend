@@ -1,5 +1,5 @@
-const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+import { DataTypes } from 'sequelize';
+export default (sequelize) => {
   return sequelize.define('aula', {
     id_aula: {
       autoIncrement: true,

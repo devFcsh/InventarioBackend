@@ -1,10 +1,11 @@
-import { sequelize } from '../models';
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 
-async function obtenerUsos(req, res) {
+export async function obtenerUsos(req, res) {
   try {
-    const results = await sequelize.query(
+    const results = await db.query(
       `SELECT * FROM uso`, 
-      { type: sequelize.QueryTypes.SELECT }
+      { type: QueryTypes.SELECT }
     );
 
     if (!Array.isArray(results)) {
@@ -17,7 +18,3 @@ async function obtenerUsos(req, res) {
     return res.status(500).json({ error: 'Error al obtener los usos' });
   }
 }
-
-export default {
-  obtenerUsos,
-};

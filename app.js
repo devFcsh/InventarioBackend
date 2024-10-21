@@ -1,7 +1,8 @@
 import express from 'express';
-import { json } from 'body-parser';
+import pkg from 'body-parser';
+const { json } = pkg;
 import cors from 'cors';
-import routes from './routes';
+import routes from './routes/index.js';
 
 const app = express(); 
 

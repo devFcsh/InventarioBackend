@@ -1,6 +1,6 @@
-import { edificio } from '../models';
+import  edificio  from '../models/edificio.js';
 
-async function obtenerEdificios(req, res) {
+export async function obtenerEdificios(req, res) {
 
   try {
     const edificios = await edificio.findAll({
@@ -15,6 +15,3 @@ async function obtenerEdificios(req, res) {
   }
 }
 
-export default {
-    obtenerEdificios,
-};

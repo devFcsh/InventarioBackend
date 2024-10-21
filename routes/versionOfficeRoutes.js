@@ -1,6 +1,6 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerVersionesOffice } from '../controllers/versionOfficeController';
+import { obtenerVersionesOffice } from '../controllers/versionOfficeController.js';
 
 router.get('/', obtenerVersionesOffice);
 

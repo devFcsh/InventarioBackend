@@ -1,17 +1,18 @@
-import { sequelize } from '../models';
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 
-async function obtenerUsuariosPorUso(req, res) {
+export async function obtenerUsuariosPorUso(req, res) {
   const { idUso } = req.params;
 
   try {
-    const results = await sequelize.query(
+    const results = await db.query(
       `SELECT u.id_usuario, u.nombre 
        FROM usuario u
        JOIN uso us ON u.id_uso = us.id_uso
        WHERE us.id_uso = :idUso`,
       {
         replacements: { idUso: idUso },
-        type: sequelize.QueryTypes.SELECT
+        type: QueryTypes.SELECT
       }
     );
 
@@ -30,6 +31,3 @@ async function obtenerUsuariosPorUso(req, res) {
   }
 }
 
-export default {
-  obtenerUsuariosPorUso,
-};

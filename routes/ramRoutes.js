@@ -1,6 +1,6 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerRAM } from '../controllers/ramController';
+import { obtenerRAM } from '../controllers/ramController.js';
 
 router.get('/', obtenerRAM);
 
