@@ -1,8 +1,7 @@
-import  periferico_modelo  from '../models/periferico_modelo.js'; 
-
+import db from "../models/index.js"
 export async function obtenerPerifericos(req, res) {
   try {
-    const perifericos = await periferico_modelo.findAll({
+    const perifericos = await db.periferico.findAll({
       attributes: ['id_periferico', 'nombre'] 
     });
 

@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 
 export default (sequelize) => {
-  return sequelize.define('marca_periferico', {
+  return sequelize.define('marca_perifico', {
     id_marca: {
       type: DataTypes.INTEGER,
       allowNull: false,

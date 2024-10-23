@@ -1,6 +1,5 @@
-import { DataTypes } from 'sequelize';
 
-export default (sequelize) => {
+export default function(sequelize, DataTypes) {
   return sequelize.define('periferico', {
     id_periferico: {
       autoIncrement: true,

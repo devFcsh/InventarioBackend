@@ -1,4 +1,5 @@
 import { DataTypes } from 'sequelize';
+
 export default (sequelize) => {
   return sequelize.define('aula', {
     id_aula: {

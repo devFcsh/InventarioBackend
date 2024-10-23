@@ -3,7 +3,14 @@ import pkg from 'body-parser';
 const { json } = pkg;
 import cors from 'cors';
 import routes from './routes/index.js';
+import dotenv from "dotenv"
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
+dotenv.config()
 const app = express(); 
 
 app.use(cors({
@@ -14,8 +21,7 @@ app.use(json());
 
 app.use('/api', routes);
 
-import { join } from 'path';
-app.use('/uploads', express.static(join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 export default app;
