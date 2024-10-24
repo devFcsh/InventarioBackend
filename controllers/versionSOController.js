@@ -1,10 +1,10 @@
-import  version_so  from '../models/version_so.js';
+import  VersionSo  from '../models/version_so.js';
 
 export async function obtenerVersionesSO(req, res) {
   const { id_sistemaoperativo } = req.params; 
 
   try {
-    const versionesSO = await version_so.findAll({
+    const versionesSO = await VersionSo.findAll({
       attributes: ['id_versionso', 'nombre'],
       where: {
         id_sistemaoperativo: id_sistemaoperativo, 

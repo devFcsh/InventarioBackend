@@ -1,10 +1,10 @@
-import  aula  from '../models/aula.js';
+import  Aula  from '../models/aula.js';
 
 export async function obtenerAulas(req, res) {
   const { id_edificio } = req.params; 
 
   try {
-    const aulas = await aula.findAll({
+    const aulas = await Aula.findAll({
       attributes: ['id_aula', 'nombre'],
       where: {
         id_edificio: id_edificio, 

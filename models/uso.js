@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
 
-export default (sequelize) => {
-  return sequelize.define('uso', {
+const Uso = db.define('uso', {
     id_uso: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
@@ -13,7 +13,6 @@ export default (sequelize) => {
       allowNull: false
     }
   }, {
-    sequelize,
     tableName: 'uso',
     timestamps: false,
     indexes: [
@@ -27,4 +26,5 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+export default Uso;

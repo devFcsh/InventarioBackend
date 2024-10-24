@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
 
-export default (sequelize) => {
-  return sequelize.define('periferico_modelo', {
+const PerifericoModelo = db.define('periferico_modelo', {
     id_periferico: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -21,7 +21,6 @@ export default (sequelize) => {
       }
     }
   }, {
-    sequelize,
     tableName: 'periferico_modelo',
     timestamps: false,
     indexes: [
@@ -43,4 +42,5 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+export default PerifericoModelo;

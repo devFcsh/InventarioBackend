@@ -1,10 +1,10 @@
 import {QueryTypes } from 'sequelize';
 import db from '../models/index.js';
-import  modelo  from '../models/modelo.js'; 
+import Modelo from '../models/Modelo.js';
 
 export async function obtenerModelos(req, res) {
     try {
-      const modelos = await modelo.findAll({
+      const modelos = await Modelo.findAll({
         attributes: ['id_modelo', 'nombre'] 
       });
   

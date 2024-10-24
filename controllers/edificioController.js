@@ -1,9 +1,9 @@
-import  edificio  from '../models/edificio.js';
+import Edificio from "../models/edificio.js";
 
 export async function obtenerEdificios(req, res) {
 
   try {
-    const edificios = await edificio.findAll({
+    const edificios = await Edificio.findAll({
       attributes: ['id_edificio', 'nombre']
     });
 

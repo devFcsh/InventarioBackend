@@ -1,9 +1,9 @@
-import  version_office  from '../models/version_office.js';
+import  VersionOffice  from '../models/version_office.js';
 
 export async function obtenerVersionesOffice(req, res) {
 
   try {
-    const versionesOffice = await version_office.findAll({
+    const versionesOffice = await VersionOffice.findAll({
       attributes: ['id_versionoffice', 'nombre']
     });
 

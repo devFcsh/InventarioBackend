@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
 
-export default (sequelize) => {
-  return sequelize.define('serie', {
+const Serie = db.define('serie', {
     id_serie: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
@@ -13,7 +13,6 @@ export default (sequelize) => {
       allowNull: true
     }
   }, {
-    sequelize,
     tableName: 'serie',
     timestamps: false,
     indexes: [
@@ -27,4 +26,6 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+
+export default Serie;

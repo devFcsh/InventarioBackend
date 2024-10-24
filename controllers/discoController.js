@@ -1,8 +1,8 @@
-import  disco  from '../models/disco.js'; 
+import  Disco  from '../models/disco.js'; 
 
 export async function obtenerDiscos(req, res) {
   try {
-    const discos = await disco.findAll({
+    const discos = await Disco.findAll({
       attributes: ['id_disco', 'capacidad'] 
     });
 

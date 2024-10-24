@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
 
-export default (sequelize) => {
-  return sequelize.define('imagen', {
+const Imagen = db.define('imagen', {
     id_imagen: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
@@ -13,7 +13,6 @@ export default (sequelize) => {
       allowNull: false
     }
   }, {
-    sequelize,
     tableName: 'imagen',
     timestamps: false,
     indexes: [
@@ -27,4 +26,5 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+export default Imagen;

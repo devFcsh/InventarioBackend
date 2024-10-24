@@ -1,10 +1,10 @@
 import {QueryTypes } from 'sequelize';
 import db from '../models/index.js';
-import  serie  from '../models/serie.js'; 
+import Serie from '../models/Serie.js';
 
 export async function obtenerSeries(req, res) {
   try {
-    const series = await serie.findAll({
+    const series = await Serie.findAll({
       attributes: ['id_serie', 'nombre'] 
     });
 

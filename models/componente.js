@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
 
-export default (sequelize) => {
-  return sequelize.define('componente', {
+const Componente = db.define('componente', {
     id_componente: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -41,4 +41,5 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+export default Componente;

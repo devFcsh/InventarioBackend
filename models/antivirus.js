@@ -1,7 +1,8 @@
-import { DataTypes } from 'sequelize';
 
-export default (sequelize) => {
-  return sequelize.define('antivirus', {
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
+
+const Antivirus = db.define('antivirus', {
     id_antivirus: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
@@ -13,7 +14,6 @@ export default (sequelize) => {
       allowNull: false
     }
   }, {
-    sequelize,
     tableName: 'antivirus',
     timestamps: false,
     indexes: [
@@ -27,4 +27,5 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+export default Antivirus;

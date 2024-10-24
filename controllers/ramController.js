@@ -1,8 +1,8 @@
-import  ram  from '../models/ram.js'; 
+import  Ram  from '../models/ram.js'; 
 
 export async function obtenerRAM(req, res) {
   try {
-    const rams = await ram.findAll({
+    const rams = await Ram.findAll({
       attributes: ['id_ram', 'tipo', 'capacidad'] 
     });
 

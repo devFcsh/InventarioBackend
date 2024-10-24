@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
 
-export default (sequelize) => {
-  return sequelize.define('computadora', {
+const Computadora = db.define('computadora', {
     id_computadora: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -68,7 +68,6 @@ export default (sequelize) => {
       }
     }
   }, {
-    sequelize,
     tableName: 'computadora',
     timestamps: false,
     indexes: [
@@ -124,4 +123,5 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+export default Computadora;

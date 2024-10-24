@@ -1,6 +1,7 @@
 
-export default function(sequelize, DataTypes) {
-  return sequelize.define('periferico', {
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
+const Periferico = db.define('periferico', {
     id_periferico: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
@@ -12,7 +13,6 @@ export default function(sequelize, DataTypes) {
       allowNull: true
     }
   }, {
-    sequelize,
     tableName: 'periferico',
     timestamps: false,
     indexes: [
@@ -26,4 +26,6 @@ export default function(sequelize, DataTypes) {
       },
     ]
   });
-};
+
+
+export default Periferico;

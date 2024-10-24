@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
+import db from "../models/index.js";
+import { DataTypes } from "sequelize";
 
-export default (sequelize) => {
-  return sequelize.define('ram', {
+const Ram = db.define('ram', {
     id_ram: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
@@ -17,7 +17,6 @@ export default (sequelize) => {
       allowNull: false
     }
   }, {
-    sequelize,
     tableName: 'ram',
     timestamps: false,
     indexes: [
@@ -31,4 +30,6 @@ export default (sequelize) => {
       },
     ]
   });
-};
+
+
+export default Ram;
