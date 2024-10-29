@@ -153,36 +153,37 @@ export async function obtenerEquiposActivos(req, res) {
 
   try {
     const query = `
-SELECT 
-    e.*, 
-    p.nombre AS periferico, 
-    m.nombre AS marca, 
-    mo.nombre AS modelo, 
-    s.nombre AS serie,
-    u.nombre AS usuario,
-    uso.nombre AS uso,
-    ea.id_aula,
-    ed.nombre AS edificio
-FROM equipo e
-JOIN serie s ON e.id_serie = s.id_serie
-JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-JOIN marca m ON mm.id_marca = m.id_marca
-JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-JOIN periferico p ON mp.id_periferico = p.id_periferico
-JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
-JOIN aula a ON ea.id_aula = a.id_aula -- Unir con la tabla aula
-JOIN edificio ed ON a.id_edificio = ed.id_edificio 
-JOIN usuario u ON ea.id_usuario = u.id_usuario
-JOIN uso ON u.id_uso = uso.id_uso
-WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
-  AND (:marcaId IS NULL OR m.id_marca = :marcaId)
-  AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
-  AND (:serieId IS NULL OR s.id_serie = :serieId)
-  AND (:inventario IS NULL OR e.inventario = :inventario)
-LIMIT :limit OFFSET :offset;
-`;
+      SELECT 
+        e.*, 
+        p.nombre AS periferico, 
+        m.nombre AS marca, 
+        mo.nombre AS modelo, 
+        s.nombre AS serie,
+        u.nombre AS usuario,
+        uso.nombre AS uso,
+        ea.id_aula,
+        ed.nombre AS edificio,
+        COUNT(*) OVER() AS total
+      FROM equipo e
+      JOIN serie s ON e.id_serie = s.id_serie
+      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+      JOIN marca m ON mm.id_marca = m.id_marca
+      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+      JOIN aula a ON ea.id_aula = a.id_aula 
+      JOIN edificio ed ON a.id_edificio = ed.id_edificio 
+      JOIN usuario u ON ea.id_usuario = u.id_usuario
+      JOIN uso ON u.id_uso = uso.id_uso
+      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
+        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
+        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
+        AND (:serieId IS NULL OR s.id_serie = :serieId)
+        AND (:inventario IS NULL OR e.inventario = :inventario)
+      LIMIT :limit OFFSET :offset;
+    `;
 
     const equipos = await db.query(query, {
       replacements: {
@@ -197,12 +198,15 @@ LIMIT :limit OFFSET :offset;
       type: QueryTypes.SELECT,
     });
 
-    res.json(equipos);
+    const total = equipos.length > 0 ? equipos[0].total : 0;
+
+    res.json({ total, equipos });
   } catch (error) {
-    console.error("Error al obtener equipos activos:", error);
-    res.status(500).json({ error: "Error al obtener equipos activos" });
+    console.error("Error al obtener equipos y contar activos:", error);
+    res.status(500).json({ error: "Error al obtener equipos y contar activos" });
   }
 }
+
 
 export async function obtenerEquiposBodega(req, res) {
   const {

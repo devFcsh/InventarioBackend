@@ -1,9 +1,10 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerEquiposActivos, obtenerComputadora, contarEquiposActivos, eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage } from '../controllers/equipoController.js'; 
+import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerComputadora, contarEquiposActivos, eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage } from '../controllers/equipoController.js'; 
 import upload from '../middlewares/uploadImageMiddleware.js';
 
 router.get('/', obtenerEquiposActivos);
+router.get('/bodega', obtenerEquiposBodega);
 router.get('/computadora/:id', obtenerComputadora);
 router.get('/totalEquipos', contarEquiposActivos);
 router.delete('/computadora/:equipoId', eliminarEquipo);
