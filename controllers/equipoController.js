@@ -910,4 +910,4 @@ export async function gestionarComponentesEditados(req, res) {
   }
 }
 
-
+export async function obtenerEquiposPorUsuario(req, res) { }

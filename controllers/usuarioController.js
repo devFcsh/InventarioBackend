@@ -72,3 +72,4 @@ export async function obtenerUsuariosPorUso(req, res) {
   }
 }
 
+export async function agregarUsuarioConUso(req, res) { }
