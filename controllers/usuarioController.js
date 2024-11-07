@@ -1,13 +1,8 @@
-import {QueryTypes } from 'sequelize';
-import db from '../models/index.js';
+import { QueryTypes } from "sequelize";
+import db from "../models/index.js";
 
 export async function obtenerUsuarios(req, res) {
-  const {
-    usoId,
-    usuarioId,
-    limit,
-    offset,
-  } = req.query;
+  const { usoId, usuarioId, limit, offset } = req.query;
 
   try {
     const query = `
@@ -37,8 +32,8 @@ export async function obtenerUsuarios(req, res) {
 
     res.json({ total, usuarios });
   } catch (error) {
-    console.error('Error al obtener los usuarios:', error);
-    res.status(500).json({ error: 'Error al obtener los usuarios' });
+    console.error("Error al obtener los usuarios:", error);
+    res.status(500).json({ error: "Error al obtener los usuarios" });
   }
 }
 
@@ -53,23 +48,54 @@ export async function obtenerUsuariosPorUso(req, res) {
        WHERE us.id_uso = :idUso`,
       {
         replacements: { idUso: idUso },
-        type: QueryTypes.SELECT
+        type: QueryTypes.SELECT,
       }
     );
 
     if (!Array.isArray(results)) {
-      return res.status(500).json({ error: 'Unexpected response format' });
+      return res.status(500).json({ error: "Unexpected response format" });
     }
 
     if (results.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron usuarios para el uso seleccionado' });
+      return res
+        .status(404)
+        .json({ error: "No se encontraron usuarios para el uso seleccionado" });
     }
 
-    return res.json(results); 
+    return res.json(results);
   } catch (error) {
-    console.error('Error al obtener los usuarios:', error);
-    return res.status(500).json({ error: 'Error al obtener los usuarios' });
+    console.error("Error al obtener los usuarios:", error);
+    return res.status(500).json({ error: "Error al obtener los usuarios" });
   }
 }
 
-export async function agregarUsuarioConUso(req, res) { }
+export async function agregarUsuario(req, res) {
+  const { nombre, usoId } = req.body;
+
+  if (!nombre || !usoId) {
+    return res
+      .status(400)
+      .json({ error: "Se requiere tanto el nombre como el ID de uso" });
+  }
+
+  try {
+    const query = `
+      INSERT INTO usuario (nombre, id_uso)
+      VALUES (:nombre, :usoId)
+    `;
+
+    const result = await db.query(query, {
+      replacements: { nombre, usoId },
+      type: QueryTypes.INSERT,
+    });
+
+    res.status(201).json({
+      mensaje: "Usuario agregado exitosamente",
+      usuario: { nombre, usoId },
+      id_usuario: result[0],
+    });
+  } catch (error) {
+    console.error("Error al agregar el usuario:", error);
+    res.status(500).json({ error: "Error al agregar el usuario" });
+  }
+}
