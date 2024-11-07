@@ -8,6 +8,7 @@ export async function obtenerUsuarios(req, res) {
     const query = `
       SELECT 
         u.id_usuario, 
+        us.id_uso,
         us.nombre AS uso, 
         u.nombre,
         COUNT(*) OVER() AS total
