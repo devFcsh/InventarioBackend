@@ -194,6 +194,7 @@ export async function obtenerEquiposPorUsuario(req, res) {
   try {
     const query = `
       SELECT 
+        e.id_equipo,
         e.inventario,
         p.nombre AS periferico, 
         m.nombre AS marca, 
@@ -229,6 +230,37 @@ export async function obtenerEquiposPorUsuario(req, res) {
   } catch (error) {
     console.error("Error al obtener equipos del usuario:", error);
     res.status(500).json({ error: "Error al obtener equipos del usuario" });
+  }
+}
+
+export async function cambiarUsuarioEquipo(req, res) {
+  const { equipoId } = req.params;  
+  const { usuarioId } = req.body; 
+
+  try {
+    const query = `
+      UPDATE equipo_Activo
+      SET id_usuario = :usuarioId
+      WHERE id_equipo = :equipoId;
+    `;
+
+    const result = await db.query(query, {
+      replacements: {
+        equipoId,   
+        usuarioId,  
+      },
+      type: QueryTypes.UPDATE,
+    });
+
+    if (result[0] === 0) {
+      return res.status(404).json({ error: 'Equipo no encontrado o no se actualizó.' });
+    }
+
+    res.json({ mensaje: 'Usuario cambiado correctamente al equipo.' });
+
+  } catch (error) {
+    console.error("Error al cambiar usuario de equipo:", error);
+    res.status(500).json({ error: "Error al cambiar usuario de equipo." });
   }
 }
 
