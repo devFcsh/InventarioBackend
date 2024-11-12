@@ -100,3 +100,38 @@ export async function agregarUsuario(req, res) {
     res.status(500).json({ error: "Error al agregar el usuario" });
   }
 }
+
+export async function editarUsuario(req, res) {
+  const { id_usuario } = req.params;
+  const { nuevoNombre, nuevoUsoId } = req.body;
+
+  try {
+    if (!nuevoNombre || !nuevoUsoId) {
+      return res.status(400).json({ error: "Faltan parámetros para la actualización" });
+    }
+
+    const query = `
+      UPDATE usuario
+      SET nombre = :nuevoNombre, id_uso = :nuevoUsoId
+      WHERE id_usuario = :id_usuario;
+    `;
+
+    const result = await db.query(query, {
+      replacements: {
+        id_usuario, 
+        nuevoNombre,
+        nuevoUsoId,
+      },
+      type: QueryTypes.UPDATE,
+    });
+
+    if (result[0] > 0) {
+      res.json({ message: "Usuario actualizado correctamente" });
+    } else {
+      res.status(404).json({ error: "Usuario no encontrado" });
+    }
+  } catch (error) {
+    console.error("Error al actualizar el usuario:", error);
+    res.status(500).json({ error: "Error al actualizar el usuario" });
+  }
+}
