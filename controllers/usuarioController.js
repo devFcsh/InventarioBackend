@@ -135,3 +135,43 @@ export async function editarUsuario(req, res) {
     res.status(500).json({ error: "Error al actualizar el usuario" });
   }
 }
+
+export async function eliminarUsuario(req, res) {
+  const { id_usuario } = req.params;
+
+  try {
+    const checkEquiposQuery = `
+      SELECT COUNT(*) AS totalEquipos
+      FROM equipo_Activo ea
+      WHERE ea.id_usuario = :id_usuario;
+    `;
+
+    const result = await db.query(checkEquiposQuery, {
+      replacements: { id_usuario },
+      type: QueryTypes.SELECT,
+    });
+
+    if (result[0].totalEquipos > 0) {
+      return res.status(400).json({
+        error: "No se puede eliminar al usuario porque tiene equipos asociados.",
+        tieneEquipos: true,
+      });
+    }
+
+    const deleteUserQuery = `
+      DELETE FROM usuario
+      WHERE id_usuario = :id_usuario;
+    `;
+
+    await db.query(deleteUserQuery, {
+      replacements: { id_usuario },
+      type: QueryTypes.DELETE,
+    });
+
+    res.json({ message: "Usuario eliminado con éxito." });
+  } catch (error) {
+    console.error("Error al eliminar el usuario:", error);
+    res.status(500).json({ error: "Error al eliminar el usuario." });
+  }
+}
+
