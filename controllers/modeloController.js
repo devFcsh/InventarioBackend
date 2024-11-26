@@ -44,3 +44,44 @@ export async function modelosPorMarcaPeriferico(req, res) {
   }
 };
 
+export async function agregarModelo(req, res) {
+  const { nombre, marcaId } = req.body;
+
+  if (!nombre || !marcaId) {
+    return res
+      .status(400)
+      .json({ error: "Se requiere tanto el nombre como el ID de marca" });
+  }
+
+  try {
+    const queryModelo = `
+      INSERT INTO modelo (nombre)
+      VALUES (:nombre)
+    `;
+    const resultModelo = await db.query(queryModelo, {
+      replacements: { nombre },
+      type: QueryTypes.INSERT,
+    });
+
+    const id_modelo = resultModelo[0];
+
+    const queryModeloMarca = `
+      INSERT INTO marca_modelo (id_marca, id_modelo)
+      VALUES (:marcaId, :id_modelo)
+    `;
+    await db.query(queryModeloMarca, {
+      replacements: { marcaId, id_modelo },
+      type: QueryTypes.INSERT,
+    });
+
+    res.status(201).json({
+      mensaje: "Modelo agregada y asociada exitosamente al periférico",
+      marca: { nombre },
+      id_modelo,
+      id_marca: marcaId,
+    });
+  } catch (error) {
+    console.error("Error al agregar marca y asociar periférico:", error);
+    res.status(500).json({ error: "Error al agregar marca y asociar periférico" });
+  }
+}

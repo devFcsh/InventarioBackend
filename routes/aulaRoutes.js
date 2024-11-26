@@ -1,7 +1,7 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerAulas } from '../controllers/aulaController.js';
+import { obtenerAulas, agregarAula } from '../controllers/aulaController.js';
 
 router.get('/:id_edificio', obtenerAulas);
-
+router.post('/', agregarAula);
 export default router;
