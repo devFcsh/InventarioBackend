@@ -1,3 +1,5 @@
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 import Edificio from "../models/edificio.js";
 
 export async function obtenerEdificios(req, res) {

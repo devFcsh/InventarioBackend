@@ -75,13 +75,13 @@ export async function agregarModelo(req, res) {
     });
 
     res.status(201).json({
-      mensaje: "Modelo agregada y asociada exitosamente al periférico",
+      mensaje: "Modelo agregado y asociado exitosamente a la marca",
       marca: { nombre },
       id_modelo,
       id_marca: marcaId,
     });
   } catch (error) {
-    console.error("Error al agregar marca y asociar periférico:", error);
-    res.status(500).json({ error: "Error al agregar marca y asociar periférico" });
+    console.error("Error al agregar modelo y asociar marca:", error);
+    res.status(500).json({ error: "Error al agregar modelo y asociar marca" });
   }
 }

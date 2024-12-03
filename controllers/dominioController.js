@@ -1,3 +1,5 @@
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 import Dominio from '../models/dominio.js';
 
 export async function obtenerDominios(req, res) {

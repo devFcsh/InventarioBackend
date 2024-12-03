@@ -1,3 +1,5 @@
+import {QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 import  Aula  from '../models/aula.js';
 
 export async function obtenerAulas(req, res) {

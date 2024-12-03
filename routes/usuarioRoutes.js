@@ -7,4 +7,5 @@ router.get('/usuariosPorUso/:idUso', obtenerUsuariosPorUso);
 router.post('/agregar', agregarUsuario); 
 router.put('/:id_usuario', editarUsuario);
 router.delete('/:id_usuario', eliminarUsuario);
+
 export default router;

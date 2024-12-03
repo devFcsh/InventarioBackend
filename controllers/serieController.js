@@ -46,4 +46,46 @@ export async function seriesPorModelo(req, res) {
       res.status(500).json({ error: 'Error al obtener series' });
     }
   };  
-
+  
+  export async function agregarSerie(req, res) {
+    const { nombre, modeloId } = req.body;
+  
+    if (!nombre || !modeloId) {
+      return res
+        .status(400)
+        .json({ error: "Se requiere tanto el nombre como el ID de modelo" });
+    }
+  
+    try {
+      const querySerie = `
+        INSERT INTO serie (nombre)
+        VALUES (:nombre)
+      `;
+      const resultSerie = await db.query(querySerie, {
+        replacements: { nombre },
+        type: QueryTypes.INSERT,
+      });
+  
+      const id_serie = resultSerie[0];
+  
+      const queryModeloSerie = `
+        INSERT INTO modelo_serie (id_modelo, id_serie)
+        VALUES (:modeloId, :id_serie)
+      `;
+      await db.query(queryModeloSerie, {
+        replacements: { modeloId, id_serie },
+        type: QueryTypes.INSERT,
+      });
+  
+      res.status(201).json({
+        mensaje: "Serie agregada y asociada exitosamente al modelo",
+        serie: { nombre },
+        id_serie,
+        id_modelo: modeloId,
+      });
+    } catch (error) {
+      console.error("Error al agregar serie y asociar modelo:", error);
+      res.status(500).json({ error: "Error al agregar serie y asociar modelo" });
+    }
+  }
+  

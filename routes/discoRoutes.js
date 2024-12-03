@@ -1,7 +1,7 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerDiscos, agregarEdificio } from '../controllers/discoController.js';
+import { obtenerDiscos, agregarDisco } from '../controllers/discoController.js';
 
 router.get('/', obtenerDiscos);
-router.post('/', agregarEdificio);
+router.post('/', agregarDisco);
 export default router;

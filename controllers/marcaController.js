@@ -90,4 +90,3 @@ export async function agregarMarca(req, res) {
     res.status(500).json({ error: "Error al agregar marca y asociar periférico" });
   }
 }
-

@@ -1,7 +1,8 @@
 import { Router } from 'express';
 const router = Router();
-import  {obtenerPerifericos}  from '../controllers/perifericoController.js';
+import  {obtenerPerifericos, agregarPeriferico}  from '../controllers/perifericoController.js';
 
 router.get('/', obtenerPerifericos);
+router.post('/', agregarPeriferico);
 
 export default router;

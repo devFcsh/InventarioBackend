@@ -1,7 +1,8 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerSO } from '../controllers/sistemaOperativoController.js';
+import { obtenerSO, agregarSistemaOperativo } from '../controllers/sistemaOperativoController.js';
 
 router.get('/', obtenerSO);
+router.post('/', agregarSistemaOperativo);
 
 export default router;
