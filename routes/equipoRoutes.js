@@ -1,6 +1,6 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage } from '../controllers/equipoController.js'; 
+import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage } from '../controllers/equipoController.js'; 
 import upload from '../middlewares/uploadImageMiddleware.js';
 
 router.get('/', obtenerEquiposActivos);
@@ -12,7 +12,8 @@ router.get('/computadora/:id', obtenerComputadora);
 router.delete('/computadora/:equipoId', eliminarEquipo);
 router.put('/darDeBajaEquipo/:equipoId', darDeBajaEquipo);
 router.put('/editarEquipo/:equipoId', editarEquipo);
-router.post("/agregarActivoComputadora", agregarEquipo);
+router.post("/agregarEquipoComputadora", agregarEquipo);
+router.post("/agregarEquipoSimple", agregarEquipoSimple);
 router.post("/agregarComponentes", agregarComponentes);
 router.post("/gestionarComponentes", gestionarComponentesEditados);
 router.post("/upload", upload.single("image"), uploadImage);

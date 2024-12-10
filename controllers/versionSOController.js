@@ -32,24 +32,15 @@ export async function agregarVersionSO(req, res) {
 
   try {
     const queryVersionSO = `
-      INSERT INTO version_so (nombre)
-      VALUES (:nombre)
+      INSERT INTO version_so (nombre, id_sistemaoperativo)
+      VALUES (:nombre, :sistemaoperativoId)
     `;
     const resultVersionSO = await db.query(queryVersionSO, {
-      replacements: { nombre },
+      replacements: { nombre, sistemaoperativoId },
       type: QueryTypes.INSERT,
     });
 
     const id_versionso = resultVersionSO[0];
-
-    const queryModeloSerie = `
-      INSERT INTO modelo_serie (id_modelo, id_serie)
-      VALUES (:sistemaoperativoId, :id_versionso)
-    `;
-    await db.query(queryModeloSerie, {
-      replacements: { sistemaoperativoId, id_versionso },
-      type: QueryTypes.INSERT,
-    });
 
     res.status(201).json({
       mensaje: "Version SO agregada y asociada exitosamente al SO",

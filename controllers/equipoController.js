@@ -478,8 +478,25 @@ export async function agregarEquipo(req, res) {
     dominio,
     idAula,
     idUsuario,
-    imagenRuta,
+    imagenRuta
   } = req.body;
+
+  const parametros = {
+    tipo,
+    inventario,
+    serie,
+    nombreEquipo,
+    direccionIp,
+    versionso,
+    versionoffice,
+    ram,
+    disco,
+    antivirus,
+    dominio,
+    idAula: tipo === 'bodega' ? null : idAula,
+    idUsuario: tipo === 'bodega' ? null : idUsuario,
+    imagenRuta: tipo === 'bodega' ? null : imagenRuta
+  };
 
   try {
     const result = await db.query(
@@ -500,22 +517,51 @@ export async function agregarEquipo(req, res) {
         :imagenRuta
       );`,
       {
-        replacements: {
-          tipo,
-          inventario,
-          serie,
-          nombreEquipo,
-          direccionIp,
-          versionso,
-          versionoffice,
-          ram,
-          disco,
-          antivirus,
-          dominio,
-          idAula,
-          idUsuario,
-          imagenRuta,
-        },
+        replacements: parametros,
+      }
+    );
+
+    const equipoId = result[0]?.id_equipo;
+
+    res.json({ message: "Equipo agregado correctamente", equipoId });
+  } catch (error) {
+    console.error("Error al agregar equipo:", error);
+    res.status(500).json({ error: "Error al agregar equipo" });
+  }
+}
+
+
+export async function agregarEquipoSimple(req, res) {
+  const {
+    tipo,
+    inventario,
+    serie,
+    idAula,
+    idUsuario,
+    imagenRuta
+  } = req.body;
+
+  const parametros = {
+    tipo,
+    inventario,
+    serie,
+    idAula: tipo === 'bodega' ? null : idAula,
+    idUsuario: tipo === 'bodega' ? null : idUsuario,
+    imagenRuta: tipo === 'bodega' ? null : imagenRuta
+  };
+
+  try {
+    const result = await db.query(
+      `CALL agregar_equipo_simple(
+        :tipo,
+        :inventario,
+        :serie,
+        :idAula,
+        :idUsuario,
+        :imagenRuta
+      );`,
+      {
+        replacements: parametros,
       }
     );
 
