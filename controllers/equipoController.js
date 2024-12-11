@@ -234,8 +234,8 @@ export async function obtenerEquiposPorUsuario(req, res) {
 }
 
 export async function cambiarUsuarioEquipo(req, res) {
-  const { equipoId } = req.params;  
-  const { usuarioId } = req.body; 
+  const { equipoId } = req.params;
+  const { usuarioId } = req.body;
 
   try {
     const query = `
@@ -246,18 +246,19 @@ export async function cambiarUsuarioEquipo(req, res) {
 
     const result = await db.query(query, {
       replacements: {
-        equipoId,   
-        usuarioId,  
+        equipoId,
+        usuarioId,
       },
       type: QueryTypes.UPDATE,
     });
 
     if (result[0] === 0) {
-      return res.status(404).json({ error: 'Equipo no encontrado o no se actualizó.' });
+      return res
+        .status(404)
+        .json({ error: "Equipo no encontrado o no se actualizó." });
     }
 
-    res.json({ mensaje: 'Usuario cambiado correctamente al equipo.' });
-
+    res.json({ mensaje: "Usuario cambiado correctamente al equipo." });
   } catch (error) {
     console.error("Error al cambiar usuario de equipo:", error);
     res.status(500).json({ error: "Error al cambiar usuario de equipo." });
@@ -478,7 +479,7 @@ export async function agregarEquipo(req, res) {
     dominio,
     idAula,
     idUsuario,
-    imagenRuta
+    imagenRuta,
   } = req.body;
 
   const parametros = {
@@ -493,9 +494,9 @@ export async function agregarEquipo(req, res) {
     disco,
     antivirus,
     dominio,
-    idAula: tipo === 'bodega' ? null : idAula,
-    idUsuario: tipo === 'bodega' ? null : idUsuario,
-    imagenRuta: tipo === 'bodega' ? null : imagenRuta
+    idAula: tipo === "bodega" ? null : idAula,
+    idUsuario: tipo === "bodega" ? null : idUsuario,
+    imagenRuta: tipo === "bodega" ? null : imagenRuta,
   };
 
   try {
@@ -530,24 +531,16 @@ export async function agregarEquipo(req, res) {
   }
 }
 
-
 export async function agregarEquipoSimple(req, res) {
-  const {
-    tipo,
-    inventario,
-    serie,
-    idAula,
-    idUsuario,
-    imagenRuta
-  } = req.body;
+  const { tipo, inventario, serie, idAula, idUsuario, imagenRuta } = req.body;
 
   const parametros = {
     tipo,
     inventario,
     serie,
-    idAula: tipo === 'bodega' ? null : idAula,
-    idUsuario: tipo === 'bodega' ? null : idUsuario,
-    imagenRuta: tipo === 'bodega' ? null : imagenRuta
+    idAula: tipo === "bodega" || tipo === "baja" ? null : idAula,
+    idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
+    imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
   };
 
   try {
@@ -707,7 +700,8 @@ export const obtenerComputadora = async (req, res) => {
 };
 
 export async function agregarComponentes(req, res) {
-  const { equipoId, componentes, aulaId, usuarioId, imagenRuta } = req.body;
+  const { tipo, equipoId, componentes, aulaId, usuarioId, imagenRuta } =
+    req.body;
 
   try {
     for (const componente of componentes) {
@@ -733,26 +727,39 @@ export async function agregarComponentes(req, res) {
         }
       );
 
-      await db.query(
-        `INSERT INTO equipo_Activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId);`,
-        {
-          replacements: {
-            idComponente,
-            aulaId,
-            usuarioId,
-          },
-        }
-      );
+      if (tipo === "activo") {
+        await db.query(
+          `INSERT INTO equipo_Activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId);`,
+          {
+            replacements: {
+              idComponente,
+              aulaId,
+              usuarioId,
+            },
+          }
+        );
 
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta));`,
-        {
-          replacements: {
-            idComponente,
-            imagenRuta,
-          },
-        }
-      );
+        await db.query(
+          `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta));`,
+          {
+            replacements: {
+              idComponente,
+              imagenRuta,
+            },
+          }
+        );
+      } else if (tipo == "bodega") {
+        await db.query(
+          `INSERT INTO equipo_Baja (id_equipo) VALUES (:idComponente);`,
+          {
+            replacements: {
+              idComponente,
+              aulaId,
+              usuarioId,
+            },
+          }
+        );
+      }
     }
 
     res.json({ message: "Componentes agregados correctamente" });
