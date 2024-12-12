@@ -333,6 +333,7 @@ export async function eliminarEquipo(req, res) {
 
 import { join } from "path";
 import { existsSync, unlinkSync } from "fs";
+import e from "express";
 
 export async function darDeBajaEquipo(req, res) {
   const { equipoId } = req.params;
@@ -567,58 +568,6 @@ export async function agregarEquipoSimple(req, res) {
   }
 }
 
-export async function actualizarEquipo(req, res) {
-  const { equipoId } = req.params;
-  const {
-    inventario,
-    serie,
-    nombreEquipo,
-    direccionIp,
-    versionso,
-    versionoffice,
-    ram,
-    disco,
-    antivirus,
-    dominio,
-  } = req.body;
-
-  try {
-    await db.query(
-      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
-      {
-        replacements: { equipoId, inventario, serie },
-        type: QueryTypes.UPDATE,
-      }
-    );
-
-    await db.query(
-      `UPDATE computadora SET nombre_equipo = :nombreEquipo, direccion_ip = :direccionIp, 
-      id_versionso = :versionso, id_versionoffice = :versionoffice, id_ram = :ram, 
-      id_disco = :disco, id_antivirus = :antivirus, id_dominio = :dominio 
-      WHERE id_computadora = :equipoId`,
-      {
-        replacements: {
-          equipoId,
-          nombreEquipo,
-          direccionIp,
-          versionso,
-          versionoffice,
-          ram,
-          disco,
-          antivirus,
-          dominio,
-        },
-        type: QueryTypes.UPDATE,
-      }
-    );
-
-    res.json({ message: "Equipo actualizado con éxito" });
-  } catch (error) {
-    console.error("Error al actualizar equipo:", error);
-    res.status(500).json({ error: "Error al actualizar equipo" });
-  }
-}
-
 export const obtenerComputadora = async (req, res) => {
   const { id } = req.params;
 
@@ -696,6 +645,77 @@ export const obtenerComputadora = async (req, res) => {
   } catch (error) {
     console.error("Error al obtener la computadora:", error);
     res.status(500).json({ error: "Error al obtener la computadora" });
+  }
+};
+
+export const obtenerComputadoraBodega = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const computadora = await db.query(
+      `SELECT 
+         e.id_equipo,
+         e.inventario,
+         e.id_serie,
+         c.nombre_equipo,
+         c.direccion_ip,
+         c.id_versionso,
+         c.id_versionoffice,
+         c.id_ram,
+         c.id_disco,
+         c.id_antivirus,
+         c.id_dominio,
+         p.id_periferico,
+         m.id_marca,
+         s.id_serie,
+         mm.id_modelo,
+         vso.id_sistemaoperativo
+       FROM equipo e
+       LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       LEFT JOIN marca m ON mm.id_marca = m.id_marca
+       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN version_SO vso ON vso.id_versionso = c.id_versionso
+       WHERE e.id_equipo = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!computadora.length) {
+      return res.status(404).json({ error: "Computadora no encontrada" });
+    }
+
+    const componentes = await db.query(
+      `SELECT c.id_componente, 
+              e.inventario, 
+              p.nombre AS periferico, 
+              m.nombre AS marca, 
+              mo.nombre AS modelo, 
+              s.nombre AS serie 
+       FROM componente c
+       JOIN equipo e ON c.id_componente = e.id_equipo
+       JOIN periferico p ON e.id_serie = p.id_periferico
+       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       JOIN marca m ON mm.id_marca = m.id_marca
+       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
+       JOIN serie s ON e.id_serie = s.id_serie
+       WHERE c.id_computadora = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.json({ computadora: computadora[0], componentes });
+  } catch (error) {
+    console.error("Error al obtener la computadora de bodega:", error);
+    res
+      .status(500)
+      .json({ error: "Error al obtener la computadora de bodega" });
   }
 };
 
@@ -782,6 +802,7 @@ export async function uploadImage(req, res) {
 export async function editarEquipo(req, res) {
   const { equipoId } = req.params;
   const {
+    tipo,
     id_ram,
     id_disco,
     id_versionso,
@@ -810,7 +831,7 @@ export async function editarEquipo(req, res) {
       return res.status(400).json({ error: "El equipo no existe." });
     }
 
-    if (imagenRuta) {
+    if (imagenRuta && tipo === "activo") {
       const imagenActual = await db.query(
         `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
         {
@@ -893,20 +914,120 @@ export async function editarEquipo(req, res) {
       }
     );
 
-    await db.query(
-      `UPDATE equipo_activo SET
-                id_usuario = :id_usuario,
-                id_aula = :id_aula
-            WHERE id_equipo = :equipoId`,
+    if (tipo === "activo") {
+      await db.query(
+        `UPDATE equipo_activo SET
+                  id_usuario = :id_usuario,
+                  id_aula = :id_aula
+              WHERE id_equipo = :equipoId`,
+        {
+          replacements: {
+            equipoId,
+            id_usuario,
+            id_aula,
+          },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    res.json({ message: "Equipo actualizado con éxito" });
+  } catch (error) {
+    console.error("Error al actualizar el equipo:", error);
+    res.status(500).json({ error: "Error al actualizar el equipo" });
+  }
+}
+
+export async function editarEquipoSimple(req, res) {
+  const { equipoId } = req.params;
+  const { tipo, id_serie, inventario, id_usuario, id_aula, imagenRuta } =
+    req.body;
+
+  try {
+    const equipo = await db.query(
+      `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
       {
-        replacements: {
-          equipoId,
-          id_usuario,
-          id_aula,
-        },
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(400).json({ error: "El equipo no existe." });
+    }
+
+    if (imagenRuta && tipo === "activo") {
+      const imagenActual = await db.query(
+        `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      if (imagenActual.length) {
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+          {
+            replacements: { idImagen: imagenActual[0].id_imagen },
+            type: QueryTypes.DELETE,
+          }
+        );
+
+        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+          replacements: { idImagen: imagenActual[0].id_imagen },
+          type: QueryTypes.DELETE,
+        });
+
+        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
+        if (existsSync(imagePath)) {
+          unlinkSync(imagePath);
+        }
+      }
+
+      const [result] = await db.query(
+        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+        {
+          replacements: { imagenRuta },
+          type: QueryTypes.INSERT,
+        }
+      );
+
+      const imagenId = result;
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
+        {
+          replacements: { equipoId, imagenId },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+
+    await db.query(
+      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId, inventario, id_serie },
         type: QueryTypes.UPDATE,
       }
     );
+
+    if (tipo === "activo") {
+      await db.query(
+        `UPDATE equipo_activo SET
+                  id_usuario = :id_usuario,
+                  id_aula = :id_aula
+              WHERE id_equipo = :equipoId`,
+        {
+          replacements: {
+            equipoId,
+            id_usuario,
+            id_aula,
+          },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
 
     res.json({ message: "Equipo actualizado con éxito" });
   } catch (error) {
@@ -916,7 +1037,8 @@ export async function editarEquipo(req, res) {
 }
 
 export async function gestionarComponentesEditados(req, res) {
-  const { equipoId, componentes, aulaId, usuarioId, imagenRuta } = req.body;
+  const { tipo, equipoId, componentes, aulaId, usuarioId, imagenRuta } =
+    req.body;
 
   try {
     const componentesActuales = await db.query(
@@ -926,8 +1048,6 @@ export async function gestionarComponentesEditados(req, res) {
         type: QueryTypes.SELECT,
       }
     );
-
-    console.log(componentes);
 
     const componentesIdsActuales = componentesActuales.map(
       (comp) => comp.id_componente
@@ -939,11 +1059,6 @@ export async function gestionarComponentesEditados(req, res) {
     const idsAEliminar = componentesIdsActuales.filter(
       (id) => !componentesIdsNuevos.includes(id)
     );
-
-    console.log(componentes);
-    console.log(componentesIdsActuales);
-    console.log(componentesIdsNuevos);
-    console.log(idsAEliminar);
 
     if (idsAEliminar.length > 0) {
       await db.query(
@@ -980,26 +1095,37 @@ export async function gestionarComponentesEditados(req, res) {
           }
         );
 
-        await db.query(
-          `INSERT INTO equipo_activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId)`,
-          {
-            replacements: {
-              idComponente,
-              aulaId,
-              usuarioId,
-            },
-          }
-        );
+        if (tipo === "activo") {
+          await db.query(
+            `INSERT INTO equipo_activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId)`,
+            {
+              replacements: {
+                idComponente,
+                aulaId,
+                usuarioId,
+              },
+            }
+          );
 
-        await db.query(
-          `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta))`,
-          {
-            replacements: {
-              idComponente,
-              imagenRuta,
-            },
-          }
-        );
+          await db.query(
+            `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta))`,
+            {
+              replacements: {
+                idComponente,
+                imagenRuta,
+              },
+            }
+          );
+        } else if (tipo === "bodega") {
+          await db.query(
+            `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente)`,
+            {
+              replacements: {
+                idComponente,
+              },
+            }
+          );
+        }
       }
     }
 
