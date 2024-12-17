@@ -589,7 +589,6 @@ export const obtenerComputadora = async (req, res) => {
          c.id_dominio,
          p.id_periferico,
          m.id_marca,
-         s.id_serie,
          mm.id_modelo,
          a.id_aula,
          a.id_edificio,
@@ -606,6 +605,74 @@ export const obtenerComputadora = async (req, res) => {
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
        JOIN version_SO vso ON vso.id_versionso = c.id_versionso
+       JOIN aula a ON ea.id_aula = a.id_aula
+       JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
+       JOIN imagen i ON i.id_imagen = ei.id_imagen
+       WHERE e.id_equipo = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(404).json({ error: "Equipo no encontrado" });
+    }
+
+    const componentes = await db.query(
+      `SELECT c.id_componente, 
+              e.inventario, 
+              p.nombre AS periferico, 
+              m.nombre AS marca, 
+              mo.nombre AS modelo, 
+              s.nombre AS serie 
+       FROM componente c
+       JOIN equipo e ON c.id_componente = e.id_equipo
+       JOIN periferico p ON e.id_serie = p.id_periferico
+       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       JOIN marca m ON mm.id_marca = m.id_marca
+       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
+       JOIN serie s ON e.id_serie = s.id_serie
+       WHERE c.id_computadora = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.json({ equipo: equipo[0], componentes });
+  } catch (error) {
+    console.error("Error al obtener la computadora:", error);
+    res.status(500).json({ error: "Error al obtener la computadora" });
+  }
+};
+
+export const obtenerActivoSimple = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const equipo = await db.query(
+      `SELECT 
+         e.id_equipo,
+         e.inventario,
+         e.id_serie,
+         ea.id_usuario,
+         u.id_uso,
+         p.id_periferico,
+         m.id_marca,
+         mm.id_modelo,
+         a.id_aula,
+         a.id_edificio,
+         i.ruta AS imagenRuta,
+       FROM equipo e
+       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+       LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
+       LEFT JOIN uso us ON u.id_uso = us.id_uso
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       LEFT JOIN marca m ON mm.id_marca = m.id_marca
+       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
        JOIN aula a ON ea.id_aula = a.id_aula
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
@@ -667,7 +734,6 @@ export const obtenerComputadoraBodega = async (req, res) => {
          c.id_dominio,
          p.id_periferico,
          m.id_marca,
-         s.id_serie,
          mm.id_modelo,
          vso.id_sistemaoperativo
        FROM equipo e
@@ -687,6 +753,65 @@ export const obtenerComputadoraBodega = async (req, res) => {
 
     if (!computadora.length) {
       return res.status(404).json({ error: "Computadora no encontrada" });
+    }
+
+    const componentes = await db.query(
+      `SELECT c.id_componente, 
+              e.inventario, 
+              p.nombre AS periferico, 
+              m.nombre AS marca, 
+              mo.nombre AS modelo, 
+              s.nombre AS serie 
+       FROM componente c
+       JOIN equipo e ON c.id_componente = e.id_equipo
+       JOIN periferico p ON e.id_serie = p.id_periferico
+       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       JOIN marca m ON mm.id_marca = m.id_marca
+       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
+       JOIN serie s ON e.id_serie = s.id_serie
+       WHERE c.id_computadora = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.json({ computadora: computadora[0], componentes });
+  } catch (error) {
+    console.error("Error al obtener la computadora de bodega:", error);
+    res
+      .status(500)
+      .json({ error: "Error al obtener la computadora de bodega" });
+  }
+};
+
+export const obtenerBodegaBajaSimple = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const equipo = await db.query(
+      `SELECT 
+         e.id_equipo,
+         e.inventario,
+         e.id_serie,
+         p.id_periferico,
+         m.id_marca,
+         mm.id_modelo,
+       FROM equipo e
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       LEFT JOIN marca m ON mm.id_marca = m.id_marca
+       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       WHERE e.id_equipo = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(404).json({ error: "Equipo no encontrado" });
     }
 
     const componentes = await db.query(
