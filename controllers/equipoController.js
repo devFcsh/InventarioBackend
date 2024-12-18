@@ -331,11 +331,7 @@ export async function eliminarEquipo(req, res) {
   }
 }
 
-import { join } from "path";
-import { existsSync, unlinkSync } from "fs";
-import e from "express";
-
-export async function darDeBajaEquipo(req, res) {
+export async function eliminarEquipoSimple(req, res) {
   const { equipoId } = req.params;
 
   try {
@@ -350,6 +346,41 @@ export async function darDeBajaEquipo(req, res) {
     if (!equipo.length) {
       return res.status(400).json({ error: "El equipo no existe." });
     }
+
+    await db.query(`DELETE FROM equipo WHERE id_equipo = :equipoId`, {
+      replacements: { equipoId },
+      type: QueryTypes.DELETE,
+    });
+
+    res.json({ message: "Equipo eliminado con éxito" });
+  } catch (error) {
+    console.error("Error al eliminar equipo:", error);
+    res.status(500).json({ error: "Error al eliminar equipo" });
+  }
+}
+
+import { join } from "path";
+import { existsSync, unlinkSync } from "fs";
+import e from "express";
+
+export async function darDeBajaEquipo(req, res) {
+  const { equipoId } = req.params;
+  const { tipo } = req.body;
+
+  try {
+    const equipo = await db.query(
+      `SELECT id_equipo FROM equipo WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(400).json({ error: "El equipo no existe." });
+    }
+
+    if(tipo === 'activo') {
 
     const imagen = await db.query(
       `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
@@ -376,8 +407,10 @@ export async function darDeBajaEquipo(req, res) {
       }
     }
 
+  }
+
     const computadora = await db.query(
-      `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
+      `SELECT id_equipo FROM computadora WHERE id_computadora = :equipoId`,
       {
         replacements: { equipoId },
         type: QueryTypes.SELECT,
@@ -412,6 +445,8 @@ export async function darDeBajaEquipo(req, res) {
           }
         );
 
+        if(tipo === 'activo') {
+
         await db.query(
           `DELETE FROM equipo_activo WHERE id_equipo IN (:componenteIds)`,
           {
@@ -420,6 +455,7 @@ export async function darDeBajaEquipo(req, res) {
           }
         );
 
+      } else if(tipo === 'bodega') {
         await db.query(
           `DELETE FROM equipo_bodega WHERE id_equipo IN (:componenteIds)`,
           {
@@ -428,7 +464,7 @@ export async function darDeBajaEquipo(req, res) {
           }
         );
       }
-
+    }
       await db.query(`INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`, {
         replacements: { equipoId },
         type: QueryTypes.INSERT,
@@ -448,15 +484,20 @@ export async function darDeBajaEquipo(req, res) {
       });
     }
 
+    if(tipo === 'activo') {
+
     await db.query(`DELETE FROM equipo_activo WHERE id_equipo = :equipoId`, {
       replacements: { equipoId },
       type: QueryTypes.DELETE,
     });
+    } else if(tipo === 'bodega') {
 
     await db.query(`DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`, {
       replacements: { equipoId },
       type: QueryTypes.DELETE,
     });
+
+  }
 
     res.json({ message: "Equipo dado de baja con éxito" });
   } catch (error) {
@@ -663,7 +704,7 @@ export const obtenerActivoSimple = async (req, res) => {
          mm.id_modelo,
          a.id_aula,
          a.id_edificio,
-         i.ruta AS imagenRuta,
+         i.ruta AS imagenRuta
        FROM equipo e
        JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario

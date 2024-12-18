@@ -1,6 +1,6 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple } from '../controllers/equipoController.js'; 
+import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple } from '../controllers/equipoController.js'; 
 import upload from '../middlewares/uploadImageMiddleware.js';
 
 router.get('/', obtenerEquiposActivos);
@@ -13,6 +13,7 @@ router.get('/computadoraBodega/:id', obtenerComputadoraBodega);
 router.get('/equipoSimpleActivo/:id', obtenerActivoSimple);
 router.get('/equipoSimple/:id', obtenerBodegaBajaSimple);
 router.delete('/computadora/:equipoId', eliminarEquipo);
+router.delete('/equipoSimple/:equipoId', eliminarEquipoSimple);
 router.put('/darDeBajaEquipo/:equipoId', darDeBajaEquipo);
 router.put('/editarEquipo/:equipoId', editarEquipo);
 router.put('/editarEquipoSimple/:equipoId', editarEquipoSimple);
