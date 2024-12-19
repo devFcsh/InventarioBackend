@@ -1231,7 +1231,7 @@ export async function gestionarComponentesEditados(req, res) {
         `DELETE FROM componente WHERE id_componente IN (:idsAEliminar)`,
         {
           replacements: { idsAEliminar },
-          type: sequelize.QueryTypes.DELETE,
+          type: QueryTypes.DELETE,
         }
       );
     }
