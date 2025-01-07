@@ -1,18 +1,21 @@
 import { QueryTypes } from "sequelize";
 import db from "../models/index.js";
-import Inventario from '../models/inventario.js'; 
 
 export async function obtenerInventarios(req, res) {
   try {
-    const inventarios = await Inventario.findAll({
-      attributes: ['id_inventario', 'nombre'] 
+    const query = `
+      SELECT DISTINCT e.inventario
+      FROM equipo e
+    `;
+
+    const inventarios = await db.query(query, {
+      type: QueryTypes.SELECT,
     });
 
-    return res.json(inventarios);
-
+    res.json(inventarios);
   } catch (error) {
-    console.error('Error al obtener las inventarios:', error);
-    return res.status(500).json({ error: 'Error al obtener las inventarios' });
+    console.error("Error al obtener inventarios:", error);
+    res.status(500).json({ error: "Error al obtener inventarios" });
   }
 }
 
