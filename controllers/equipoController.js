@@ -22,7 +22,7 @@ export async function obtenerEquiposActivos(req, res) {
         s.nombre AS serie,
         u.nombre AS usuario,
         uso.nombre AS uso,
-        ea.id_aula,
+        ea.id_ubicacion,
         ed.nombre AS edificio,
         COUNT(*) OVER() AS total
       FROM equipo e
@@ -34,7 +34,7 @@ export async function obtenerEquiposActivos(req, res) {
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
-      JOIN aula a ON ea.id_aula = a.id_aula 
+      JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
       JOIN usuario u ON ea.id_usuario = u.id_usuario
       JOIN uso ON u.id_uso = uso.id_uso
@@ -519,7 +519,7 @@ export async function agregarEquipo(req, res) {
     disco,
     antivirus,
     dominio,
-    idAula,
+    idUbicacion,
     idUsuario,
     imagenRuta,
   } = req.body;
@@ -536,7 +536,7 @@ export async function agregarEquipo(req, res) {
     disco,
     antivirus,
     dominio,
-    idAula: tipo === "bodega" ? null : idAula,
+    idUbicacion: tipo === "bodega" ? null : idUbicacion,
     idUsuario: tipo === "bodega" ? null : idUsuario,
     imagenRuta: tipo === "bodega" ? null : imagenRuta,
   };
@@ -555,7 +555,7 @@ export async function agregarEquipo(req, res) {
         :disco,
         :antivirus,
         :dominio,
-        :idAula,
+        :idUbicacion,
         :idUsuario,
         :imagenRuta
       );`,
@@ -574,13 +574,13 @@ export async function agregarEquipo(req, res) {
 }
 
 export async function agregarEquipoSimple(req, res) {
-  const { tipo, inventario, serie, idAula, idUsuario, imagenRuta } = req.body;
+  const { tipo, inventario, serie, idUbicacion, idUsuario, imagenRuta } = req.body;
 
   const parametros = {
     tipo,
     inventario,
     serie,
-    idAula: tipo === "bodega" || tipo === "baja" ? null : idAula,
+    idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
     idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
     imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
   };
@@ -591,7 +591,7 @@ export async function agregarEquipoSimple(req, res) {
         :tipo,
         :inventario,
         :serie,
-        :idAula,
+        :idUbicacion,
         :idUsuario,
         :imagenRuta
       );`,
@@ -631,7 +631,7 @@ export const obtenerComputadora = async (req, res) => {
          p.id_periferico,
          m.id_marca,
          mm.id_modelo,
-         a.id_aula,
+         a.id_ubicacion,
          a.id_edificio,
          i.ruta AS imagenRuta,
          vso.id_sistemaoperativo
@@ -646,7 +646,7 @@ export const obtenerComputadora = async (req, res) => {
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
        JOIN version_SO vso ON vso.id_versionso = c.id_versionso
-       JOIN aula a ON ea.id_aula = a.id_aula
+       JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        WHERE e.id_equipo = :id`,
@@ -702,7 +702,7 @@ export const obtenerActivoSimple = async (req, res) => {
          p.id_periferico,
          m.id_marca,
          mm.id_modelo,
-         a.id_aula,
+         a.id_ubicacion,
          a.id_edificio,
          i.ruta AS imagenRuta
        FROM equipo e
@@ -714,7 +714,7 @@ export const obtenerActivoSimple = async (req, res) => {
        LEFT JOIN marca m ON mm.id_marca = m.id_marca
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
-       JOIN aula a ON ea.id_aula = a.id_aula
+       JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        WHERE e.id_equipo = :id`,
@@ -886,7 +886,7 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
 };
 
 export async function agregarComponentes(req, res) {
-  const { tipo, equipoId, componentes, aulaId, usuarioId, imagenRuta } =
+  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } =
     req.body;
 
   try {
@@ -915,11 +915,11 @@ export async function agregarComponentes(req, res) {
 
       if (tipo === "activo") {
         await db.query(
-          `INSERT INTO equipo_Activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId);`,
+          `INSERT INTO equipo_Activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
           {
             replacements: {
               idComponente,
-              aulaId,
+              ubicacionId,
               usuarioId,
             },
           }
@@ -940,7 +940,7 @@ export async function agregarComponentes(req, res) {
           {
             replacements: {
               idComponente,
-              aulaId,
+              ubicacionId,
               usuarioId,
             },
           }
@@ -980,7 +980,7 @@ export async function editarEquipo(req, res) {
     nombre_equipo,
     direccion_ip,
     id_usuario,
-    id_aula,
+    id_ubicacion,
     imagenRuta,
   } = req.body;
 
@@ -1084,13 +1084,13 @@ export async function editarEquipo(req, res) {
       await db.query(
         `UPDATE equipo_activo SET
                   id_usuario = :id_usuario,
-                  id_aula = :id_aula
+                  id_ubicacion = :id_ubicacion
               WHERE id_equipo = :equipoId`,
         {
           replacements: {
             equipoId,
             id_usuario,
-            id_aula,
+            id_ubicacion,
           },
           type: QueryTypes.UPDATE,
         }
@@ -1106,7 +1106,7 @@ export async function editarEquipo(req, res) {
 
 export async function editarEquipoSimple(req, res) {
   const { equipoId } = req.params;
-  const { tipo, id_serie, inventario, id_usuario, id_aula, imagenRuta } =
+  const { tipo, id_serie, inventario, id_usuario, id_ubicacion, imagenRuta } =
     req.body;
 
   try {
@@ -1182,13 +1182,13 @@ export async function editarEquipoSimple(req, res) {
       await db.query(
         `UPDATE equipo_activo SET
                   id_usuario = :id_usuario,
-                  id_aula = :id_aula
+                  id_ubicacion = :id_ubicacion
               WHERE id_equipo = :equipoId`,
         {
           replacements: {
             equipoId,
             id_usuario,
-            id_aula,
+            id_ubicacion,
           },
           type: QueryTypes.UPDATE,
         }
@@ -1203,7 +1203,7 @@ export async function editarEquipoSimple(req, res) {
 }
 
 export async function gestionarComponentesEditados(req, res) {
-  const { tipo, equipoId, componentes, aulaId, usuarioId, imagenRuta } =
+  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } =
     req.body;
 
   try {
@@ -1263,11 +1263,11 @@ export async function gestionarComponentesEditados(req, res) {
 
         if (tipo === "activo") {
           await db.query(
-            `INSERT INTO equipo_activo (id_equipo, id_aula, id_usuario) VALUES (:idComponente, :aulaId, :usuarioId)`,
+            `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId)`,
             {
               replacements: {
                 idComponente,
-                aulaId,
+                ubicacionId,
                 usuarioId,
               },
             }

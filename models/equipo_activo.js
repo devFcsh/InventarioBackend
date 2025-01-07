@@ -11,12 +11,12 @@ const EquipoActivo = db.define('equipo_activo', {
         key: 'id_equipo'
       }
     },
-    id_aula: {
+    id_ubicacion: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'aula',
-        key: 'id_aula'
+        model: 'ubicacion',
+        key: 'id_ubicacion'
       }
     },
     id_usuario: {
@@ -40,10 +40,10 @@ const EquipoActivo = db.define('equipo_activo', {
         ]
       },
       {
-        name: "id_aula",
+        name: "id_ubicacion",
         using: "BTREE",
         fields: [
-          { name: "id_aula" },
+          { name: "id_ubicacion" },
         ]
       },
       {

@@ -1,8 +1,8 @@
-import db from "../models/index.js";
+import db from "./index.js";
 import { DataTypes } from "sequelize";
 
-const Aula = db.define('aula', {
-    id_aula: {
+const Ubicacion = db.define('ubicacion', {
+    id_ubicacion: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -21,7 +21,7 @@ const Aula = db.define('aula', {
       allowNull: false
     }
   }, {
-    tableName: 'aula',
+    tableName: 'ubicacion',
     timestamps: false,
     indexes: [
       {
@@ -29,7 +29,7 @@ const Aula = db.define('aula', {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "id_aula" },
+          { name: "id_ubicacion" },
         ]
       },
       {
@@ -41,4 +41,4 @@ const Aula = db.define('aula', {
       },
     ]
   });
-export default Aula;
+export default Ubicacion;

@@ -16,7 +16,7 @@ import sistemasoperativos from './sistemaOperativoRoutes.js';
 import versionesSO from './versionSORoutes.js'; 
 import versionesOffice from './versionOfficeRoutes.js'; 
 import edificios from './edificioRoutes.js'; 
-import aulas from './aulaRoutes.js'; 
+import ubicaciones from './ubicacionRoutes.js'; 
 
 router.use('/perifericos', perifericos);
 router.use('/marcas', marcas);
@@ -33,6 +33,6 @@ router.use('/sistemasoperativos', sistemasoperativos);
 router.use('/versionesSO', versionesSO);  
 router.use('/versionesOffice', versionesOffice);  
 router.use('/edificios', edificios);  
-router.use('/aulas', aulas);  
+router.use('/ubicaciones', ubicaciones);  
 
 export default router;

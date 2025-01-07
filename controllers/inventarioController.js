@@ -1,5 +1,21 @@
 import { QueryTypes } from "sequelize";
 import db from "../models/index.js";
+import Inventario from '../models/inventario.js'; 
+
+export async function obtenerInventarios(req, res) {
+  try {
+    const inventarios = await Inventario.findAll({
+      attributes: ['id_inventario', 'nombre'] 
+    });
+
+    return res.json(inventarios);
+
+  } catch (error) {
+    console.error('Error al obtener las inventarios:', error);
+    return res.status(500).json({ error: 'Error al obtener las inventarios' });
+  }
+}
+
 export async function inventarioPorSerie(req, res) {
   const { perifericoId, marcaId, modeloId, serieId } = req.query;
 
