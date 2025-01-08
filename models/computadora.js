@@ -51,6 +51,14 @@ const Computadora = db.define('computadora', {
         key: 'id_disco'
       }
     },
+    id_procesador: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'procesador',
+        key: 'id_procesador'
+      }
+    },
     id_antivirus: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -105,6 +113,13 @@ const Computadora = db.define('computadora', {
         using: "BTREE",
         fields: [
           { name: "id_disco" },
+        ]
+      },
+      {
+        name: "id_procesador",
+        using: "BTREE",
+        fields: [
+          { name: "id_procesador" },
         ]
       },
       {
