@@ -16,6 +16,25 @@ export async function obtenerDominios(req, res) {
   }
 }
 
+export async function editarDominio(req, res) {
+  const { id_dominio, nuevoNombre } = req.body;
+
+  try {
+    const dominio = await Dominio.findByPk(id_dominio);
+
+    if (!dominio) {
+      return res.status(404).json({ error: 'Dominio no encontrado' });
+    }
+
+    await dominio.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Dominio actualizado correctamente', dominio });
+  } catch (error) {
+    console.error('Error al actualizar el dominio:', error);
+    return res.status(500).json({ error: 'Error al actualizar el dominio' });
+  }
+}
+
 export async function agregarDominio(req, res) {
   const { nombre } = req.body;
 

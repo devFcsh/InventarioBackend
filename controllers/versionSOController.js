@@ -2,6 +2,21 @@ import {QueryTypes } from 'sequelize';
 import db from '../models/index.js';
 import  VersionSo  from '../models/version_so.js';
 
+export async function obtenerVersionesCompletasSO(req, res) {
+
+  try {
+    const versionesSO = await VersionSo.findAll({
+      attributes: ['id_versionso', 'nombre'],
+    });
+
+    return res.json(versionesSO);
+
+  } catch (error) {
+    console.error('Error al obtener las versiones de SOs:', error);
+    return res.status(500).json({ error: 'Error al obtener las versiones de SOs' });
+  }
+}
+
 export async function obtenerVersionesSO(req, res) {
   const { id_sistemaoperativo } = req.params; 
 

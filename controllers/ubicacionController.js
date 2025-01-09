@@ -21,6 +21,21 @@ export async function obtenerUbicaciones(req, res) {
   }
 }
 
+export async function obtenerUbicacionesCompletas(req, res) {
+
+  try {
+    const ubicaciones = await Ubicacion.findAll({
+      attributes: ['id_ubicacion', 'nombre'],
+    });
+
+    return res.json(ubicaciones);
+
+  } catch (error) {
+    console.error('Error al obtener las ubicaciones:', error);
+    return res.status(500).json({ error: 'Error al obtener las ubicaciones' });
+  }
+}
+
 export async function agregarUbicacion(req, res) {
   const { nombre, edificioId } = req.body;
 
