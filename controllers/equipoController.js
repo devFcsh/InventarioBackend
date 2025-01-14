@@ -629,7 +629,7 @@ export const obtenerComputadora = async (req, res) => {
          c.id_versionoffice,
          c.id_ram,
          c.id_disco,
-         c.id_procesador
+         c.id_procesador,
          c.id_antivirus,
          c.id_dominio,
          p.id_periferico,

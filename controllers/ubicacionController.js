@@ -66,3 +66,22 @@ export async function agregarUbicacion(req, res) {
     res.status(500).json({ error: "Error al agregar el ubicacion" });
   }
 }
+
+export async function editarUbicacion(req, res) {
+  const { id_ubicacion, nuevoNombre } = req.body;
+
+  try {
+    const ubicacion = await Ubicacion.findByPk(id_ubicacion);
+
+    if (!ubicacion) {
+      return res.status(404).json({ error: 'Ubicacion no encontrado' });
+    }
+
+    await ubicacion.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Ubicacion actualizado correctamente', ubicacion });
+  } catch (error) {
+    console.error('Error al actualizar el ubicacion:', error);
+    return res.status(500).json({ error: 'Error al actualizar el ubicacion' });
+  }
+}

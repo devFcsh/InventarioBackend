@@ -47,3 +47,21 @@ export async function agregarProcesador(req, res) {
     }
   }
   
+  export async function editarProcesador(req, res) {
+    const { id_procesador, nuevoNombre } = req.body;
+  
+    try {
+      const procesador = await Procesador.findByPk(id_procesador);
+  
+      if (!procesador) {
+        return res.status(404).json({ error: 'Procesador no encontrado' });
+      }
+  
+      await procesador.update({ nombre: nuevoNombre });
+  
+      return res.json({ message: 'Procesador actualizado correctamente', procesador });
+    } catch (error) {
+      console.error('Error al actualizar el procesador:', error);
+      return res.status(500).json({ error: 'Error al actualizar el procesador' });
+    }
+  }

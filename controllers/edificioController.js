@@ -47,3 +47,22 @@ export async function agregarEdificio(req, res) {
     res.status(500).json({ error: "Error al agregar el edificio" });
   }
 }
+
+export async function editarEdificio(req, res) {
+  const { id_edificio, nuevoNombre } = req.body;
+
+  try {
+    const edificio = await Edificio.findByPk(id_edificio);
+
+    if (!edificio) {
+      return res.status(404).json({ error: 'Edificio no encontrado' });
+    }
+
+    await edificio.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Edficio actualizado correctamente', edificio });
+  } catch (error) {
+    console.error('Error al actualizar el edificio:', error);
+    return res.status(500).json({ error: 'Error al actualizar el edificio' });
+  }
+}

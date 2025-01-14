@@ -46,3 +46,22 @@ export async function agregarPeriferico(req, res) {
     res.status(500).json({ error: "Error al agregar el periferico" });
   }
 }
+
+export async function editarPeriferico(req, res) {
+  const { id_periferico, nuevoNombre } = req.body;
+
+  try {
+    const periferico = await Periferico.findByPk(id_periferico);
+
+    if (!periferico) {
+      return res.status(404).json({ error: 'Periferico no encontrado' });
+    }
+
+    await periferico.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Periferico actualizado correctamente', periferico });
+  } catch (error) {
+    console.error('Error al actualizar el periferico:', error);
+    return res.status(500).json({ error: 'Error al actualizar el periferico' });
+  }
+}

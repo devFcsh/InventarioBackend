@@ -90,3 +90,22 @@ export async function agregarMarca(req, res) {
     res.status(500).json({ error: "Error al agregar marca y asociar periférico" });
   }
 }
+
+export async function editarMarca(req, res) {
+  const { id_marca, nuevoNombre } = req.body;
+
+  try {
+    const marca = await Marca.findByPk(id_marca);
+
+    if (!marca) {
+      return res.status(404).json({ error: 'Marca no encontrado' });
+    }
+
+    await marca.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Marca actualizado correctamente', marca });
+  } catch (error) {
+    console.error('Error al actualizar el marca:', error);
+    return res.status(500).json({ error: 'Error al actualizar el marca' });
+  }
+}

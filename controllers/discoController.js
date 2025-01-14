@@ -46,3 +46,22 @@ export async function agregarDisco(req, res) {
     res.status(500).json({ error: "Error al agregar el disco" });
   }
 }
+
+export async function editarDisco(req, res) {
+  const { id_disco, nuevoNombre } = req.body;
+
+  try {
+    const disco = await Disco.findByPk(id_disco);
+
+    if (!disco) {
+      return res.status(404).json({ error: 'Disco no encontrado' });
+    }
+
+    await disco.update({ capacidad: nuevoNombre });
+
+    return res.json({ message: 'Disco actualizado correctamente', disco });
+  } catch (error) {
+    console.error('Error al actualizar el disco:', error);
+    return res.status(500).json({ error: 'Error al actualizar el disco' });
+  }
+}

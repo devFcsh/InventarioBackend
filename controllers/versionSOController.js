@@ -68,3 +68,22 @@ export async function agregarVersionSO(req, res) {
     res.status(500).json({ error: "Error al agregar Version SO y asociar SO" });
   }
 }
+
+export async function editarVersionSO(req, res) {
+  const { id_versionso, nuevoNombre } = req.body;
+
+  try {
+    const version_SO = await VersionSo.findByPk(id_versionso);
+
+    if (!version_SO) {
+      return res.status(404).json({ error: 'Version SO no encontrado' });
+    }
+
+    await version_SO.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Version SO actualizado correctamente', version_SO });
+  } catch (error) {
+    console.error('Error al actualizar el version SO:', error);
+    return res.status(500).json({ error: 'Error al actualizar el version SO' });
+  }
+}

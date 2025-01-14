@@ -85,3 +85,22 @@ export async function agregarModelo(req, res) {
     res.status(500).json({ error: "Error al agregar modelo y asociar marca" });
   }
 }
+
+export async function editarModelo(req, res) {
+  const { id_modelo, nuevoNombre } = req.body;
+
+  try {
+    const modelo = await Modelo.findByPk(id_modelo);
+
+    if (!modelo) {
+      return res.status(404).json({ error: 'Modelo no encontrado' });
+    }
+
+    await modelo.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Modelo actualizado correctamente', modelo });
+  } catch (error) {
+    console.error('Error al actualizar el modelo:', error);
+    return res.status(500).json({ error: 'Error al actualizar el modelo' });
+  }
+}

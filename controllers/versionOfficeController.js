@@ -47,3 +47,22 @@ export async function agregarVersionOffice(req, res) {
     res.status(500).json({ error: "Error al agregar Versión Office" });
   }
 }
+
+export async function editarVersionOffice(req, res) {
+  const { id_version_office, nuevoNombre } = req.body;
+
+  try {
+    const version_office = await VersionOffice.findByPk(id_version_office);
+
+    if (!version_office) {
+      return res.status(404).json({ error: 'Version Office no encontrado' });
+    }
+
+    await version_office.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Version Office actualizado correctamente', version_office });
+  } catch (error) {
+    console.error('Error al actualizar el version office:', error);
+    return res.status(500).json({ error: 'Error al actualizar el version office' });
+  }
+}

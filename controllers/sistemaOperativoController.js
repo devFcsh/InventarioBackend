@@ -46,3 +46,22 @@ export async function agregarSistemaOperativo(req, res) {
     res.status(500).json({ error: "Error al agregar el Sistema Operativo" });
   }
 }
+
+export async function editarSistemaOperativo(req, res) {
+  const { id_sistemaoperativo, nuevoNombre } = req.body;
+
+  try {
+    const sistema_operativo = await SistemaOperativo.findByPk(id_sistemaoperativo);
+
+    if (!sistema_operativo) {
+      return res.status(404).json({ error: 'Sistema Operativo no encontrado' });
+    }
+
+    await sistema_operativo.update({ nombre: nuevoNombre });
+
+    return res.json({ message: 'Sistema Operativo actualizado correctamente', sistema_operativo });
+  } catch (error) {
+    console.error('Error al actualizar el Sistema Operativo:', error);
+    return res.status(500).json({ error: 'Error al actualizar el sistema operativo' });
+  }
+}
