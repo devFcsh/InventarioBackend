@@ -109,3 +109,22 @@ export async function editarMarca(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el marca' });
   }
 }
+
+export async function eliminarMarca(req, res) {
+  const { id_marca } = req.params;
+
+  try {
+    const marca = await Marca.findByPk(id_marca);
+
+    if (!marca) {
+      return res.status(404).json({ error: 'Marca no encontrada' });
+    }
+
+    await marca.destroy();
+
+    return res.json({ message: 'Marca eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar marca:', error);
+    return res.status(500).json({ error: 'Error al eliminar marca' });
+  }
+}

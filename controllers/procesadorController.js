@@ -65,3 +65,22 @@ export async function agregarProcesador(req, res) {
       return res.status(500).json({ error: 'Error al actualizar el procesador' });
     }
   }
+
+  export async function eliminarProcesador(req, res) {
+    const { id_procesador } = req.params;
+  
+    try {
+      const procesador = await Procesador.findByPk(id_procesador);
+  
+      if (!procesador) {
+        return res.status(404).json({ error: 'Procesador no encontrado' });
+      }
+  
+      await procesador.destroy();
+  
+      return res.json({ message: 'Procesador eliminado correctamente' });
+    } catch (error) {
+      console.error('Error al eliminar el procesador:', error);
+      return res.status(500).json({ error: 'Error al eliminar el procesador' });
+    }
+  }

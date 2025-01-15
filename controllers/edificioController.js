@@ -66,3 +66,22 @@ export async function editarEdificio(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el edificio' });
   }
 }
+
+export async function eliminarEdificio(req, res) {
+  const { id_edificio } = req.params;
+
+  try {
+    const edificio = await Edificio.findByPk(id_edificio);
+
+    if (!edificio) {
+      return res.status(404).json({ error: 'Edificio no encontrado' });
+    }
+
+    await edificio.destroy();
+
+    return res.json({ message: 'Edificio eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el edificio:', error);
+    return res.status(500).json({ error: 'Error al eliminar el edificio' });
+  }
+}

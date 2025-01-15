@@ -69,3 +69,22 @@ export async function editarUso(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el uso' });
   }
 }
+
+export async function eliminarUso(req, res) {
+  const { id_uso } = req.params;
+
+  try {
+    const uso = await Uso.findByPk(id_uso);
+
+    if (!uso) {
+      return res.status(404).json({ error: 'Uso no encontrado' });
+    }
+
+    await uso.destroy();
+
+    return res.json({ message: 'Uso eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el uso:', error);
+    return res.status(500).json({ error: 'Error al eliminar el uso' });
+  }
+}

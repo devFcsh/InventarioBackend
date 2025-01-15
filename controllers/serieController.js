@@ -107,3 +107,22 @@ export async function seriesPorModelo(req, res) {
       return res.status(500).json({ error: 'Error al actualizar el serie' });
     }
   }
+
+  export async function eliminarSerie(req, res) {
+    const { id_serie } = req.params;
+  
+    try {
+      const serie = await Serie.findByPk(id_serie);
+  
+      if (!serie) {
+        return res.status(404).json({ error: 'Serie no encontrado' });
+      }
+  
+      await serie.destroy();
+  
+      return res.json({ message: 'Serie eliminado correctamente' });
+    } catch (error) {
+      console.error('Error al eliminar el serie:', error);
+      return res.status(500).json({ error: 'Error al eliminar el serie' });
+    }
+  }

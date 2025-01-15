@@ -65,3 +65,22 @@ export async function editarSistemaOperativo(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el sistema operativo' });
   }
 }
+
+export async function eliminarSistemaOperativo(req, res) {
+  const { id_sistemaoperativo } = req.params;
+
+  try {
+    const sistema_operativo = await SistemaOperativo.findByPk(id_sistemaoperativo);
+
+    if (!sistema_operativo) {
+      return res.status(404).json({ error: 'Sistema Operativo no encontrado' });
+    }
+
+    await sistema_operativo.destroy();
+
+    return res.json({ message: 'Sistema Operativo eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el Sistema Operativo:', error);
+    return res.status(500).json({ error: 'Error al eliminar el Sistema Operativo' });
+  }
+}

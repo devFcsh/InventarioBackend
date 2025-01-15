@@ -87,3 +87,22 @@ export async function editarVersionSO(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el version SO' });
   }
 }
+
+export async function eliminarVersionSO(req, res) {
+  const { id_versionso } = req.params;
+
+  try {
+    const version_so = await VersionSo.findByPk(id_versionso);
+
+    if (!version_so) {
+      return res.status(404).json({ error: 'Version SO no encontrado' });
+    }
+
+    await version_so.destroy();
+
+    return res.json({ message: 'Version SO eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar version SO:', error);
+    return res.status(500).json({ error: 'Error al eliminar version SO' });
+  }
+}

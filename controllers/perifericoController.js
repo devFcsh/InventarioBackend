@@ -65,3 +65,22 @@ export async function editarPeriferico(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el periferico' });
   }
 }
+
+export async function eliminarPeriferico(req, res) {
+  const { id_periferico } = req.params;
+
+  try {
+    const periferico = await Periferico.findByPk(id_periferico);
+
+    if (!periferico) {
+      return res.status(404).json({ error: 'Periferico no encontrado' });
+    }
+
+    await periferico.destroy();
+
+    return res.json({ message: 'Periferico eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el periferico:', error);
+    return res.status(500).json({ error: 'Error al eliminar el periferico' });
+  }
+}

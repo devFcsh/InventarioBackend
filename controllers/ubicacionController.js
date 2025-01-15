@@ -85,3 +85,22 @@ export async function editarUbicacion(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el ubicacion' });
   }
 }
+
+export async function eliminarUbicacion(req, res) {
+  const { id_ubicacion } = req.params;
+
+  try {
+    const ubicacion = await Ubicacion.findByPk(id_ubicacion);
+
+    if (!ubicacion) {
+      return res.status(404).json({ error: 'Ubicacion no encontrado' });
+    }
+
+    await ubicacion.destroy();
+
+    return res.json({ message: 'Ubicacion eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el ubicacion:', error);
+    return res.status(500).json({ error: 'Error al eliminar el ubicacion' });
+  }
+}

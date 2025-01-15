@@ -65,3 +65,22 @@ export async function editarRAM(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el ram' });
   }
 }
+
+export async function eliminarRAM(req, res) {
+  const { id_ram } = req.params;
+
+  try {
+    const ram = await Ram.findByPk(id_ram);
+
+    if (!ram) {
+      return res.status(404).json({ error: 'Ram no encontrado' });
+    }
+
+    await ram.destroy();
+
+    return res.json({ message: 'Ram eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el ram:', error);
+    return res.status(500).json({ error: 'Error al eliminar el ram' });
+  }
+}

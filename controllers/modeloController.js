@@ -104,3 +104,22 @@ export async function editarModelo(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el modelo' });
   }
 }
+
+export async function eliminarModelo(req, res) {
+  const { id_modelo } = req.params;
+
+  try {
+    const modelo = await Modelo.findByPk(id_modelo);
+
+    if (!modelo) {
+      return res.status(404).json({ error: 'Modelo no encontrado' });
+    }
+
+    await modelo.destroy();
+
+    return res.json({ message: 'Modelo eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el modelo:', error);
+    return res.status(500).json({ error: 'Error al eliminar el modelo' });
+  }
+}

@@ -65,3 +65,22 @@ export async function agregarDominio(req, res) {
     res.status(500).json({ error: "Error al agregar el dominio" });
   }
 }
+
+export async function eliminarDominio(req, res) {
+  const { id_dominio } = req.params;
+
+  try {
+    const dominio = await Dominio.findByPk(id_dominio);
+
+    if (!dominio) {
+      return res.status(404).json({ error: 'Dominio no encontrado' });
+    }
+
+    await dominio.destroy();
+
+    return res.json({ message: 'Dominio eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el dominio:', error);
+    return res.status(500).json({ error: 'Error al eliminar el dominio' });
+  }
+}

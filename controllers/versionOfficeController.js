@@ -66,3 +66,22 @@ export async function editarVersionOffice(req, res) {
     return res.status(500).json({ error: 'Error al actualizar el version office' });
   }
 }
+
+export async function eliminarVersionOffice(req, res) {
+  const { id_version_office } = req.params;
+
+  try {
+    const version_office = await VersionOffice.findByPk(id_version_office);
+
+    if (!version_office) {
+      return res.status(404).json({ error: 'Version Office no encontrado' });
+    }
+
+    await version_office.destroy();
+
+    return res.json({ message: 'Version office eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar el version office:', error);
+    return res.status(500).json({ error: 'Error al eliminar el version office' });
+  }
+}
