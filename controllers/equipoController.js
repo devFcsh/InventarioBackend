@@ -70,6 +70,76 @@ export async function obtenerEquiposActivos(req, res) {
   }
 }
 
+export async function obtenerEquiposRed(req, res) {
+  const {
+    perifericoId,
+    marcaId,
+    modeloId,
+    serieId,
+    inventario,
+    limit,
+    offset,
+  } = req.query;
+
+  try {
+    const query = `
+      SELECT 
+    e.*, 
+    p.nombre AS periferico, 
+    m.nombre AS marca, 
+    mo.nombre AS modelo, 
+    s.nombre AS serie,
+    u.nombre AS usuario,
+    uso.nombre AS uso,
+    ea.id_ubicacion,
+    ed.nombre AS edificio,
+    COUNT(*) OVER() AS total
+FROM equipo e
+JOIN serie s ON e.id_serie = s.id_serie
+JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+JOIN marca m ON mm.id_marca = m.id_marca
+JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+JOIN periferico p ON mp.id_periferico = p.id_periferico
+JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
+JOIN edificio ed ON a.id_edificio = ed.id_edificio 
+JOIN usuario u ON ea.id_usuario = u.id_usuario
+JOIN uso ON u.id_uso = uso.id_uso
+JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
+WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
+  AND (:marcaId IS NULL OR m.id_marca = :marcaId)
+  AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
+  AND (:serieId IS NULL OR s.id_serie = :serieId)
+  AND (:inventario IS NULL OR e.inventario = :inventario)
+LIMIT :limit OFFSET :offset;
+`;
+
+    const equipos = await db.query(query, {
+      replacements: {
+        perifericoId: perifericoId || null,
+        marcaId: marcaId || null,
+        modeloId: modeloId || null,
+        serieId: serieId || null,
+        inventario: inventario || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
+      },
+      type: QueryTypes.SELECT,
+    });
+
+    const total = equipos.length > 0 ? equipos[0].total : 0;
+
+    res.json({ total, equipos });
+  } catch (error) {
+    console.error("Error al obtener equipos y contar activos:", error);
+    res
+      .status(500)
+      .json({ error: "Error al obtener equipos y contar activos" });
+  }
+}
+
 export async function obtenerEquiposBodega(req, res) {
   const {
     perifericoId,
@@ -129,6 +199,66 @@ export async function obtenerEquiposBodega(req, res) {
   }
 }
 
+export async function obtenerEquiposRedBodega(req, res) {
+  const {
+    perifericoId,
+    marcaId,
+    modeloId,
+    serieId,
+    inventario,
+    limit,
+    offset,
+  } = req.query;
+
+  try {
+    const query = `
+      SELECT 
+        e.*, 
+        p.nombre AS periferico, 
+        m.nombre AS marca, 
+        mo.nombre AS modelo, 
+        s.nombre AS serie,
+        COUNT(*) OVER() AS total
+      FROM equipo e
+      JOIN serie s ON e.id_serie = s.id_serie
+      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+      JOIN marca m ON mm.id_marca = m.id_marca
+      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN equipo_Bodega eb ON e.id_equipo = eb.id_equipo
+      JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
+      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
+        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
+        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
+        AND (:serieId IS NULL OR s.id_serie = :serieId)
+        AND (:inventario IS NULL OR e.inventario = :inventario)
+      LIMIT :limit OFFSET :offset;
+    `;
+
+    const equipos = await db.query(query, {
+      replacements: {
+        perifericoId: perifericoId || null,
+        marcaId: marcaId || null,
+        modeloId: modeloId || null,
+        serieId: serieId || null,
+        inventario: inventario || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
+      },
+      type: QueryTypes.SELECT,
+    });
+
+    const total = equipos.length > 0 ? equipos[0].total : 0;
+
+    res.json({ total, equipos });
+  } catch (error) {
+    console.error("Error al obtener equipos en bodega:", error);
+    res.status(500).json({ error: "Error al obtener equipos en bodega" });
+  }
+}
+
 export async function obtenerEquiposBaja(req, res) {
   const {
     perifericoId,
@@ -158,6 +288,66 @@ export async function obtenerEquiposBaja(req, res) {
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
       JOIN equipo_Baja eb ON e.id_equipo = eb.id_equipo
+      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
+        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
+        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
+        AND (:serieId IS NULL OR s.id_serie = :serieId)
+        AND (:inventario IS NULL OR e.inventario = :inventario)
+      LIMIT :limit OFFSET :offset;
+    `;
+
+    const equipos = await db.query(query, {
+      replacements: {
+        perifericoId: perifericoId || null,
+        marcaId: marcaId || null,
+        modeloId: modeloId || null,
+        serieId: serieId || null,
+        inventario: inventario || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
+      },
+      type: QueryTypes.SELECT,
+    });
+
+    const total = equipos.length > 0 ? equipos[0].total : 0;
+
+    res.json({ total, equipos });
+  } catch (error) {
+    console.error("Error al obtener equipos de baja:", error);
+    res.status(500).json({ error: "Error al obtener equipos de baja" });
+  }
+}
+
+export async function obtenerEquiposRedBaja(req, res) {
+  const {
+    perifericoId,
+    marcaId,
+    modeloId,
+    serieId,
+    inventario,
+    limit,
+    offset,
+  } = req.query;
+
+  try {
+    const query = `
+      SELECT 
+        e.*, 
+        p.nombre AS periferico, 
+        m.nombre AS marca, 
+        mo.nombre AS modelo, 
+        s.nombre AS serie,
+        COUNT(*) OVER() AS total
+      FROM equipo e
+      JOIN serie s ON e.id_serie = s.id_serie
+      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+      JOIN marca m ON mm.id_marca = m.id_marca
+      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN equipo_Baja eb ON e.id_equipo = eb.id_equipo
+      JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
       WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
         AND (:marcaId IS NULL OR m.id_marca = :marcaId)
         AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
@@ -380,34 +570,35 @@ export async function darDeBajaEquipo(req, res) {
       return res.status(400).json({ error: "El equipo no existe." });
     }
 
-    if(tipo === 'activo') {
+    if (tipo === "activo") {
+      const imagen = await db.query(
+        `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
 
-    const imagen = await db.query(
-      `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
-      {
-        replacements: { equipoId },
-        type: QueryTypes.SELECT,
-      }
-    );
+      if (imagen.length) {
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`,
+          {
+            replacements: { equipoId },
+            type: QueryTypes.DELETE,
+          }
+        );
 
-    if (imagen.length) {
-      await db.query(`DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`, {
-        replacements: { equipoId },
-        type: QueryTypes.DELETE,
-      });
+        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+          replacements: { idImagen: imagen[0].id_imagen },
+          type: QueryTypes.DELETE,
+        });
 
-      await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
-        replacements: { idImagen: imagen[0].id_imagen },
-        type: QueryTypes.DELETE,
-      });
-
-      const imagePath = join(__dirname, "..", imagen[0].ruta);
-      if (existsSync(imagePath)) {
-        unlinkSync(imagePath);
+        const imagePath = join(__dirname, "..", imagen[0].ruta);
+        if (existsSync(imagePath)) {
+          unlinkSync(imagePath);
+        }
       }
     }
-
-  }
 
     const computadora = await db.query(
       `SELECT id_equipo FROM computadora WHERE id_computadora = :equipoId`,
@@ -445,26 +636,24 @@ export async function darDeBajaEquipo(req, res) {
           }
         );
 
-        if(tipo === 'activo') {
-
-        await db.query(
-          `DELETE FROM equipo_activo WHERE id_equipo IN (:componenteIds)`,
-          {
-            replacements: { componenteIds },
-            type: QueryTypes.DELETE,
-          }
-        );
-
-      } else if(tipo === 'bodega') {
-        await db.query(
-          `DELETE FROM equipo_bodega WHERE id_equipo IN (:componenteIds)`,
-          {
-            replacements: { componenteIds },
-            type: QueryTypes.DELETE,
-          }
-        );
+        if (tipo === "activo") {
+          await db.query(
+            `DELETE FROM equipo_activo WHERE id_equipo IN (:componenteIds)`,
+            {
+              replacements: { componenteIds },
+              type: QueryTypes.DELETE,
+            }
+          );
+        } else if (tipo === "bodega") {
+          await db.query(
+            `DELETE FROM equipo_bodega WHERE id_equipo IN (:componenteIds)`,
+            {
+              replacements: { componenteIds },
+              type: QueryTypes.DELETE,
+            }
+          );
+        }
       }
-    }
       await db.query(`INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`, {
         replacements: { equipoId },
         type: QueryTypes.INSERT,
@@ -484,20 +673,17 @@ export async function darDeBajaEquipo(req, res) {
       });
     }
 
-    if(tipo === 'activo') {
-
-    await db.query(`DELETE FROM equipo_activo WHERE id_equipo = :equipoId`, {
-      replacements: { equipoId },
-      type: QueryTypes.DELETE,
-    });
-    } else if(tipo === 'bodega') {
-
-    await db.query(`DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`, {
-      replacements: { equipoId },
-      type: QueryTypes.DELETE,
-    });
-
-  }
+    if (tipo === "activo") {
+      await db.query(`DELETE FROM equipo_activo WHERE id_equipo = :equipoId`, {
+        replacements: { equipoId },
+        type: QueryTypes.DELETE,
+      });
+    } else if (tipo === "bodega") {
+      await db.query(`DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`, {
+        replacements: { equipoId },
+        type: QueryTypes.DELETE,
+      });
+    }
 
     res.json({ message: "Equipo dado de baja con éxito" });
   } catch (error) {
@@ -580,7 +766,15 @@ export async function agregarEquipo(req, res) {
 }
 
 export async function agregarEquipoSimple(req, res) {
-  const { tipo, inventario, serie, idUbicacion, idUsuario, imagenRuta, observacion } = req.body;
+  const {
+    tipo,
+    inventario,
+    serie,
+    idUbicacion,
+    idUsuario,
+    imagenRuta,
+    observacion,
+  } = req.body;
 
   const parametros = {
     tipo,
@@ -589,7 +783,7 @@ export async function agregarEquipoSimple(req, res) {
     idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
     idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
     imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
-    observacion
+    observacion,
   };
 
   try {
@@ -609,6 +803,68 @@ export async function agregarEquipoSimple(req, res) {
     );
 
     const equipoId = result[0]?.id_equipo;
+
+    res.json({ message: "Equipo agregado correctamente", equipoId });
+  } catch (error) {
+    console.error("Error al agregar equipo:", error);
+    res.status(500).json({ error: "Error al agregar equipo" });
+  }
+}
+
+export async function agregarEquipoRed(req, res) {
+  const {
+    tipo,
+    inventario,
+    serie,
+    idUbicacion,
+    idUsuario,
+    imagenRuta,
+    observacion,
+    mac,
+    puertos,
+    puerto_ftp,
+  } = req.body;
+
+  const parametros = {
+    tipo,
+    inventario,
+    serie,
+    idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
+    idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
+    imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
+    observacion,
+  };
+
+  try {
+    const result = await db.query(
+      `CALL agregar_equipo_simple(
+        :tipo,
+        :inventario,
+        :serie,
+        :idUbicacion,
+        :idUsuario,
+        :imagenRuta,
+        :observacion
+      );`,
+      {
+        replacements: parametros,
+      }
+    );
+
+    const equipoId = result[0]?.id_equipo;
+
+    if (!equipoId) {
+      return res.status(400).json({ error: "No se pudo agregar el equipo" });
+    }
+
+    await db.query(
+      `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp)
+         VALUES (:equipoId, :mac, :puertos, :puerto_ftp)`,
+      {
+        replacements: { equipoId, mac, puertos, puerto_ftp },
+        type: QueryTypes.INSERT,
+      }
+    );
 
     res.json({ message: "Equipo agregado correctamente", equipoId });
   } catch (error) {
@@ -767,6 +1023,58 @@ export const obtenerActivoSimple = async (req, res) => {
   }
 };
 
+export const obtenerActivoRed = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const equipo = await db.query(
+      `SELECT 
+         e.id_equipo,
+         e.inventario,
+         e.id_serie,
+         ea.id_usuario,
+         u.id_uso,
+         p.id_periferico,
+         m.id_marca,
+         mm.id_modelo,
+         a.id_ubicacion,
+         a.id_edificio,
+         i.ruta AS imagenRuta,
+         e.observacion,
+         er.mac,
+         er.puertos,
+         er.puerto_ftp
+       FROM equipo e
+       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+       LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
+       LEFT JOIN uso us ON u.id_uso = us.id_uso
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       LEFT JOIN marca m ON mm.id_marca = m.id_marca
+       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
+       JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
+       JOIN imagen i ON i.id_imagen = ei.id_imagen
+       LEFT JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
+       WHERE e.id_equipo = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(404).json({ error: "Equipo no encontrado" });
+    }
+
+    res.json({ equipo: equipo[0] });
+  } catch (error) {
+    console.error("Error al obtener el equipo de red:", error);
+    res.status(500).json({ error: "Error al obtener el equipo de red" });
+  }
+};
+
 export const obtenerComputadoraBodega = async (req, res) => {
   const { id } = req.params;
 
@@ -896,6 +1204,68 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
     res
       .status(500)
       .json({ error: "Error al obtener la computadora de bodega" });
+  }
+};
+
+export const obtenerBodegaBajaRed = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const equipo = await db.query(
+      `SELECT 
+         e.id_equipo,
+         e.inventario,
+         e.id_serie,
+         p.id_periferico,
+         m.id_marca,
+         mm.id_modelo,
+         e.observacion,
+         er.mac,
+         er.puertos,
+         er.puerto_ftp
+       FROM equipo e
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       LEFT JOIN marca m ON mm.id_marca = m.id_marca
+       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
+       WHERE e.id_equipo = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(404).json({ error: "Equipo no encontrado" });
+    }
+
+    const componentes = await db.query(
+      `SELECT c.id_componente, 
+              e.inventario, 
+              p.nombre AS periferico, 
+              m.nombre AS marca, 
+              mo.nombre AS modelo, 
+              s.nombre AS serie 
+       FROM componente c
+       JOIN equipo e ON c.id_componente = e.id_equipo
+       JOIN periferico p ON e.id_serie = p.id_periferico
+       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
+       JOIN marca m ON mm.id_marca = m.id_marca
+       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
+       JOIN serie s ON e.id_serie = s.id_serie
+       WHERE c.id_computadora = :id`,
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.json({ equipo: equipo[0], componentes });
+  } catch (error) {
+    console.error("Error al obtener el equipo de bodega:", error);
+    res.status(500).json({ error: "Error al obtener el equipo de bodega" });
   }
 };
 
@@ -1064,7 +1434,7 @@ export async function editarEquipo(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, id_serie },
+        replacements: { equipoId, inventario, id_serie, observacion },
         type: QueryTypes.UPDATE,
       }
     );
@@ -1124,8 +1494,15 @@ export async function editarEquipo(req, res) {
 
 export async function editarEquipoSimple(req, res) {
   const { equipoId } = req.params;
-  const { tipo, id_serie, inventario, id_usuario, id_ubicacion, imagenRuta, observacion } =
-    req.body;
+  const {
+    tipo,
+    id_serie,
+    inventario,
+    id_usuario,
+    id_ubicacion,
+    imagenRuta,
+    observacion,
+  } = req.body;
 
   try {
     const equipo = await db.query(
@@ -1191,7 +1568,7 @@ export async function editarEquipoSimple(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, id_serie },
+        replacements: { equipoId, inventario, id_serie, observacion },
         type: QueryTypes.UPDATE,
       }
     );
@@ -1209,6 +1586,129 @@ export async function editarEquipoSimple(req, res) {
             id_ubicacion,
           },
           type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    res.json({ message: "Equipo actualizado con éxito" });
+  } catch (error) {
+    console.error("Error al actualizar el equipo:", error);
+    res.status(500).json({ error: "Error al actualizar el equipo" });
+  }
+}
+
+export async function editarEquipoRed(req, res) {
+  const { equipoId } = req.params;
+  const {
+    tipo,
+    id_serie,
+    inventario,
+    id_usuario,
+    id_ubicacion,
+    imagenRuta,
+    observacion,
+    mac,
+    puertos,
+    puerto_ftp,
+  } = req.body;
+
+  try {
+    const equipo = await db.query(
+      `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(400).json({ error: "El equipo no existe." });
+    }
+
+    if (imagenRuta && tipo === "activo") {
+      const imagenActual = await db.query(
+        `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      if (imagenActual.length) {
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+          {
+            replacements: { idImagen: imagenActual[0].id_imagen },
+            type: QueryTypes.DELETE,
+          }
+        );
+
+        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+          replacements: { idImagen: imagenActual[0].id_imagen },
+          type: QueryTypes.DELETE,
+        });
+
+        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
+        if (existsSync(imagePath)) {
+          unlinkSync(imagePath);
+        }
+      }
+
+      const [result] = await db.query(
+        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+        {
+          replacements: { imagenRuta },
+          type: QueryTypes.INSERT,
+        }
+      );
+
+      const imagenId = result;
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
+        {
+          replacements: { equipoId, imagenId },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+
+    await db.query(
+      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId, inventario, id_serie, observacion },
+        type: QueryTypes.UPDATE,
+      }
+    );
+
+    if (tipo === "activo") {
+      await db.query(
+        `UPDATE equipo_activo SET
+                  id_usuario = :id_usuario,
+                  id_ubicacion = :id_ubicacion
+              WHERE id_equipo = :equipoId`,
+        {
+          replacements: {
+            equipoId,
+            id_usuario,
+            id_ubicacion,
+          },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    if (mac || puertos || puerto_ftp) {
+      await db.query(
+        `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp)
+         VALUES (:equipoId, :mac, :puertos, :puerto_ftp)
+         ON DUPLICATE KEY UPDATE
+         mac = :mac,
+         puertos = :puertos,
+         puerto_ftp = :puerto_ftp`,
+        {
+          replacements: { equipoId, mac, puertos, puerto_ftp },
+          type: QueryTypes.INSERT,
         }
       );
     }
