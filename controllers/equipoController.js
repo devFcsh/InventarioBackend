@@ -523,6 +523,7 @@ export async function agregarEquipo(req, res) {
     idUbicacion,
     idUsuario,
     imagenRuta,
+    observacion,
   } = req.body;
 
   const parametros = {
@@ -541,6 +542,7 @@ export async function agregarEquipo(req, res) {
     idUbicacion: tipo === "bodega" ? null : idUbicacion,
     idUsuario: tipo === "bodega" ? null : idUsuario,
     imagenRuta: tipo === "bodega" ? null : imagenRuta,
+    observacion,
   };
 
   try {
@@ -560,7 +562,8 @@ export async function agregarEquipo(req, res) {
         :dominio,
         :idUbicacion,
         :idUsuario,
-        :imagenRuta
+        :imagenRuta,
+        :observacion
       );`,
       {
         replacements: parametros,
@@ -577,7 +580,7 @@ export async function agregarEquipo(req, res) {
 }
 
 export async function agregarEquipoSimple(req, res) {
-  const { tipo, inventario, serie, idUbicacion, idUsuario, imagenRuta } = req.body;
+  const { tipo, inventario, serie, idUbicacion, idUsuario, imagenRuta, observacion } = req.body;
 
   const parametros = {
     tipo,
@@ -586,6 +589,7 @@ export async function agregarEquipoSimple(req, res) {
     idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
     idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
     imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
+    observacion
   };
 
   try {
@@ -596,7 +600,8 @@ export async function agregarEquipoSimple(req, res) {
         :serie,
         :idUbicacion,
         :idUsuario,
-        :imagenRuta
+        :imagenRuta,
+        :observacion
       );`,
       {
         replacements: parametros,
@@ -638,7 +643,8 @@ export const obtenerComputadora = async (req, res) => {
          a.id_ubicacion,
          a.id_edificio,
          i.ruta AS imagenRuta,
-         vso.id_sistemaoperativo
+         vso.id_sistemaoperativo,
+         e.observacion
        FROM equipo e
        JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
@@ -708,7 +714,8 @@ export const obtenerActivoSimple = async (req, res) => {
          mm.id_modelo,
          a.id_ubicacion,
          a.id_edificio,
-         i.ruta AS imagenRuta
+         i.ruta AS imagenRuta,
+         e.observacion
        FROM equipo e
        JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
@@ -781,7 +788,8 @@ export const obtenerComputadoraBodega = async (req, res) => {
          p.id_periferico,
          m.id_marca,
          mm.id_modelo,
-         vso.id_sistemaoperativo
+         vso.id_sistemaoperativo,
+         e.observacion
        FROM equipo e
        LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
        LEFT JOIN serie s ON e.id_serie = s.id_serie
@@ -843,6 +851,7 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
          p.id_periferico,
          m.id_marca,
          mm.id_modelo,
+         e.observacion
        FROM equipo e
        LEFT JOIN serie s ON e.id_serie = s.id_serie
        LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
@@ -988,6 +997,7 @@ export async function editarEquipo(req, res) {
     id_usuario,
     id_ubicacion,
     imagenRuta,
+    observacion,
   } = req.body;
 
   try {
@@ -1052,7 +1062,7 @@ export async function editarEquipo(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
         replacements: { equipoId, inventario, id_serie },
         type: QueryTypes.UPDATE,
@@ -1114,7 +1124,7 @@ export async function editarEquipo(req, res) {
 
 export async function editarEquipoSimple(req, res) {
   const { equipoId } = req.params;
-  const { tipo, id_serie, inventario, id_usuario, id_ubicacion, imagenRuta } =
+  const { tipo, id_serie, inventario, id_usuario, id_ubicacion, imagenRuta, observacion } =
     req.body;
 
   try {
@@ -1179,7 +1189,7 @@ export async function editarEquipoSimple(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
         replacements: { equipoId, inventario, id_serie },
         type: QueryTypes.UPDATE,
