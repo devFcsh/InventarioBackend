@@ -774,6 +774,7 @@ export async function agregarEquipoSimple(req, res) {
     idUsuario,
     imagenRuta,
     observacion,
+    idLampara,
   } = req.body;
 
   const parametros = {
@@ -784,6 +785,7 @@ export async function agregarEquipoSimple(req, res) {
     idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
     imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
     observacion,
+    idLampara,
   };
 
   try {
@@ -795,7 +797,8 @@ export async function agregarEquipoSimple(req, res) {
         :idUbicacion,
         :idUsuario,
         :imagenRuta,
-        :observacion
+        :observacion,
+        :idLampara
       );`,
       {
         replacements: parametros,
@@ -971,7 +974,8 @@ export const obtenerActivoSimple = async (req, res) => {
          a.id_ubicacion,
          a.id_edificio,
          i.ruta AS imagenRuta,
-         e.observacion
+         e.observacion,
+         ep.id_lampara 
        FROM equipo e
        JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
@@ -984,6 +988,7 @@ export const obtenerActivoSimple = async (req, res) => {
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
+       LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
        WHERE e.id_equipo = :id`,
       {
         replacements: { id },
@@ -1018,8 +1023,8 @@ export const obtenerActivoSimple = async (req, res) => {
 
     res.json({ equipo: equipo[0], componentes });
   } catch (error) {
-    console.error("Error al obtener la computadora:", error);
-    res.status(500).json({ error: "Error al obtener la computadora" });
+    console.error("Error al obtener el equipo:", error);
+    res.status(500).json({ error: "Error al obtener el equipo" });
   }
 };
 
@@ -1159,13 +1164,15 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
          p.id_periferico,
          m.id_marca,
          mm.id_modelo,
-         e.observacion
+         e.observacion,
+         ep.id_lampara
        FROM equipo e
        LEFT JOIN serie s ON e.id_serie = s.id_serie
        LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
        LEFT JOIN marca m ON mm.id_marca = m.id_marca
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
        WHERE e.id_equipo = :id`,
       {
         replacements: { id },
@@ -1198,7 +1205,7 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
       }
     );
 
-    res.json({ computadora: computadora[0], componentes });
+    res.json({ equipo: equipo[0], componentes });
   } catch (error) {
     console.error("Error al obtener la computadora de bodega:", error);
     res
@@ -1502,6 +1509,7 @@ export async function editarEquipoSimple(req, res) {
     id_ubicacion,
     imagenRuta,
     observacion,
+    id_lampara,
   } = req.body;
 
   try {
@@ -1575,7 +1583,7 @@ export async function editarEquipoSimple(req, res) {
 
     if (tipo === "activo") {
       await db.query(
-        `UPDATE equipo_activo SET
+        `UPDATE equipo_Activo SET
                   id_usuario = :id_usuario,
                   id_ubicacion = :id_ubicacion
               WHERE id_equipo = :equipoId`,
@@ -1585,6 +1593,16 @@ export async function editarEquipoSimple(req, res) {
             id_usuario,
             id_ubicacion,
           },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    if (id_lampara !== undefined && id_lampara !== 0) {
+      await db.query(
+        `UPDATE equipo_proyector SET id_lampara = :id_lampara WHERE id_equipo_proyector = :equipoId`,
+        {
+          replacements: { id_lampara, equipoId },
           type: QueryTypes.UPDATE,
         }
       );
