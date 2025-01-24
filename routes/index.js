@@ -18,6 +18,7 @@ import versionesOffice from './versionOfficeRoutes.js';
 import edificios from './edificioRoutes.js'; 
 import ubicaciones from './ubicacionRoutes.js';
 import procesadores from './procesadorRoutes.js'; 
+import lamparas from './lamparaRoutes.js'; 
 
 router.use('/perifericos', perifericos);
 router.use('/marcas', marcas);
@@ -36,5 +37,6 @@ router.use('/versionesOffice', versionesOffice);
 router.use('/edificios', edificios);  
 router.use('/ubicaciones', ubicaciones);  
 router.use('/procesadores', procesadores);  
+router.use('/lamparas', lamparas);  
 
 export default router;
