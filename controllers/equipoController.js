@@ -1837,3 +1837,133 @@ export async function gestionarComponentesEditados(req, res) {
     res.status(500).json({ error: "Error al gestionar componentes" });
   }
 }
+
+export const pasarActivoABodega = async (req, res) => {
+  const { equipoId } = req.params;
+
+  try {
+    const equipoActivo = await db.query(
+      `SELECT * FROM equipo_Activo WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipoActivo.length) {
+      return res
+        .status(400)
+        .json({ error: "El equipo no se encuentra como activo." });
+    }
+
+    const imagenesAsociadas = await db.query(
+      `SELECT id_imagen, ruta FROM imagen WHERE id_imagen IN 
+       (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (imagenesAsociadas.length) {
+      for (const imagen of imagenesAsociadas) {
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+          {
+            replacements: { idImagen: imagen.id_imagen },
+            type: QueryTypes.DELETE,
+          }
+        );
+
+        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+          replacements: { idImagen: imagen.id_imagen },
+          type: QueryTypes.DELETE,
+        });
+
+        const imagePath = join(__dirname, "..", imagen.ruta);
+        if (existsSync(imagePath)) {
+          unlinkSync(imagePath);
+        }
+      }
+    }
+
+    await db.query(`DELETE FROM equipo_Activo WHERE id_equipo = :equipoId`, {
+      replacements: { equipoId },
+      type: QueryTypes.DELETE,
+    });
+
+    await db.query(`INSERT INTO equipo_Bodega (id_equipo) VALUES (:equipoId)`, {
+      replacements: { equipoId },
+      type: QueryTypes.INSERT,
+    });
+
+    res.json({
+      message: "El equipo se ha transferido a bodega correctamente.",
+    });
+  } catch (error) {
+    console.error("Error al transferir el equipo:", error);
+    res.status(500).json({ error: "Error al transferir el equipo a bodega." });
+  }
+};
+
+export const pasarBodegaAActivo = async (req, res) => {
+  const { equipoId } = req.params;
+  const { id_usuario, id_ubicacion, imagenRuta } = req.body;
+
+  try {
+    const equipoBodega = await db.query(
+      `SELECT * FROM equipo_Bodega WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipoBodega.length) {
+      return res
+        .status(400)
+        .json({ error: "El equipo no se encuentra en la bodega." });
+    }
+
+    await db.query(`DELETE FROM equipo_Bodega WHERE id_equipo = :equipoId`, {
+      replacements: { equipoId },
+      type: QueryTypes.DELETE,
+    });
+
+    await db.query(
+      `INSERT INTO equipo_Activo (id_equipo, id_usuario, id_ubicacion) 
+      VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
+      {
+        replacements: { equipoId, id_usuario, id_ubicacion },
+        type: QueryTypes.INSERT,
+      }
+    );
+
+    if (imagenRuta) {
+      const [result] = await db.query(
+        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+        {
+          replacements: { imagenRuta },
+          type: QueryTypes.INSERT,
+        }
+      );
+
+      const imagenId = result;
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
+        {
+          replacements: { equipoId, imagenId },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+
+    res.json({
+      message: "El equipo se ha transferido a activo correctamente.",
+    });
+  } catch (error) {
+    console.error("Error al transferir el equipo:", error);
+    res.status(500).json({ error: "Error al transferir el equipo a activo." });
+  }
+};
