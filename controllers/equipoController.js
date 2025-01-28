@@ -826,6 +826,7 @@ export async function agregarEquipoRed(req, res) {
     mac,
     puertos,
     puerto_ftp,
+    idLampara,
   } = req.body;
 
   const parametros = {
@@ -836,6 +837,10 @@ export async function agregarEquipoRed(req, res) {
     idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
     imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
     observacion,
+    mac,
+    puertos,
+    puerto_ftp,
+    idLampara
   };
 
   try {
@@ -848,6 +853,7 @@ export async function agregarEquipoRed(req, res) {
         :idUsuario,
         :imagenRuta,
         :observacion
+        :idLampara
       );`,
       {
         replacements: parametros,
@@ -1880,7 +1886,7 @@ export const pasarActivoABodega = async (req, res) => {
           type: QueryTypes.DELETE,
         });
 
-        const imagePath = join(__dirname, "..", imagen.ruta);
+        const imagePath = join(__dirname, "..", imagen[0].ruta);
         if (existsSync(imagePath)) {
           unlinkSync(imagePath);
         }
