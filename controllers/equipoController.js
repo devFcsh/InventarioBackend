@@ -1974,6 +1974,18 @@ export const pasarBodegaAActivo = async (req, res) => {
   const { id_usuario, id_ubicacion, imagenRuta } = req.body;
 
   try {
+    const isComponente = await db.query(
+      `SELECT 1 FROM componente WHERE id_componente = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (isComponente.length > 0) {
+      return res.status(400).json({ error: "No se puede mover un componente a bodega directamente." });
+    }
+    
     const equipoBodega = await db.query(
       `SELECT * FROM equipo_Bodega WHERE id_equipo = :equipoId`,
       {
@@ -2000,9 +2012,8 @@ export const pasarBodegaAActivo = async (req, res) => {
         replacements: { imagenRuta },
         type: QueryTypes.INSERT,
       }
-    );
-
-    const imagenId = imagenInsert[0].insertId;
+    )
+    const imagenId = imagenInsert[0];
 
     if (computadora.length) {
       const componentes = await db.query(

@@ -28,7 +28,7 @@ export async function lamparasPorModelo(req, res) {
         JOIN marca_periferico mp ON mm.id_marca = mp.id_marca
         WHERE (:perifericoId IS NULL OR mp.id_periferico = :perifericoId)
         AND (:marcaId IS NULL OR mm.id_marca = :marcaId)
-        AND (:modeloId IS NULL OR ms.id_modelo = :modeloId);
+        AND (:modeloId IS NULL OR mm.id_modelo = :modeloId);
       `;
   
       const lamparas = await db.query(query, {
