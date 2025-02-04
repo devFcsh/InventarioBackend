@@ -1,6 +1,90 @@
 import { QueryTypes } from "sequelize";
 import db from "../models/index.js";
 
+export async function exportarComputadorasActivos(req, res) {
+  try {
+    const query = `
+      SELECT 
+  e.id_equipo AS id,
+  ed.nombre AS edificio,
+  ub.nombre AS ubicacion,
+  uo.nombre AS uso,
+  us.nombre AS usuario,
+
+  -- Mouse
+  MAX(CASE WHEN pe.nombre = 'Mouse' THEN ma.nombre END) AS mouse_marca,
+  MAX(CASE WHEN pe.nombre = 'Mouse' THEN mo.nombre END) AS mouse_modelo,
+  MAX(CASE WHEN pe.nombre = 'Mouse' THEN se.nombre END) AS mouse_serie,
+  MAX(CASE WHEN pe.nombre = 'Mouse' THEN eqc.inventario END) AS mouse_inventario,
+
+  -- Teclado
+  MAX(CASE WHEN pe.nombre = 'Teclado' THEN ma.nombre END) AS teclado_marca,
+  MAX(CASE WHEN pe.nombre = 'Teclado' THEN mo.nombre END) AS teclado_modelo,
+  MAX(CASE WHEN pe.nombre = 'Teclado' THEN se.nombre END) AS teclado_serie,
+  MAX(CASE WHEN pe.nombre = 'Teclado' THEN eqc.inventario END) AS teclado_inventario,
+
+  -- Monitor
+  MAX(CASE WHEN pe.nombre = 'Monitor' THEN ma.nombre END) AS monitor_marca,
+  MAX(CASE WHEN pe.nombre = 'Monitor' THEN mo.nombre END) AS monitor_modelo,
+  MAX(CASE WHEN pe.nombre = 'Monitor' THEN se.nombre END) AS monitor_serie,
+  MAX(CASE WHEN pe.nombre = 'Monitor' THEN eqc.inventario END) AS monitor_inventario,
+
+  c.direccion_ip,
+  c.nombre_equipo,
+  d.nombre AS dominio,
+  so.nombre AS sistema_operativo,
+  p.nombre AS procesador,
+  r.tipo AS tipo_ram,
+  r.capacidad AS capacidad_ram,
+  di.capacidad AS capacidad_disco,
+  mar.nombre AS marca,
+  m.nombre AS modelo,
+  se.nombre AS serie,
+  e.inventario,
+  ea.fecha_ultima_modificacion AS fecha_ultimo_cambio,
+  e.observacion
+FROM computadora c
+JOIN equipo e ON c.id_computadora = e.id_equipo
+JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
+JOIN ubicacion ub ON ea.id_ubicacion = ub.id_ubicacion
+JOIN edificio ed ON ub.id_edificio = ed.id_edificio
+JOIN usuario us ON ea.id_usuario = us.id_usuario
+JOIN uso uo ON us.id_uso = uo.id_uso
+JOIN dominio d ON c.id_dominio = d.id_dominio
+JOIN version_SO vso ON c.id_versionso = vso.id_versionso
+JOIN sistema_Operativo so ON vso.id_sistemaoperativo = so.id_sistemaoperativo
+JOIN procesador p ON c.id_procesador = p.id_procesador
+JOIN ram r ON c.id_ram = r.id_ram
+JOIN disco di ON c.id_disco = di.id_disco
+JOIN serie se ON e.id_serie = se.id_serie
+JOIN modelo_serie ms ON se.id_serie = ms.id_serie
+JOIN modelo m ON ms.id_modelo = m.id_modelo
+JOIN marca_modelo mm ON m.id_modelo = mm.id_modelo
+JOIN marca mar ON mm.id_marca = mar.id_marca
+LEFT JOIN componente comp ON c.id_computadora = comp.id_computadora
+LEFT JOIN equipo eqc ON comp.id_componente = eqc.id_equipo
+LEFT JOIN serie se_com ON eqc.id_serie = se_com.id_serie
+LEFT JOIN modelo_serie ms_com ON se_com.id_serie = ms_com.id_serie
+LEFT JOIN modelo mo ON ms_com.id_modelo = mo.id_modelo
+LEFT JOIN marca_modelo mm_com ON mo.id_modelo = mm_com.id_modelo
+LEFT JOIN marca ma ON mm_com.id_marca = ma.id_marca
+LEFT JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
+LEFT JOIN periferico pe ON mp.id_periferico = pe.id_periferico
+GROUP BY e.id_equipo, ed.nombre, ub.nombre, uo.nombre, us.nombre, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, ea.fecha_ultima_modificacion, e.observacion;
+
+    `;
+
+    const equipos = await db.query(query, {
+      type: QueryTypes.SELECT,
+    });
+
+    res.json(equipos);
+  } catch (error) {
+    console.error("Error al obtener todos los equipos con componentes:", error);
+    res.status(500).json({ error: "Error al obtener todos los equipos" });
+  }
+}
+
 export async function obtenerEquiposActivos(req, res) {
   const {
     perifericoId,
@@ -840,7 +924,7 @@ export async function agregarEquipoRed(req, res) {
     mac,
     puertos,
     puerto_ftp,
-    idLampara
+    idLampara,
   };
 
   try {
@@ -1856,7 +1940,11 @@ export const pasarActivoABodega = async (req, res) => {
     );
 
     if (isComponente.length > 0) {
-      return res.status(400).json({ error: "No se puede mover un componente a bodega directamente." });
+      return res
+        .status(400)
+        .json({
+          error: "No se puede mover un componente a bodega directamente.",
+        });
     }
 
     const equipoActivo = await db.query(
@@ -1890,13 +1978,10 @@ export const pasarActivoABodega = async (req, res) => {
         }
       );
 
-      await db.query(
-        `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`,
-        {
-          replacements: { equipoId },
-          type: QueryTypes.DELETE,
-        }
-      );
+      await db.query(`DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`, {
+        replacements: { equipoId },
+        type: QueryTypes.DELETE,
+      });
 
       if (componentes.length) {
         for (const componente of componentes) {
@@ -1915,10 +2000,13 @@ export const pasarActivoABodega = async (req, res) => {
         type: QueryTypes.DELETE,
       });
 
-      await db.query(`INSERT INTO equipo_Bodega (id_equipo) VALUES (:equipoId)`, {
-        replacements: { equipoId },
-        type: QueryTypes.INSERT,
-      });
+      await db.query(
+        `INSERT INTO equipo_Bodega (id_equipo) VALUES (:equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.INSERT,
+        }
+      );
 
       if (componentes.length) {
         for (const componente of componentes) {
@@ -1929,30 +2017,33 @@ export const pasarActivoABodega = async (req, res) => {
               type: QueryTypes.INSERT,
             }
           );
-          await db.query(`DELETE FROM equipo_Activo WHERE id_equipo = :idComponente`, {
-            replacements: { idComponente: componente.id_componente },
-            type: QueryTypes.DELETE,
-          });
+          await db.query(
+            `DELETE FROM equipo_Activo WHERE id_equipo = :idComponente`,
+            {
+              replacements: { idComponente: componente.id_componente },
+              type: QueryTypes.DELETE,
+            }
+          );
         }
       }
     } else {
-      await db.query(
-        `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`,
-        {
-          replacements: { equipoId },
-          type: QueryTypes.DELETE,
-        }
-      );
+      await db.query(`DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`, {
+        replacements: { equipoId },
+        type: QueryTypes.DELETE,
+      });
 
       await db.query(`DELETE FROM equipo_Activo WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
         type: QueryTypes.DELETE,
       });
 
-      await db.query(`INSERT INTO equipo_Bodega (id_equipo) VALUES (:equipoId)`, {
-        replacements: { equipoId },
-        type: QueryTypes.INSERT,
-      });
+      await db.query(
+        `INSERT INTO equipo_Bodega (id_equipo) VALUES (:equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.INSERT,
+        }
+      );
     }
 
     const imagePath = join(__dirname, "..", imagen[0].ruta);
@@ -1961,7 +2052,8 @@ export const pasarActivoABodega = async (req, res) => {
     }
 
     res.json({
-      message: "El equipo y sus componentes (si son computadora) han sido transferidos a bodega correctamente.",
+      message:
+        "El equipo y sus componentes (si son computadora) han sido transferidos a bodega correctamente.",
     });
   } catch (error) {
     console.error("Error al transferir el equipo:", error);
@@ -1983,9 +2075,13 @@ export const pasarBodegaAActivo = async (req, res) => {
     );
 
     if (isComponente.length > 0) {
-      return res.status(400).json({ error: "No se puede mover un componente a bodega directamente." });
+      return res
+        .status(400)
+        .json({
+          error: "No se puede mover un componente a bodega directamente.",
+        });
     }
-    
+
     const equipoBodega = await db.query(
       `SELECT * FROM equipo_Bodega WHERE id_equipo = :equipoId`,
       {
@@ -1995,7 +2091,9 @@ export const pasarBodegaAActivo = async (req, res) => {
     );
 
     if (!equipoBodega.length) {
-      return res.status(400).json({ error: "El equipo no se encuentra en bodega." });
+      return res
+        .status(400)
+        .json({ error: "El equipo no se encuentra en bodega." });
     }
 
     const computadora = await db.query(
@@ -2012,7 +2110,7 @@ export const pasarBodegaAActivo = async (req, res) => {
         replacements: { imagenRuta },
         type: QueryTypes.INSERT,
       }
-    )
+    );
     const imagenId = imagenInsert[0];
 
     if (computadora.length) {
@@ -2057,7 +2155,10 @@ export const pasarBodegaAActivo = async (req, res) => {
           await db.query(
             `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, :imagenId)`,
             {
-              replacements: { idComponente: componente.id_componente, imagenId },
+              replacements: {
+                idComponente: componente.id_componente,
+                imagenId,
+              },
               type: QueryTypes.INSERT,
             }
           );
@@ -2080,7 +2181,6 @@ export const pasarBodegaAActivo = async (req, res) => {
           );
         }
       }
-
     } else {
       await db.query(
         `INSERT INTO equipo_Activo (id_equipo, id_usuario, id_ubicacion) VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
@@ -2105,10 +2205,13 @@ export const pasarBodegaAActivo = async (req, res) => {
     }
 
     res.json({
-      message: "El equipo ha sido transferido a activo correctamente, y la imagen asociada.",
+      message:
+        "El equipo ha sido transferido a activo correctamente, y la imagen asociada.",
     });
   } catch (error) {
     console.error("Error al transferir el equipo:", error);
-    res.status(500).json({ error: "Error al transferir el equipo de bodega a activo." });
+    res
+      .status(500)
+      .json({ error: "Error al transferir el equipo de bodega a activo." });
   }
 };
