@@ -48,21 +48,21 @@ export async function agregarRAM(req, res) {
 }
 
 export async function editarRAM(req, res) {
-  const { id_ram, nuevoNombre } = req.body;
+  const { id_ram, tipo, capacidad } = req.body;
 
   try {
     const ram = await Ram.findByPk(id_ram);
 
     if (!ram) {
-      return res.status(404).json({ error: 'Ram no encontrado' });
+      return res.status(404).json({ error: "RAM no encontrada" });
     }
 
-    await ram.update({ nombre: nuevoNombre });
+    await ram.update({ tipo, capacidad });
 
-    return res.json({ message: 'Ram actualizado correctamente', ram });
+    return res.json({ message: "RAM actualizada correctamente", ram });
   } catch (error) {
-    console.error('Error al actualizar el ram:', error);
-    return res.status(500).json({ error: 'Error al actualizar el ram' });
+    console.error("Error al actualizar la RAM:", error);
+    return res.status(500).json({ error: "Error al actualizar la RAM" });
   }
 }
 
