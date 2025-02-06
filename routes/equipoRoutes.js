@@ -1,13 +1,14 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo, exportarComputadorasActivos } from '../controllers/equipoController.js'; 
+import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo } from '../controllers/equipoController.js'; 
+import { exportarEquiposActivos } from '../controllers/exportarController.js';
 import upload from '../middlewares/uploadImageMiddleware.js';
 
 router.get('/', obtenerEquiposActivos);
 router.get('/bodega', obtenerEquiposBodega);
 router.get('/baja', obtenerEquiposBaja);
 router.get('/red', obtenerEquiposRed);
-router.get('/exportarComputadorasActivos', exportarComputadorasActivos);
+router.get('/exportarEquiposActivos', exportarEquiposActivos);
 router.get('/redbodega', obtenerEquiposRedBodega);
 router.get('/redbaja', obtenerEquiposRedBaja);
 router.get('/porUsuario/:id_usuario', obtenerEquiposPorUsuario);
