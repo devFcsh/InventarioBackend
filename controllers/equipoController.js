@@ -1,5 +1,11 @@
 import { QueryTypes } from "sequelize";
 import db from "../models/index.js";
+import { fileURLToPath } from 'url';
+import { dirname, join } from "path";
+import { existsSync, unlinkSync } from "fs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export async function exportarComputadorasActivos(req, res) {
   try {
@@ -555,6 +561,18 @@ export async function eliminarEquipo(req, res) {
       return res.status(400).json({ error: "El equipo no existe." });
     }
 
+    const componente = await db.query(
+      `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (componente.length) {
+      return res.status(400).json({ error: "Debe desligar el componente antes de eliminarlo." });
+    }
+
     const computadora = await db.query(
       `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
       {
@@ -593,12 +611,43 @@ export async function eliminarEquipo(req, res) {
       }
     }
 
+    const imagen = await db.query(
+      `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (imagen.length) {
+      await db.query(
+        `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+        {
+          replacements: { idImagen: imagen[0].id_imagen },
+          type: QueryTypes.DELETE,
+        }
+      );
+
+      await db.query(
+        `DELETE FROM imagen WHERE id_imagen = :idImagen`,
+        {
+          replacements: { idImagen: imagen[0].id_imagen },
+          type: QueryTypes.DELETE,
+        }
+      );
+
+      const imagePath = join(__dirname, "..", imagen[0].ruta);
+      if (existsSync(imagePath)) {
+        unlinkSync(imagePath);
+      }
+    }
+
     await db.query(`DELETE FROM equipo WHERE id_equipo = :equipoId`, {
       replacements: { equipoId },
       type: QueryTypes.DELETE,
     });
 
-    res.json({ message: "Equipo y sus componentes eliminados con éxito" });
+    res.json({ message: "Equipo, imagen y sus componentes eliminados con éxito" });
   } catch (error) {
     console.error("Error al eliminar equipo y componentes:", error);
     res.status(500).json({ error: "Error al eliminar equipo y componentes" });
@@ -633,10 +682,6 @@ export async function eliminarEquipoSimple(req, res) {
   }
 }
 
-import { join } from "path";
-import { existsSync, unlinkSync } from "fs";
-import e from "express";
-
 export async function darDeBajaEquipo(req, res) {
   const { equipoId } = req.params;
   const { tipo } = req.body;
@@ -654,6 +699,18 @@ export async function darDeBajaEquipo(req, res) {
       return res.status(400).json({ error: "El equipo no existe." });
     }
 
+    const componente = await db.query(
+      `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (componente.length) {
+      return res.status(400).json({ error: "Debe desligar el componente" });
+    }
+
     if (tipo === "activo") {
       const imagen = await db.query(
         `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
@@ -665,9 +722,9 @@ export async function darDeBajaEquipo(req, res) {
 
       if (imagen.length) {
         await db.query(
-          `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`,
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
           {
-            replacements: { equipoId },
+            replacements: { idImagen: imagen[0].id_imagen },
             type: QueryTypes.DELETE,
           }
         );
@@ -685,7 +742,7 @@ export async function darDeBajaEquipo(req, res) {
     }
 
     const computadora = await db.query(
-      `SELECT id_equipo FROM computadora WHERE id_computadora = :equipoId`,
+      `SELECT id_computadora FROM computadora WHERE id_computadora = :equipoId`,
       {
         replacements: { equipoId },
         type: QueryTypes.SELECT,
