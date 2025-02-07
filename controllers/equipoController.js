@@ -1503,7 +1503,7 @@ export async function uploadImage(req, res) {
   res.json({ imagePath });
 }
 
-export async function editarEquipo(req, res) {
+export async function editarEquipo(req, res) { 
   const { equipoId } = req.params;
   const {
     tipo,
@@ -1539,7 +1539,8 @@ export async function editarEquipo(req, res) {
 
     if (imagenRuta && tipo === "activo") {
       const imagenActual = await db.query(
-        `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+        `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = 
+          (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
         {
           replacements: { equipoId },
           type: QueryTypes.SELECT,
@@ -1547,42 +1548,57 @@ export async function editarEquipo(req, res) {
       );
 
       if (imagenActual.length) {
-        await db.query(
-          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+        const idImagenAntigua = imagenActual[0].id_imagen;
+
+        const equiposRelacionados = await db.query(
+          `SELECT id_equipo FROM equipo_imagen WHERE id_imagen = :idImagenAntigua`,
           {
-            replacements: { idImagen: imagenActual[0].id_imagen },
+            replacements: { idImagenAntigua },
+            type: QueryTypes.SELECT,
+          }
+        );
+
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagenAntigua`,
+          {
+            replacements: { idImagenAntigua },
             type: QueryTypes.DELETE,
           }
         );
 
-        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
-          replacements: { idImagen: imagenActual[0].id_imagen },
-          type: QueryTypes.DELETE,
-        });
+        await db.query(
+          `DELETE FROM imagen WHERE id_imagen = :idImagenAntigua`,
+          {
+            replacements: { idImagenAntigua },
+            type: QueryTypes.DELETE,
+          }
+        );
 
         const imagePath = join(__dirname, "..", imagenActual[0].ruta);
         if (existsSync(imagePath)) {
           unlinkSync(imagePath);
         }
+
+        const [result] = await db.query(
+          `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+          {
+            replacements: { imagenRuta },
+            type: QueryTypes.INSERT,
+          }
+        );
+
+        const nuevaImagenId = result;
+
+        for (const equipo of equiposRelacionados) {
+          await db.query(
+            `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :nuevaImagenId)`,
+            {
+              replacements: { equipoId: equipo.id_equipo, nuevaImagenId },
+              type: QueryTypes.INSERT,
+            }
+          );
+        }
       }
-
-      const [result] = await db.query(
-        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
-        {
-          replacements: { imagenRuta },
-          type: QueryTypes.INSERT,
-        }
-      );
-
-      const imagenId = result;
-
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
-        {
-          replacements: { equipoId, imagenId },
-          type: QueryTypes.INSERT,
-        }
-      );
     }
 
     await db.query(
@@ -1595,16 +1611,16 @@ export async function editarEquipo(req, res) {
 
     await db.query(
       `UPDATE computadora SET
-                nombre_equipo = :nombre_equipo,
-                direccion_ip = :direccion_ip,
-                id_versionso = :id_versionso,
-                id_versionoffice = :id_versionoffice,
-                id_ram = :id_ram,
-                id_disco = :id_disco,
-                id_procesador = :id_procesador,
-                id_antivirus = :id_antivirus,
-                id_dominio = :id_dominio
-            WHERE id_computadora = :equipoId`,
+        nombre_equipo = :nombre_equipo,
+        direccion_ip = :direccion_ip,
+        id_versionso = :id_versionso,
+        id_versionoffice = :id_versionoffice,
+        id_ram = :id_ram,
+        id_disco = :id_disco,
+        id_procesador = :id_procesador,
+        id_antivirus = :id_antivirus,
+        id_dominio = :id_dominio
+      WHERE id_computadora = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -1625,9 +1641,9 @@ export async function editarEquipo(req, res) {
     if (tipo === "activo") {
       await db.query(
         `UPDATE equipo_activo SET
-                  id_usuario = :id_usuario,
-                  id_ubicacion = :id_ubicacion
-              WHERE id_equipo = :equipoId`,
+          id_usuario = :id_usuario,
+          id_ubicacion = :id_ubicacion
+        WHERE id_equipo = :equipoId`,
         {
           replacements: {
             equipoId,
@@ -1673,6 +1689,14 @@ export async function editarEquipoSimple(req, res) {
     }
 
     if (imagenRuta && tipo === "activo") {
+      const esComponente = await db.query(
+        `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+
       const imagenActual = await db.query(
         `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
         {
@@ -1683,21 +1707,23 @@ export async function editarEquipoSimple(req, res) {
 
       if (imagenActual.length) {
         await db.query(
-          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen AND id_equipo = :equipoId`,
           {
-            replacements: { idImagen: imagenActual[0].id_imagen },
+            replacements: { idImagen: imagenActual[0].id_imagen, equipoId },
             type: QueryTypes.DELETE,
           }
         );
 
-        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
-          replacements: { idImagen: imagenActual[0].id_imagen },
-          type: QueryTypes.DELETE,
-        });
+        if (!esComponente.length) {
+          await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+            replacements: { idImagen: imagenActual[0].id_imagen },
+            type: QueryTypes.DELETE,
+          });
 
-        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
-        if (existsSync(imagePath)) {
-          unlinkSync(imagePath);
+          const imagePath = join(__dirname, "..", imagenActual[0].ruta);
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+          }
         }
       }
 
@@ -1731,9 +1757,9 @@ export async function editarEquipoSimple(req, res) {
     if (tipo === "activo") {
       await db.query(
         `UPDATE equipo_Activo SET
-                  id_usuario = :id_usuario,
-                  id_ubicacion = :id_ubicacion
-              WHERE id_equipo = :equipoId`,
+          id_usuario = :id_usuario,
+          id_ubicacion = :id_ubicacion
+        WHERE id_equipo = :equipoId`,
         {
           replacements: {
             equipoId,
