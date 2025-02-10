@@ -12,7 +12,7 @@ const EquipoRed = db.define('equipo_red', {
         }
       },
       mac: {
-        type: DataTypes.STRING(12),
+        type: DataTypes.STRING(18),
         allowNull: false
       },
       puertos: {
