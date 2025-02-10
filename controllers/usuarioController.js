@@ -124,8 +124,9 @@ export async function editarUsuario(req, res) {
       },
       type: QueryTypes.UPDATE,
     });
+    console.log(result[1])
 
-    if (result[0] > 0) {
+    if (id_usuario > 0) {
       res.json({ message: "Usuario actualizado correctamente" });
     } else {
       res.status(404).json({ error: "Usuario no encontrado" });
