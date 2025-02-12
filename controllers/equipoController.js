@@ -7,90 +7,6 @@ import { existsSync, unlinkSync } from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export async function exportarComputadorasActivos(req, res) {
-  try {
-    const query = `
-      SELECT 
-  e.id_equipo AS id,
-  ed.nombre AS edificio,
-  ub.nombre AS ubicacion,
-  uo.nombre AS uso,
-  us.nombre AS usuario,
-
-  -- Mouse
-  MAX(CASE WHEN pe.nombre = 'Mouse' THEN ma.nombre END) AS mouse_marca,
-  MAX(CASE WHEN pe.nombre = 'Mouse' THEN mo.nombre END) AS mouse_modelo,
-  MAX(CASE WHEN pe.nombre = 'Mouse' THEN se.nombre END) AS mouse_serie,
-  MAX(CASE WHEN pe.nombre = 'Mouse' THEN eqc.inventario END) AS mouse_inventario,
-
-  -- Teclado
-  MAX(CASE WHEN pe.nombre = 'Teclado' THEN ma.nombre END) AS teclado_marca,
-  MAX(CASE WHEN pe.nombre = 'Teclado' THEN mo.nombre END) AS teclado_modelo,
-  MAX(CASE WHEN pe.nombre = 'Teclado' THEN se.nombre END) AS teclado_serie,
-  MAX(CASE WHEN pe.nombre = 'Teclado' THEN eqc.inventario END) AS teclado_inventario,
-
-  -- Monitor
-  MAX(CASE WHEN pe.nombre = 'Monitor' THEN ma.nombre END) AS monitor_marca,
-  MAX(CASE WHEN pe.nombre = 'Monitor' THEN mo.nombre END) AS monitor_modelo,
-  MAX(CASE WHEN pe.nombre = 'Monitor' THEN se.nombre END) AS monitor_serie,
-  MAX(CASE WHEN pe.nombre = 'Monitor' THEN eqc.inventario END) AS monitor_inventario,
-
-  c.direccion_ip,
-  c.nombre_equipo,
-  d.nombre AS dominio,
-  so.nombre AS sistema_operativo,
-  p.nombre AS procesador,
-  r.tipo AS tipo_ram,
-  r.capacidad AS capacidad_ram,
-  di.capacidad AS capacidad_disco,
-  mar.nombre AS marca,
-  m.nombre AS modelo,
-  se.nombre AS serie,
-  e.inventario,
-  ea.fecha_ultima_modificacion AS fecha_ultimo_cambio,
-  e.observacion
-FROM computadora c
-JOIN equipo e ON c.id_computadora = e.id_equipo
-JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
-JOIN ubicacion ub ON ea.id_ubicacion = ub.id_ubicacion
-JOIN edificio ed ON ub.id_edificio = ed.id_edificio
-JOIN usuario us ON ea.id_usuario = us.id_usuario
-JOIN uso uo ON us.id_uso = uo.id_uso
-JOIN dominio d ON c.id_dominio = d.id_dominio
-JOIN version_SO vso ON c.id_versionso = vso.id_versionso
-JOIN sistema_Operativo so ON vso.id_sistemaoperativo = so.id_sistemaoperativo
-JOIN procesador p ON c.id_procesador = p.id_procesador
-JOIN ram r ON c.id_ram = r.id_ram
-JOIN disco di ON c.id_disco = di.id_disco
-JOIN serie se ON e.id_serie = se.id_serie
-JOIN modelo_serie ms ON se.id_serie = ms.id_serie
-JOIN modelo m ON ms.id_modelo = m.id_modelo
-JOIN marca_modelo mm ON m.id_modelo = mm.id_modelo
-JOIN marca mar ON mm.id_marca = mar.id_marca
-LEFT JOIN componente comp ON c.id_computadora = comp.id_computadora
-LEFT JOIN equipo eqc ON comp.id_componente = eqc.id_equipo
-LEFT JOIN serie se_com ON eqc.id_serie = se_com.id_serie
-LEFT JOIN modelo_serie ms_com ON se_com.id_serie = ms_com.id_serie
-LEFT JOIN modelo mo ON ms_com.id_modelo = mo.id_modelo
-LEFT JOIN marca_modelo mm_com ON mo.id_modelo = mm_com.id_modelo
-LEFT JOIN marca ma ON mm_com.id_marca = ma.id_marca
-LEFT JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-LEFT JOIN periferico pe ON mp.id_periferico = pe.id_periferico
-GROUP BY e.id_equipo, ed.nombre, ub.nombre, uo.nombre, us.nombre, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, ea.fecha_ultima_modificacion, e.observacion;
-
-    `;
-
-    const equipos = await db.query(query, {
-      type: QueryTypes.SELECT,
-    });
-
-    res.json(equipos);
-  } catch (error) {
-    console.error("Error al obtener todos los equipos con componentes:", error);
-    res.status(500).json({ error: "Error al obtener todos los equipos" });
-  }
-}
-
 export async function obtenerEquiposActivos(req, res) {
   const {
     perifericoId,
@@ -994,6 +910,7 @@ export async function agregarEquipoRed(req, res) {
     puertos,
     puerto_ftp,
     idLampara,
+    nombre_equipo
   } = req.body;
 
   const parametros = {
@@ -1008,6 +925,7 @@ export async function agregarEquipoRed(req, res) {
     puertos,
     puerto_ftp,
     idLampara,
+    nombre_equipo
   };
 
   try {
@@ -1020,7 +938,7 @@ export async function agregarEquipoRed(req, res) {
         :idUsuario,
         :imagenRuta,
         :observacion,
-        :idLampara
+        :idLampara,
       );`,
       {
         replacements: parametros,
@@ -1034,10 +952,10 @@ export async function agregarEquipoRed(req, res) {
     }
 
     await db.query(
-      `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp)
-         VALUES (:equipoId, :mac, :puertos, :puerto_ftp)`,
+      `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp, nombre_equipo)
+         VALUES (:equipoId, :mac, :puertos, :puerto_ftp, :nombre_equipo)`,
       {
-        replacements: { equipoId, mac, puertos, puerto_ftp },
+        replacements: { equipoId, mac, puertos, puerto_ftp, nombre_equipo },
         type: QueryTypes.INSERT,
       }
     );
@@ -1221,7 +1139,8 @@ export const obtenerActivoRed = async (req, res) => {
          e.observacion,
          er.mac,
          er.puertos,
-         er.puerto_ftp
+         er.puerto_ftp,
+         er.nombre_equipo
        FROM equipo e
        JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
@@ -1402,7 +1321,8 @@ export const obtenerBodegaBajaRed = async (req, res) => {
          e.observacion,
          er.mac,
          er.puertos,
-         er.puerto_ftp
+         er.puerto_ftp,
+         er.nombre_equipo
        FROM equipo e
        LEFT JOIN serie s ON e.id_serie = s.id_serie
        LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
@@ -1827,6 +1747,7 @@ export async function editarEquipoRed(req, res) {
     mac,
     puertos,
     puerto_ftp,
+    nombre_equipo
   } = req.body;
 
   try {
@@ -1917,15 +1838,15 @@ export async function editarEquipoRed(req, res) {
 
     if (mac || puertos || puerto_ftp) {
       await db.query(
-        `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp)
-         VALUES (:equipoId, :mac, :puertos, :puerto_ftp)
-         ON DUPLICATE KEY UPDATE
-         mac = :mac,
-         puertos = :puertos,
-         puerto_ftp = :puerto_ftp`,
+        `UPDATE equipo_red 
+         SET mac = :mac, 
+             puertos = :puertos, 
+             puerto_ftp = :puerto_ftp,
+             nombre_equipo = :nombre_equipo
+         WHERE id_equipo_red = :equipoId`,
         {
-          replacements: { equipoId, mac, puertos, puerto_ftp },
-          type: QueryTypes.INSERT,
+          replacements: { equipoId, mac, puertos, puerto_ftp, nombre_equipo },
+          type: QueryTypes.UPDATE,
         }
       );
     }

@@ -209,6 +209,7 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
           e.id_equipo AS id,
+          er.nombre_equipo,
           CASE 
             WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
             WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
@@ -251,6 +252,7 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
           e.id_equipo AS id,
+          er.nombre_equipo,
           CASE 
             WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
             WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
@@ -289,6 +291,7 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
           e.id_equipo AS id,
+          er.nombre_equipo,
           CASE 
             WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
             WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
@@ -333,6 +336,7 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
           e.id_equipo AS id,
+          er.nombre_equipo,
           CASE 
             WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
             WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'

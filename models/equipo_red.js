@@ -23,6 +23,10 @@ const EquipoRed = db.define('equipo_red', {
         type: DataTypes.STRING(10),
         allowNull: false
       },
+      nombre_equipo: {
+        type: DataTypes.STRING(10),
+        allowNull: false
+      },
   }, {
     tableName: 'equipo_red',
     timestamps: false,
