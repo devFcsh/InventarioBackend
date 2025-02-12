@@ -518,6 +518,20 @@ export async function cambiarUsuarioEquipo(req, res) {
   const { usuarioId } = req.body;
 
   try {
+    const esComponente = await db.query(
+      `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (esComponente.length) {
+      return res
+        .status(400)
+        .json({ error: "No se puede cambiar el usuario de un componente." });
+    }
+
     const query = `
       UPDATE equipo_Activo
       SET id_usuario = :usuarioId
@@ -525,10 +539,7 @@ export async function cambiarUsuarioEquipo(req, res) {
     `;
 
     const result = await db.query(query, {
-      replacements: {
-        equipoId,
-        usuarioId,
-      },
+      replacements: { equipoId, usuarioId },
       type: QueryTypes.UPDATE,
     });
 
@@ -538,7 +549,22 @@ export async function cambiarUsuarioEquipo(req, res) {
         .json({ error: "Equipo no encontrado o no se actualizó." });
     }
 
-    res.json({ mensaje: "Usuario cambiado correctamente al equipo." });
+    await db.query(
+      `UPDATE equipo_Activo 
+       SET id_usuario = :usuarioId 
+       WHERE id_equipo IN (
+         SELECT id_componente FROM componente WHERE id_computadora = :equipoId
+       )`,
+      {
+        replacements: { equipoId, usuarioId },
+        type: QueryTypes.UPDATE,
+      }
+    );
+
+    res.json({
+      mensaje:
+        "Usuario cambiado correctamente en el equipo y sus componentes asociados.",
+    });
   } catch (error) {
     console.error("Error al cambiar usuario de equipo:", error);
     res.status(500).json({ error: "Error al cambiar usuario de equipo." });
