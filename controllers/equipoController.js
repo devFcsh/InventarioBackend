@@ -2044,6 +2044,14 @@ export const pasarActivoABodega = async (req, res) => {
         .json({ error: "El equipo no se encuentra como activo." });
     }
 
+    const imagen = await db.query(
+      `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
     const computadora = await db.query(
       `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
       {
