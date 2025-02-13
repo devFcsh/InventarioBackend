@@ -58,6 +58,11 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
     e.id_equipo AS id,
+    CASE 
+            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
+            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
+            ELSE 'DESCONOCIDO'
+          END AS empresa,
     ed.nombre AS edificio,
     ub.nombre AS ubicacion,
     uo.nombre AS uso,
@@ -85,6 +90,7 @@ export async function exportarEquiposActivos(req, res) {
     c.nombre_equipo,
     d.nombre AS dominio,
     so.nombre AS sistema_operativo,
+    vso.nombre AS version_sistema_operativo,
     p.nombre AS procesador,
     r.tipo AS tipo_ram,
     r.capacidad AS capacidad_ram,
@@ -138,6 +144,11 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
     e.id_equipo AS id,
+    CASE 
+            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
+            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
+            ELSE 'DESCONOCIDO'
+          END AS empresa,
     -- Mouse
     MAX(CASE WHEN pe.nombre = 'Mouse' THEN ma.nombre END) AS mouse_marca,
     MAX(CASE WHEN pe.nombre = 'Mouse' THEN mo.nombre END) AS mouse_modelo,
@@ -160,6 +171,7 @@ export async function exportarEquiposActivos(req, res) {
     c.nombre_equipo,
     d.nombre AS dominio,
     so.nombre AS sistema_operativo,
+    vso.nombre AS version_sistema_operativo,
     p.nombre AS procesador,
     r.tipo AS tipo_ram,
     r.capacidad AS capacidad_ram,
@@ -375,9 +387,9 @@ export async function exportarEquiposActivos(req, res) {
   export async function exportarProyectoresActivos(req, res) {
     try {
       const query = `
-        SELECT 
+      SELECT
       e.id_equipo AS id,
-      CASE 
+      CASE
           WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
           WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
           ELSE 'DESCONOCIDO'
@@ -459,6 +471,11 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
       e.id_equipo AS id,
+      CASE 
+            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
+            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
+            ELSE 'DESCONOCIDO'
+          END AS empresa,
       ed.nombre AS edificio,
       ub.nombre AS ubicacion,
       u.nombre AS uso,
@@ -507,6 +524,11 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
       e.id_equipo AS id,
+      CASE 
+            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
+            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
+            ELSE 'DESCONOCIDO'
+          END AS empresa,
       pe.nombre AS periferico,
       ma.nombre AS marca,
       mo.nombre AS modelo,
@@ -532,7 +554,6 @@ export async function exportarEquiposActivos(req, res) {
       SELECT id_computadora FROM computadora
     )
   ORDER BY e.id_equipo;
-  
       `;
   
       return await db.query(query, { type: QueryTypes.SELECT });
@@ -541,3 +562,46 @@ export async function exportarEquiposActivos(req, res) {
       return [];
     }
   }
+
+  export async function exportarEquiposBaja(req, res) {
+      try {
+          const query = `
+              SELECT 
+                  e.id_equipo AS id,
+                  CASE 
+                      WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
+                      WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
+                      ELSE 'DESCONOCIDO'
+                  END AS empresa,
+                  pe.nombre AS periferico,
+                  ma.nombre AS marca,
+                  mo.nombre AS modelo,
+                  se.nombre AS serie,
+                  e.inventario,
+                  eb.fecha_ultima_modificacion AS fecha_ultimo_cambio,
+                  e.observacion AS estado
+              FROM equipo e
+              JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
+              JOIN serie se ON e.id_serie = se.id_serie
+              JOIN modelo_serie ms ON se.id_serie = ms.id_serie
+              JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+              JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+              JOIN marca ma ON mm.id_marca = ma.id_marca
+              JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
+              JOIN periferico pe ON mp.id_periferico = pe.id_periferico
+              ORDER BY e.id_equipo;
+          `;
+  
+          const equiposBaja = await db.query(query, { type: QueryTypes.SELECT });
+  
+          if (equiposBaja.length === 0) {
+              return res.status(404).json({ message: "No se encontraron equipos para exportar" });
+          }
+  
+          return res.json(equiposBaja);
+      } catch (error) {
+          console.error("Error al obtener equipos:", error);
+          return res.status(500).json({ message: "Error al obtener los equipos para exportar", error: error.message });
+      }
+  }
+  
