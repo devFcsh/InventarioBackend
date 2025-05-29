@@ -18,7 +18,7 @@ import versionesOffice from './versionOfficeRoutes.js';
 import edificios from './edificioRoutes.js'; 
 import ubicaciones from './ubicacionRoutes.js';
 import procesadores from './procesadorRoutes.js'; 
-import lamparas from './lamparaRoutes.js'; 
+import lamparas from './lamparaRoutes.js';
 
 router.use('/perifericos', perifericos);
 router.use('/marcas', marcas);
