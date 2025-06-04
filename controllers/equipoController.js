@@ -99,50 +99,54 @@ export async function obtenerEquiposActivos(req, res) {
 }
 
 export async function obtenerEquiposRed(req, res) {
-  const {
-    perifericoId,
-    marcaId,
-    modeloId,
-    serieId,
-    inventario,
-    limit,
-    offset,
-  } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+
+  perifericoId = validarTexto(perifericoId);
+  marcaId = validarTexto(marcaId);
+  modeloId = validarTexto(modeloId);
+  serieId = validarTexto(serieId);
+  inventario = validarTexto(inventario);
+
+  limit = parseInt(limit, 10);
+  offset = parseInt(offset, 10);
+
+  if (isNaN(limit) || limit <= 0) limit = 10;
+  if (isNaN(offset) || offset < 0) offset = 0;
 
   try {
     const query = `
       SELECT 
-    e.*, 
-    p.nombre AS periferico, 
-    m.nombre AS marca, 
-    mo.nombre AS modelo, 
-    s.nombre AS serie,
-    u.nombre AS usuario,
-    uso.nombre AS uso,
-    ea.id_ubicacion,
-    ed.nombre AS edificio,
-    COUNT(*) OVER() AS total
-FROM equipo e
-JOIN serie s ON e.id_serie = s.id_serie
-JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-JOIN marca m ON mm.id_marca = m.id_marca
-JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-JOIN periferico p ON mp.id_periferico = p.id_periferico
-JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
-JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
-JOIN edificio ed ON a.id_edificio = ed.id_edificio 
-JOIN usuario u ON ea.id_usuario = u.id_usuario
-JOIN uso ON u.id_uso = uso.id_uso
-JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
-WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
-  AND (:marcaId IS NULL OR m.id_marca = :marcaId)
-  AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
-  AND (:serieId IS NULL OR s.id_serie = :serieId)
-  AND (:inventario IS NULL OR e.inventario = :inventario)
-LIMIT :limit OFFSET :offset;
-`;
+        e.*, 
+        p.nombre AS periferico, 
+        m.nombre AS marca, 
+        mo.nombre AS modelo, 
+        s.nombre AS serie,
+        u.nombre AS usuario,
+        uso.nombre AS uso,
+        ea.id_ubicacion,
+        ed.nombre AS edificio,
+        COUNT(*) OVER() AS total
+      FROM equipo e
+      JOIN serie s ON e.id_serie = s.id_serie
+      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+      JOIN marca m ON mm.id_marca = m.id_marca
+      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+      JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
+      JOIN edificio ed ON a.id_edificio = ed.id_edificio 
+      JOIN usuario u ON ea.id_usuario = u.id_usuario
+      JOIN uso ON u.id_uso = uso.id_uso
+      JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
+      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+        AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
+        AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
+        AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
+        AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+      LIMIT :limit OFFSET :offset;
+    `;
 
     const equipos = await db.query(query, {
       replacements: {
@@ -151,8 +155,8 @@ LIMIT :limit OFFSET :offset;
         modeloId: modeloId || null,
         serieId: serieId || null,
         inventario: inventario || null,
-        limit: parseInt(limit, 10) || 10,
-        offset: parseInt(offset, 10) || 0,
+        limit,
+        offset,
       },
       type: QueryTypes.SELECT,
     });
@@ -162,22 +166,24 @@ LIMIT :limit OFFSET :offset;
     res.json({ total, equipos });
   } catch (error) {
     console.error("Error al obtener equipos y contar activos:", error);
-    res
-      .status(500)
-      .json({ error: "Error al obtener equipos y contar activos" });
+    res.status(500).json({ error: "Error al obtener equipos de red" });
   }
 }
 
 export async function obtenerEquiposBodega(req, res) {
-  const {
-    perifericoId,
-    marcaId,
-    modeloId,
-    serieId,
-    inventario,
-    limit,
-    offset,
-  } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+
+  perifericoId = validarTexto(perifericoId);
+  marcaId = validarTexto(marcaId);
+  modeloId = validarTexto(modeloId);
+  serieId = validarTexto(serieId);
+  inventario = validarTexto(inventario);
+
+  limit = parseInt(limit, 10);
+  offset = parseInt(offset, 10);
+
+  if (isNaN(limit) || limit <= 0) limit = 10;
+  if (isNaN(offset) || offset < 0) offset = 0;
 
   try {
     const query = `
@@ -197,24 +203,16 @@ export async function obtenerEquiposBodega(req, res) {
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
       JOIN equipo_Bodega eb ON e.id_equipo = eb.id_equipo
-      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
-        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
-        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
-        AND (:serieId IS NULL OR s.id_serie = :serieId)
-        AND (:inventario IS NULL OR e.inventario = :inventario)
+      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+        AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
+        AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
+        AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
+        AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
       LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
-      replacements: {
-        perifericoId: perifericoId || null,
-        marcaId: marcaId || null,
-        modeloId: modeloId || null,
-        serieId: serieId || null,
-        inventario: inventario || null,
-        limit: parseInt(limit, 10) || 10,
-        offset: parseInt(offset, 10) || 0,
-      },
+      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
       type: QueryTypes.SELECT,
     });
 
@@ -228,15 +226,19 @@ export async function obtenerEquiposBodega(req, res) {
 }
 
 export async function obtenerEquiposRedBodega(req, res) {
-  const {
-    perifericoId,
-    marcaId,
-    modeloId,
-    serieId,
-    inventario,
-    limit,
-    offset,
-  } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+
+  perifericoId = validarTexto(perifericoId);
+  marcaId = validarTexto(marcaId);
+  modeloId = validarTexto(modeloId);
+  serieId = validarTexto(serieId);
+  inventario = validarTexto(inventario);
+
+  limit = parseInt(limit, 10);
+  offset = parseInt(offset, 10);
+
+  if (isNaN(limit) || limit <= 0) limit = 10;
+  if (isNaN(offset) || offset < 0) offset = 0;
 
   try {
     const query = `
@@ -257,24 +259,16 @@ export async function obtenerEquiposRedBodega(req, res) {
       JOIN periferico p ON mp.id_periferico = p.id_periferico
       JOIN equipo_Bodega eb ON e.id_equipo = eb.id_equipo
       JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
-      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
-        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
-        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
-        AND (:serieId IS NULL OR s.id_serie = :serieId)
-        AND (:inventario IS NULL OR e.inventario = :inventario)
+      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+        AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
+        AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
+        AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
+        AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
       LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
-      replacements: {
-        perifericoId: perifericoId || null,
-        marcaId: marcaId || null,
-        modeloId: modeloId || null,
-        serieId: serieId || null,
-        inventario: inventario || null,
-        limit: parseInt(limit, 10) || 10,
-        offset: parseInt(offset, 10) || 0,
-      },
+      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
       type: QueryTypes.SELECT,
     });
 
@@ -282,21 +276,25 @@ export async function obtenerEquiposRedBodega(req, res) {
 
     res.json({ total, equipos });
   } catch (error) {
-    console.error("Error al obtener equipos en bodega:", error);
-    res.status(500).json({ error: "Error al obtener equipos en bodega" });
+    console.error("Error al obtener equipos en bodega red:", error);
+    res.status(500).json({ error: "Error al obtener equipos en bodega red" });
   }
 }
 
 export async function obtenerEquiposBaja(req, res) {
-  const {
-    perifericoId,
-    marcaId,
-    modeloId,
-    serieId,
-    inventario,
-    limit,
-    offset,
-  } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+
+  perifericoId = validarTexto(perifericoId);
+  marcaId = validarTexto(marcaId);
+  modeloId = validarTexto(modeloId);
+  serieId = validarTexto(serieId);
+  inventario = validarTexto(inventario);
+
+  limit = parseInt(limit, 10);
+  offset = parseInt(offset, 10);
+
+  if (isNaN(limit) || limit <= 0) limit = 10;
+  if (isNaN(offset) || offset < 0) offset = 0;
 
   try {
     const query = `
@@ -316,24 +314,16 @@ export async function obtenerEquiposBaja(req, res) {
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
       JOIN equipo_Baja eb ON e.id_equipo = eb.id_equipo
-      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
-        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
-        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
-        AND (:serieId IS NULL OR s.id_serie = :serieId)
-        AND (:inventario IS NULL OR e.inventario = :inventario)
+      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+        AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
+        AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
+        AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
+        AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
       LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
-      replacements: {
-        perifericoId: perifericoId || null,
-        marcaId: marcaId || null,
-        modeloId: modeloId || null,
-        serieId: serieId || null,
-        inventario: inventario || null,
-        limit: parseInt(limit, 10) || 10,
-        offset: parseInt(offset, 10) || 0,
-      },
+      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
       type: QueryTypes.SELECT,
     });
 
@@ -347,15 +337,19 @@ export async function obtenerEquiposBaja(req, res) {
 }
 
 export async function obtenerEquiposRedBaja(req, res) {
-  const {
-    perifericoId,
-    marcaId,
-    modeloId,
-    serieId,
-    inventario,
-    limit,
-    offset,
-  } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+
+  perifericoId = validarTexto(perifericoId);
+  marcaId = validarTexto(marcaId);
+  modeloId = validarTexto(modeloId);
+  serieId = validarTexto(serieId);
+  inventario = validarTexto(inventario);
+
+  limit = parseInt(limit, 10);
+  offset = parseInt(offset, 10);
+
+  if (isNaN(limit) || limit <= 0) limit = 10;
+  if (isNaN(offset) || offset < 0) offset = 0;
 
   try {
     const query = `
@@ -376,24 +370,16 @@ export async function obtenerEquiposRedBaja(req, res) {
       JOIN periferico p ON mp.id_periferico = p.id_periferico
       JOIN equipo_Baja eb ON e.id_equipo = eb.id_equipo
       JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
-      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
-        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
-        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
-        AND (:serieId IS NULL OR s.id_serie = :serieId)
-        AND (:inventario IS NULL OR e.inventario = :inventario)
+      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+        AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
+        AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
+        AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
+        AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
       LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
-      replacements: {
-        perifericoId: perifericoId || null,
-        marcaId: marcaId || null,
-        modeloId: modeloId || null,
-        serieId: serieId || null,
-        inventario: inventario || null,
-        limit: parseInt(limit, 10) || 10,
-        offset: parseInt(offset, 10) || 0,
-      },
+      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
       type: QueryTypes.SELECT,
     });
 
@@ -401,8 +387,8 @@ export async function obtenerEquiposRedBaja(req, res) {
 
     res.json({ total, equipos });
   } catch (error) {
-    console.error("Error al obtener equipos de baja:", error);
-    res.status(500).json({ error: "Error al obtener equipos de baja" });
+    console.error("Error al obtener equipos de baja red:", error);
+    res.status(500).json({ error: "Error al obtener equipos de baja red" });
   }
 }
 
