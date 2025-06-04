@@ -1,22 +1,43 @@
 import { QueryTypes } from "sequelize";
 import db from "../models/index.js";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { existsSync, unlinkSync } from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+function validarTexto(input) {
+  if (!input) return null;
+
+  if (typeof input !== "string") return null;
+
+  const trimmed = input.trim();
+
+  if (trimmed.length === 0 || trimmed.length > 20) return null;
+
+  const regex = /^[a-zA-Z0-9 _-]+$/;
+
+  if (!regex.test(trimmed)) return null;
+
+  return trimmed;
+}
+
 export async function obtenerEquiposActivos(req, res) {
-  const {
-    perifericoId,
-    marcaId,
-    modeloId,
-    serieId,
-    inventario,
-    limit,
-    offset,
-  } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+    req.query;
+
+  perifericoId = validarTexto(perifericoId);
+  marcaId = validarTexto(marcaId);
+  modeloId = validarTexto(modeloId);
+  serieId = validarTexto(serieId);
+  inventario = validarTexto(inventario);
+
+  limit = parseInt(limit, 10);
+  offset = parseInt(offset, 10);
+
+  if (isNaN(limit) || limit <= 0) limit = 10;
+  if (isNaN(offset) || offset < 0) offset = 0;
 
   try {
     const query = `
@@ -44,11 +65,12 @@ export async function obtenerEquiposActivos(req, res) {
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
       JOIN usuario u ON ea.id_usuario = u.id_usuario
       JOIN uso ON u.id_uso = uso.id_uso
-      WHERE (:perifericoId IS NULL OR p.id_periferico = :perifericoId)
-        AND (:marcaId IS NULL OR m.id_marca = :marcaId)
-        AND (:modeloId IS NULL OR mo.id_modelo = :modeloId)
-        AND (:serieId IS NULL OR s.id_serie = :serieId)
-        AND (:inventario IS NULL OR e.inventario = :inventario)
+      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+      AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
+      AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
+      AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
+      AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -512,7 +534,9 @@ export async function eliminarEquipo(req, res) {
     );
 
     if (componente.length) {
-      return res.status(400).json({ error: "Debe desligar el componente antes de eliminarlo." });
+      return res
+        .status(400)
+        .json({ error: "Debe desligar el componente antes de eliminarlo." });
     }
 
     const computadora = await db.query(
@@ -562,21 +586,15 @@ export async function eliminarEquipo(req, res) {
     );
 
     if (imagen.length) {
-      await db.query(
-        `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
-        {
-          replacements: { idImagen: imagen[0].id_imagen },
-          type: QueryTypes.DELETE,
-        }
-      );
+      await db.query(`DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`, {
+        replacements: { idImagen: imagen[0].id_imagen },
+        type: QueryTypes.DELETE,
+      });
 
-      await db.query(
-        `DELETE FROM imagen WHERE id_imagen = :idImagen`,
-        {
-          replacements: { idImagen: imagen[0].id_imagen },
-          type: QueryTypes.DELETE,
-        }
-      );
+      await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+        replacements: { idImagen: imagen[0].id_imagen },
+        type: QueryTypes.DELETE,
+      });
 
       const imagePath = join(__dirname, "..", imagen[0].ruta);
       if (existsSync(imagePath)) {
@@ -589,7 +607,9 @@ export async function eliminarEquipo(req, res) {
       type: QueryTypes.DELETE,
     });
 
-    res.json({ message: "Equipo, imagen y sus componentes eliminados con éxito" });
+    res.json({
+      message: "Equipo, imagen y sus componentes eliminados con éxito",
+    });
   } catch (error) {
     console.error("Error al eliminar equipo y componentes:", error);
     res.status(500).json({ error: "Error al eliminar equipo y componentes" });
@@ -910,7 +930,7 @@ export async function agregarEquipoRed(req, res) {
     puertos,
     puerto_ftp,
     idLampara,
-    nombre_equipo
+    nombre_equipo,
   } = req.body;
 
   const parametros = {
@@ -925,7 +945,7 @@ export async function agregarEquipoRed(req, res) {
     puertos,
     puerto_ftp,
     idLampara,
-    nombre_equipo
+    nombre_equipo,
   };
 
   try {
@@ -1449,7 +1469,7 @@ export async function uploadImage(req, res) {
   res.json({ imagePath });
 }
 
-export async function editarEquipo(req, res) { 
+export async function editarEquipo(req, res) {
   const { equipoId } = req.params;
   const {
     tipo,
@@ -1747,7 +1767,7 @@ export async function editarEquipoRed(req, res) {
     mac,
     puertos,
     puerto_ftp,
-    nombre_equipo
+    nombre_equipo,
   } = req.body;
 
   try {
@@ -1970,11 +1990,9 @@ export const pasarActivoABodega = async (req, res) => {
     );
 
     if (isComponente.length > 0) {
-      return res
-        .status(400)
-        .json({
-          error: "No se puede mover un componente a bodega directamente.",
-        });
+      return res.status(400).json({
+        error: "No se puede mover un componente a bodega directamente.",
+      });
     }
 
     const equipoActivo = await db.query(
@@ -2113,11 +2131,9 @@ export const pasarBodegaAActivo = async (req, res) => {
     );
 
     if (isComponente.length > 0) {
-      return res
-        .status(400)
-        .json({
-          error: "No se puede mover un componente a bodega directamente.",
-        });
+      return res.status(400).json({
+        error: "No se puede mover un componente a bodega directamente.",
+      });
     }
 
     const equipoBodega = await db.query(
