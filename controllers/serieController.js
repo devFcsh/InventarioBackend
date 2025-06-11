@@ -1,6 +1,6 @@
 import {QueryTypes } from 'sequelize';
 import db from '../models/index.js';
-import Serie from '../models/Serie.js';
+import Serie from '../models/serie.js';
 
 export async function obtenerSeries(req, res) {
   try {

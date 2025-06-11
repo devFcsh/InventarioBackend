@@ -1,8 +1,8 @@
+
 import db from "./index.js";
 import { DataTypes } from "sequelize";
-
-const Marca = db.define('marca', {
-    id_marca: {
+const Periferico = db.define('periferico', {
+    id_periferico: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -13,7 +13,7 @@ const Marca = db.define('marca', {
       allowNull: true
     }
   }, {
-    tableName: 'marca',
+    tableName: 'periferico',
     timestamps: false,
     indexes: [
       {
@@ -21,10 +21,11 @@ const Marca = db.define('marca', {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "id_marca" },
+          { name: "id_periferico" },
         ]
       },
     ]
   });
 
-export default Marca;
+
+export default Periferico;
