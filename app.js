@@ -1,7 +1,5 @@
 // app.js
 import express from 'express';
-import pkg from 'body-parser';
-const { json } = pkg;
 import cors from 'cors';
 import routes from './routes/index.js';
 import authRoutes from './routes/authRoutes.js';
@@ -15,106 +13,95 @@ const __dirname = dirname(__filename);
 
 const app = express();
 
-// --------------------------------------------------
-// 0) VERIFICACIÓN DE VARIABLES DE ENTORNO
-// --------------------------------------------------
-console.log('🔧 === VERIFICANDO CONFIGURACIÓN ===');
-const requiredEnvVars = ['BACKEND_URL', 'FRONTEND_URL'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-if (missingVars.length > 0) {
-  console.error('❌ Variables de entorno faltantes:', missingVars);
-  process.exit(1);
-}
-
-console.log('✅ Variables de entorno configuradas:');
-console.log('- Backend URL:', process.env.BACKEND_URL);
-console.log('- Frontend URL:', process.env.FRONTEND_URL);
-console.log('- Node ENV:', process.env.NODE_ENV || 'development');
-console.log('- Session Secret:', process.env.SESSION_SECRET ? '***configurado***' : '❌ usando default');
+console.log('🚀 === INICIANDO SERVIDOR CAS ESPOL ===');
+console.log('Backend URL:', process.env.BACKEND_URL);
+console.log('Frontend URL:', process.env.FRONTEND_URL);
+console.log('Node ENV:', process.env.NODE_ENV);
 
 // --------------------------------------------------
-// 1) TRUST PROXY (IMPORTANTE PARA HTTPS)
+// 1) TRUST PROXY (importante para HTTPS detrás de proxy)
 // --------------------------------------------------
-// Si estás detrás de Cloudflare / TryCloudflare / balanceador, 
-// Express necesita confiar en las cabeceras X-Forwarded-* para detectar HTTPS
 app.set('trust proxy', 1);
-console.log('✅ Trust proxy configurado');
 
 // --------------------------------------------------
-// 2) CORS - CONFIGURACIÓN ESPECÍFICA
+// 2) CORS - Configuración específica para CAS
 // --------------------------------------------------
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Permitir requests sin origin (mobile apps, postman, curl)
+app.use(cors({
+  origin: function(origin, callback) {
+    // Permitir requests sin origin (mobile apps, etc.)
     if (!origin) return callback(null, true);
     
-    // Verificar si el origin está permitido
+    // Lista de orígenes permitidos
     const allowedOrigins = [
       process.env.FRONTEND_URL,
-      'http://localhost:3000', // Para desarrollo local
-      'http://localhost:3001'  // Para desarrollo local alternativo
+      'https://auth.espol.edu.ec', // CAS server
+      'https://www.espol.edu.ec'   // ESPOL main site
     ];
     
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn('🚫 Origin no permitido:', origin);
-      callback(null, false);
+      return callback(null, true);
     }
+    
+    // En desarrollo, permitir localhost
+    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('No permitido por CORS'), false);
   },
-  credentials: true, // CRÍTICO: permite cookies/sesiones cross-origin
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['X-Session-ID']
-};
-
-app.use(cors(corsOptions));
-console.log('✅ CORS configurado con credentials=true');
+  exposedHeaders: ['set-cookie']
+}));
 
 // --------------------------------------------------
-// 3) PARSERS DE BODY
+// 3) MIDDLEWARE DE PARSING
 // --------------------------------------------------
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-console.log('✅ Body parsers configurados');
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // --------------------------------------------------
-// 4) MIDDLEWARE DE LOGGING
+// 4) SESIÓN (DEBE IR ANTES DE PASSPORT)
 // --------------------------------------------------
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`📡 ${timestamp} ${req.method} ${req.originalUrl}`);
-  
-  // Log de headers importantes para debugging CAS
-  if (req.originalUrl.includes('/auth/')) {
-    console.log('🔍 Headers importantes:', {
-      'user-agent': req.get('User-Agent'),
-      'referer': req.get('Referer'),
-      'host': req.get('Host'),
-      'x-forwarded-proto': req.get('X-Forwarded-Proto'),
-      'x-forwarded-for': req.get('X-Forwarded-For')
-    });
+  console.log(`📨 ${req.method} ${req.originalUrl} - Session: ${req.sessionID || 'none'}`);
+  next();
+});
+
+app.use(sessionMiddleware);
+
+// --------------------------------------------------
+// 5) PASSPORT INICIALIZACIÓN
+// --------------------------------------------------
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Middleware para logging de autenticación
+app.use((req, res, next) => {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    console.log(`👤 Usuario autenticado: ${req.user?.username} (${req.sessionID})`);
   }
-  
   next();
 });
 
 // --------------------------------------------------
-// 5) SESIÓN Y PASSPORT (ORDEN CRÍTICO)
+// 6) RUTAS DE AUTENTICACIÓN (PÚBLICAS)
 // --------------------------------------------------
-// IMPORTANTE: sessionMiddleware DEBE ir ANTES de passport.initialize()
-app.use(sessionMiddleware);
-console.log('✅ Middleware de sesión configurado');
-
-app.use(passport.initialize());
-console.log('✅ Passport inicializado');
-
-app.use(passport.session());
-console.log('✅ Sesiones de Passport configuradas');
+app.use('/auth', authRoutes);
 
 // --------------------------------------------------
-// 6) HEALTH CHECK
+// 7) RUTAS API PROTEGIDAS
+// --------------------------------------------------
+app.use('/api', requireAuth, routes);
+
+// --------------------------------------------------
+// 8) ARCHIVOS ESTÁTICOS
+// --------------------------------------------------
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// --------------------------------------------------
+// 9) RUTA DE SALUD DEL SERVIDOR
 // --------------------------------------------------
 app.get('/health', (req, res) => {
   res.json({
@@ -122,83 +109,50 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    environment: process.env.NODE_ENV || 'development'
+    cas: {
+      server: 'https://auth.espol.edu.ec',
+      callback: `${process.env.BACKEND_URL}/auth/cas/callback`,
+      frontend: process.env.FRONTEND_URL
+    }
   });
 });
 
 // --------------------------------------------------
-// 7) RUTAS DE AUTENTICACIÓN (PÚBLICAS)
-// --------------------------------------------------
-app.use('/auth', authRoutes);
-console.log('✅ Rutas de autenticación montadas en /auth');
-
-// --------------------------------------------------
-// 8) RUTAS DE API (PROTEGIDAS)
-// --------------------------------------------------
-app.use('/api', requireAuth, routes);
-console.log('✅ Rutas de API montadas en /api (requieren autenticación)');
-
-// --------------------------------------------------
-// 9) ARCHIVOS ESTÁTICOS
-// --------------------------------------------------
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-console.log('✅ Archivos estáticos configurados en /uploads');
-
-// --------------------------------------------------
-// 10) MIDDLEWARE PARA 404
+// 10) CAPTURAR 404
 // --------------------------------------------------
 app.use((req, res, next) => {
-  console.log('❌ Ruta no encontrada:', req.method, req.originalUrl);
+  console.log(`❌ Ruta no encontrada: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ 
-    error: 'Endpoint no encontrado',
+    error: 'Ruta no encontrada',
     method: req.method,
-    path: req.originalUrl,
-    timestamp: new Date().toISOString(),
-    availableEndpoints: [
-      'GET /health - Health check',
-      'GET /auth/test - Test de configuración CAS',
-      'GET /auth/status - Estado de autenticación',
-      'GET /auth/cas/login - Iniciar login CAS',
-      'POST /auth/logout - Cerrar sesión',
-      'GET /api/* - Endpoints de API (requieren autenticación)'
-    ]
+    url: req.originalUrl,
+    timestamp: new Date().toISOString()
   });
 });
 
 // --------------------------------------------------
-// 11) MANEJADOR GLOBAL DE ERRORES
+// 11) MANEJADOR DE ERRORES GLOBAL
 // --------------------------------------------------
 app.use((err, req, res, next) => {
   console.error('💥 === ERROR GLOBAL ===');
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
   console.error('URL:', req.originalUrl);
   console.error('Method:', req.method);
   console.error('Session ID:', req.sessionID);
   console.error('User:', req.user?.username || 'no autenticado');
-  console.error('Error:', err.message);
-  console.error('Stack:', err.stack);
 
-  // No exponer detalles internos en producción
+  // En producción, no exponer detalles del error
   const isDevelopment = process.env.NODE_ENV !== 'production';
   
-  const errorResponse = {
+  res.status(err.status || 500).json({
     error: err.message || 'Error interno del servidor',
     timestamp: new Date().toISOString(),
-    path: req.originalUrl,
-    method: req.method
-  };
-
-  // Agregar detalles adicionales solo en desarrollo
-  if (isDevelopment) {
-    errorResponse.stack = err.stack;
-    errorResponse.sessionId = req.sessionID;
-  }
-
-  // Determinar código de estado
-  const statusCode = err.status || err.statusCode || 500;
-  
-  res.status(statusCode).json(errorResponse);
+    ...(isDevelopment && { 
+      stack: err.stack,
+      details: err
+    })
+  });
 });
-
-console.log('🚀 === SERVIDOR CONFIGURADO EXITOSAMENTE ===');
 
 export default app;
