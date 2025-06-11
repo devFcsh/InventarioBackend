@@ -1,6 +1,6 @@
 import {QueryTypes } from 'sequelize';
 import db from '../models/index.js';
-import Modelo from '../models/Modelo.js';
+import Modelo from '../models/modelo.js';
 
 export async function obtenerModelos(req, res) {
     try {
