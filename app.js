@@ -1,7 +1,5 @@
 // app.js
 import express from 'express';
-import pkg from 'body-parser';
-const { json } = pkg;
 import cors from 'cors';
 import routes from './routes/index.js';
 import authRoutes from './routes/authRoutes.js';
@@ -14,62 +12,146 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-// --------------------------------------------------
-// 0) TRUST PROXY
-// --------------------------------------------------
-// Si estás detrás de Cloudflare / TryCloudflare / balanceador, 
-// Express necesita confiar en la cabecera X-Forwarded-Proto para saber que fue HTTPS.
-app.set('trust proxy', 1);
 
-
-console.log('🚀 Iniciando servidor...');
+console.log('🚀 === INICIANDO SERVIDOR CAS ESPOL ===');
 console.log('Backend URL:', process.env.BACKEND_URL);
 console.log('Frontend URL:', process.env.FRONTEND_URL);
+console.log('Node ENV:', process.env.NODE_ENV);
 
-// PROBLEMA 6: CORS debe ser más específico y permitir credentials
+// --------------------------------------------------
+// 1) TRUST PROXY (importante para HTTPS detrás de proxy)
+// --------------------------------------------------
+app.set('trust proxy', 1);
+
+// --------------------------------------------------
+// 2) CORS - Configuración específica para CAS
+// --------------------------------------------------
 app.use(cors({
-  origin: process.env.FRONTEND_URL, // ej: 'https://pt-settled-families-specs.trycloudflare.com'
-  credentials: true
+  origin: function(origin, callback) {
+    // Permitir requests sin origin (mobile apps, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Lista de orígenes permitidos
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'https://auth.espol.edu.ec', // CAS server
+      'https://www.espol.edu.ec'   // ESPOL main site
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // En desarrollo, permitir localhost
+    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('No permitido por CORS'), false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['set-cookie']
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// 3) SESIÓN y PASSPORT
-//  - Nota: sessionMiddleware DEBE ir ANTES de passport.initialize()
 // --------------------------------------------------
+// 3) MIDDLEWARE DE PARSING
+// --------------------------------------------------
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// --------------------------------------------------
+// 4) SESIÓN (DEBE IR ANTES DE PASSPORT)
+// --------------------------------------------------
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.originalUrl} - Session: ${req.sessionID || 'none'}`);
+  next();
+});
+
 app.use(sessionMiddleware);
 
+// --------------------------------------------------
+// 5) PASSPORT INICIALIZACIÓN
+// --------------------------------------------------
 app.use(passport.initialize());
 app.use(passport.session());
 
-
-// --------------------------------------------------
-// 4) RUTAS DE AUTENTICACIÓN
-// --------------------------------------------------
-app.use('/auth', authRoutes);
-
-
-// 4. Rutas de API protegidas - REQUIEREN AUTENTICACIÓN
-app.use('/api', requireAuth, routes);
-
-// 5. Archivos estáticos
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// --------------------------------------------------
-// 6) CAPTURAR 404
-// --------------------------------------------------
+// Middleware para logging de autenticación
 app.use((req, res, next) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    console.log(`👤 Usuario autenticado: ${req.user?.username} (${req.sessionID})`);
+  }
+  next();
 });
 
 // --------------------------------------------------
-// 7) MANEJADOR DE ERRORES
+// 6) RUTAS DE AUTENTICACIÓN (PÚBLICAS)
+// --------------------------------------------------
+app.use('/auth', authRoutes);
+
+// --------------------------------------------------
+// 7) RUTAS API PROTEGIDAS
+// --------------------------------------------------
+app.use('/api', requireAuth, routes);
+
+// --------------------------------------------------
+// 8) ARCHIVOS ESTÁTICOS
+// --------------------------------------------------
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// --------------------------------------------------
+// 9) RUTA DE SALUD DEL SERVIDOR
+// --------------------------------------------------
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    cas: {
+      server: 'https://auth.espol.edu.ec',
+      callback: `${process.env.BACKEND_URL}/auth/cas/callback`,
+      frontend: process.env.FRONTEND_URL
+    }
+  });
+});
+
+// --------------------------------------------------
+// 10) CAPTURAR 404
+// --------------------------------------------------
+app.use((req, res, next) => {
+  console.log(`❌ Ruta no encontrada: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ 
+    error: 'Ruta no encontrada',
+    method: req.method,
+    url: req.originalUrl,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// --------------------------------------------------
+// 11) MANEJADOR DE ERRORES GLOBAL
 // --------------------------------------------------
 app.use((err, req, res, next) => {
-  console.error('💥 Error global en Express:', err);
+  console.error('💥 === ERROR GLOBAL ===');
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
+  console.error('URL:', req.originalUrl);
+  console.error('Method:', req.method);
+  console.error('Session ID:', req.sessionID);
+  console.error('User:', req.user?.username || 'no autenticado');
+
+  // En producción, no exponer detalles del error
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
   res.status(err.status || 500).json({
-    error: err.message || 'Error interno del servidor'
+    error: err.message || 'Error interno del servidor',
+    timestamp: new Date().toISOString(),
+    ...(isDevelopment && { 
+      stack: err.stack,
+      details: err
+    })
   });
 });
 

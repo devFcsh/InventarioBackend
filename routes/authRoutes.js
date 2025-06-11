@@ -6,24 +6,28 @@ const router = Router();
 
 // GET /auth/cas/login
 router.get('/cas/login', (req, res, next) => {
-  console.log('🚀 === INICIANDO LOGIN CAS ===');
+  console.log('🚀 === INICIANDO LOGIN CAS ESPOL ===');
   console.log('Service URL:', `${process.env.BACKEND_URL}/auth/cas/callback`);
-  console.log('Session ID antes de login:', req.sessionID);
+  console.log('Session ID:', req.sessionID);
   console.log('Query params:', req.query);
 
-  // Si llega ticket en query, saltar a callback
-  if (req.query.ticket) {
-    console.log('🎫 Ticket en /cas/login → redirigiendo a callback');
-    return res.redirect(`/auth/cas/callback?ticket=${req.query.ticket}`);
-  }
-
-  // Si ya está autenticado
+  // Verificar si ya está autenticado
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     console.log('✅ Ya autenticado:', req.user.username);
     return res.redirect(`${process.env.FRONTEND_URL}/activos`);
   }
 
-  console.log('🔄 passport.authenticate("cas")');
+  // Si viene con ticket, procesar directamente
+  if (req.query.ticket) {
+    console.log('🎫 Ticket recibido en login, procesando...');
+    return passport.authenticate('cas', {
+      failureRedirect: '/auth/login/failed?error=ticket_validation_failed',
+      session: true
+    })(req, res, next);
+  }
+
+  // Iniciar autenticación CAS
+  console.log('🔄 Iniciando autenticación CAS');
   passport.authenticate('cas', {
     failureRedirect: '/auth/login/failed?error=cas_login_failed',
     session: true
@@ -32,54 +36,67 @@ router.get('/cas/login', (req, res, next) => {
 
 // GET /auth/cas/callback
 router.get('/cas/callback', (req, res, next) => {
-  console.log('🔄 === CALLBACK CAS ===');
-  console.log('URL:', req.originalUrl);
+  console.log('🔄 === CALLBACK CAS ESPOL ===');
+  console.log('URL completa:', req.originalUrl);
   console.log('Session ID:', req.sessionID);
   console.log('Query params:', req.query);
 
-  // Si CAS devolvió retry
-  if (req.query._cas_retry) {
-    console.error('❌ _cas_retry detectado');
-    return res.redirect(`/auth/login/failed?error=cas_retry&retry=${req.query._cas_retry}`);
+  // Verificar si CAS devolvió un error
+  if (req.query.error) {
+    console.error('❌ Error en callback CAS:', req.query.error);
+    return res.redirect(`/auth/login/failed?error=cas_error&message=${encodeURIComponent(req.query.error)}`);
   }
 
-  // Si no llegó ticket
+  // Verificar si hay ticket
   if (!req.query.ticket) {
-    console.error('❌ Falta ticket en callback');
+    console.error('❌ No se recibió ticket en callback');
     return res.redirect(`/auth/login/failed?error=no_ticket`);
   }
 
   console.log('🎫 Procesando ticket CAS:', req.query.ticket);
+  
+  // Procesar autenticación con callback personalizado
   passport.authenticate('cas', (err, user, info) => {
-    console.log('🔄 === RESULTADO AUTENTICACIÓN ===');
+    console.log('🔄 === RESULTADO AUTENTICACIÓN CAS ===');
     console.log('Error:', err ? err.message : 'ninguno');
-    console.log('User:', user ? user.username : 'ninguno');
+    console.log('Usuario:', user ? user.username : 'ninguno');
     console.log('Info:', info);
 
     if (err) {
       console.error('❌ Error en authenticate:', err);
-      return res.redirect(`/auth/login/failed?error=callback_error&message=${encodeURIComponent(err.message)}`);
-    }
-    if (!user) {
-      console.error('❌ No se obtuvo usuario de CAS');
-      return res.redirect(`/auth/login/failed?error=no_user`);
+      return res.redirect(`/auth/login/failed?error=authentication_error&message=${encodeURIComponent(err.message)}`);
     }
 
-    console.log('👤 Usuario obtenido:', { id: user.id, username: user.username });
-    req.logIn(user, loginErr => {
+    if (!user) {
+      console.error('❌ No se obtuvo usuario válido');
+      return res.redirect(`/auth/login/failed?error=no_user&message=No se pudo obtener información del usuario`);
+    }
+
+    console.log('👤 Usuario autenticado exitosamente:', {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      displayName: user.displayName
+    });
+
+    // Iniciar sesión del usuario
+    req.logIn(user, (loginErr) => {
       if (loginErr) {
         console.error('❌ Error en req.logIn:', loginErr);
-        return res.redirect(`/auth/login/failed?error=login_failed&message=${encodeURIComponent(loginErr.message)}`);
+        return res.redirect(`/auth/login/failed?error=login_session_error&message=${encodeURIComponent(loginErr.message)}`);
       }
 
-      console.log('✅ Autenticación exitosa:', user.username);
-      // Guardar sesión antes de redirect
-      req.session.save(saveErr => {
+      console.log('✅ Sesión iniciada correctamente para:', user.username);
+      
+      // Guardar sesión y redirigir
+      req.session.save((saveErr) => {
         if (saveErr) {
           console.error('❌ Error guardando sesión:', saveErr);
-          return res.redirect(`/auth/login/failed?error=session_save_failed`);
+          return res.redirect(`/auth/login/failed?error=session_save_error`);
         }
-        console.log('💾 Sesión guardada');
+        
+        console.log('💾 Sesión guardada correctamente');
+        console.log('🎉 Autenticación CAS completada exitosamente');
         return res.redirect(`${process.env.FRONTEND_URL}/activos`);
       });
     });
@@ -98,17 +115,19 @@ router.get('/login/failed', (req, res) => {
     timestamp: new Date().toISOString(),
     sessionId: req.sessionID
   };
-  console.log('Detalles del error:', errorDetails);
 
-  // Destruir sesión fallida
+  console.log('📝 Detalles del error:', errorDetails);
+
+  // Limpiar sesión fallida
   if (req.session) {
-    req.session.destroy(err => {
+    req.session.destroy((err) => {
       if (err) {
         console.error('❌ Error destruyendo sesión fallida:', err);
       } else {
-        console.log('🧹 Sesión fallida destruida');
+        console.log('🧹 Sesión fallida limpiada');
       }
 
+      // Crear query string para el frontend
       const errorQuery = new URLSearchParams({
         error: errorDetails.error,
         message: errorDetails.message,
@@ -118,14 +137,25 @@ router.get('/login/failed', (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL}/login/failed?${errorQuery}`);
     });
   } else {
-    return res.redirect(`${process.env.FRONTEND_URL}/login/failed?error=${errorDetails.error}`);
+    const errorQuery = new URLSearchParams({
+      error: errorDetails.error,
+      message: errorDetails.message,
+      timestamp: errorDetails.timestamp
+    }).toString();
+
+    return res.redirect(`${process.env.FRONTEND_URL}/login/failed?${errorQuery}`);
   }
 });
 
 // GET /auth/status
 router.get('/status', (req, res) => {
   const isAuth = req.isAuthenticated && req.isAuthenticated();
-  console.log('📊 === ESTADO DE AUTENTICACIÓN ===', { isAuth, sessionID: req.sessionID });
+  console.log('📊 === ESTADO DE AUTENTICACIÓN ===', { 
+    isAuth, 
+    sessionID: req.sessionID,
+    hasUser: !!req.user
+  });
+
   if (isAuth && req.user) {
     return res.json({
       authenticated: true,
@@ -135,11 +165,13 @@ router.get('/status', (req, res) => {
         username: req.user.username,
         email: req.user.email,
         displayName: req.user.displayName,
-        authenticatedAt: req.user.authenticatedAt
+        authenticatedAt: req.user.authenticatedAt,
+        source: req.user.source
       },
       timestamp: new Date().toISOString()
     });
   }
+
   return res.json({
     authenticated: false,
     sessionId: req.sessionID,
@@ -150,7 +182,11 @@ router.get('/status', (req, res) => {
 
 // GET /auth/user
 router.get('/user', (req, res) => {
-  console.log('🔍 === VERIFICANDO USUARIO ===', { sessionID: req.sessionID });
+  console.log('🔍 === VERIFICANDO USUARIO ===', { 
+    sessionID: req.sessionID,
+    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
+  });
+
   const isAuth = req.isAuthenticated && req.isAuthenticated();
   if (isAuth && req.user) {
     return res.json({
@@ -160,12 +196,15 @@ router.get('/user', (req, res) => {
         username: req.user.username,
         email: req.user.email,
         displayName: req.user.displayName,
-        authenticatedAt: req.user.authenticatedAt
+        authenticatedAt: req.user.authenticatedAt,
+        source: req.user.source,
+        attributes: req.user.attributes
       },
       sessionId: req.sessionID,
       timestamp: new Date().toISOString()
     });
   }
+
   return res.status(401).json({
     authenticated: false,
     error: 'No hay usuario autenticado',
@@ -176,31 +215,49 @@ router.get('/user', (req, res) => {
 
 // POST /auth/logout
 router.post('/logout', (req, res) => {
-  const casLogoutURL = 'https://auth.espol.edu.ec/cas/logout';
+  console.log('🚪 === LOGOUT CAS ESPOL ===', { 
+    user: req.user?.username, 
+    sessionID: req.sessionID 
+  });
+
+  // URL de logout del CAS de ESPOL
+  const casLogoutURL = 'https://auth.espol.edu.ec/logout';
   const serviceURL = encodeURIComponent(process.env.FRONTEND_URL);
   const fullCasLogoutURL = `${casLogoutURL}?service=${serviceURL}`;
 
-  console.log('🚪 === LOGOUT ===', { user: req.user?.username, sessionID: req.sessionID });
   if (!req.user) {
+    console.log('ℹ️ No hay sesión activa para cerrar');
     return res.json({
       success: true,
       message: 'No hay sesión activa',
-      casLogoutUrl: fullCasLogoutURL
+      casLogoutUrl: fullCasLogoutURL,
+      timestamp: new Date().toISOString()
     });
   }
 
   const username = req.user.username;
-  req.logout(err => {
+  
+  // Cerrar sesión de Passport
+  req.logout((err) => {
     if (err) {
       console.error('❌ Error en logout:', err);
-      return res.status(500).json({ error: 'Error al cerrar sesión', details: err.message });
+      return res.status(500).json({ 
+        error: 'Error al cerrar sesión', 
+        details: err.message 
+      });
     }
-    req.session.destroy(destroyErr => {
+
+    // Destruir sesión
+    req.session.destroy((destroyErr) => {
       if (destroyErr) {
         console.error('❌ Error destruyendo sesión:', destroyErr);
-        return res.status(500).json({ error: 'Error al destruir sesión', details: destroyErr.message });
+        return res.status(500).json({ 
+          error: 'Error al destruir sesión', 
+          details: destroyErr.message 
+        });
       }
-      console.log('✅ Logout exitoso para:', username);
+
+      console.log('✅ Logout exitoso para usuario:', username);
       return res.json({
         success: true,
         message: 'Sesión cerrada exitosamente',
@@ -213,29 +270,33 @@ router.post('/logout', (req, res) => {
 
 // GET /auth/test
 router.get('/test', (req, res) => {
-  console.log('🧪 === TEST CAS ===');
+  console.log('🧪 === TEST CAS ESPOL ===');
   const isAuth = req.isAuthenticated && req.isAuthenticated();
+  
   return res.json({
-    message: 'Rutas de autenticación CAS funcionando',
+    message: 'Rutas de autenticación CAS ESPOL funcionando',
     timestamp: new Date().toISOString(),
     config: {
       casURL: 'https://auth.espol.edu.ec',
       backendURL: process.env.BACKEND_URL,
       frontendURL: process.env.FRONTEND_URL,
-      callbackURL: `${process.env.BACKEND_URL}/auth/cas/callback`
+      callbackURL: `${process.env.BACKEND_URL}/auth/cas/callback`,
+      loginURL: `https://auth.espol.edu.ec/login?service=${encodeURIComponent(process.env.BACKEND_URL + '/auth/cas/callback')}`,
+      logoutURL: `https://auth.espol.edu.ec/logout?service=${encodeURIComponent(process.env.FRONTEND_URL)}`
     },
     session: {
       id: req.sessionID,
       authenticated: isAuth,
-      user: req.user?.username || null
+      user: req.user?.username || null,
+      userDetails: req.user || null
     },
     endpoints: [
-      '/auth/cas/login',
-      '/auth/cas/callback',
-      '/auth/status',
-      '/auth/user',
-      '/auth/logout',
-      '/auth/test'
+      'GET /auth/cas/login - Iniciar autenticación CAS',
+      'GET /auth/cas/callback - Callback CAS',
+      'GET /auth/status - Estado de autenticación',
+      'GET /auth/user - Información del usuario',
+      'POST /auth/logout - Cerrar sesión',
+      'GET /auth/test - Esta prueba'
     ]
   });
 });
