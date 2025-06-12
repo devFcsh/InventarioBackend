@@ -99,7 +99,8 @@ export async function obtenerEquiposActivos(req, res) {
 }
 
 export async function obtenerEquiposRed(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+    req.query;
 
   perifericoId = validarTexto(perifericoId);
   marcaId = validarTexto(marcaId);
@@ -171,7 +172,8 @@ export async function obtenerEquiposRed(req, res) {
 }
 
 export async function obtenerEquiposBodega(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+    req.query;
 
   perifericoId = validarTexto(perifericoId);
   marcaId = validarTexto(marcaId);
@@ -212,7 +214,15 @@ export async function obtenerEquiposBodega(req, res) {
     `;
 
     const equipos = await db.query(query, {
-      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
+      replacements: {
+        perifericoId,
+        marcaId,
+        modeloId,
+        serieId,
+        inventario,
+        limit,
+        offset,
+      },
       type: QueryTypes.SELECT,
     });
 
@@ -226,7 +236,8 @@ export async function obtenerEquiposBodega(req, res) {
 }
 
 export async function obtenerEquiposRedBodega(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+    req.query;
 
   perifericoId = validarTexto(perifericoId);
   marcaId = validarTexto(marcaId);
@@ -268,7 +279,15 @@ export async function obtenerEquiposRedBodega(req, res) {
     `;
 
     const equipos = await db.query(query, {
-      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
+      replacements: {
+        perifericoId,
+        marcaId,
+        modeloId,
+        serieId,
+        inventario,
+        limit,
+        offset,
+      },
       type: QueryTypes.SELECT,
     });
 
@@ -282,7 +301,8 @@ export async function obtenerEquiposRedBodega(req, res) {
 }
 
 export async function obtenerEquiposBaja(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+    req.query;
 
   perifericoId = validarTexto(perifericoId);
   marcaId = validarTexto(marcaId);
@@ -323,7 +343,15 @@ export async function obtenerEquiposBaja(req, res) {
     `;
 
     const equipos = await db.query(query, {
-      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
+      replacements: {
+        perifericoId,
+        marcaId,
+        modeloId,
+        serieId,
+        inventario,
+        limit,
+        offset,
+      },
       type: QueryTypes.SELECT,
     });
 
@@ -337,7 +365,8 @@ export async function obtenerEquiposBaja(req, res) {
 }
 
 export async function obtenerEquiposRedBaja(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } = req.query;
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+    req.query;
 
   perifericoId = validarTexto(perifericoId);
   marcaId = validarTexto(marcaId);
@@ -379,7 +408,15 @@ export async function obtenerEquiposRedBaja(req, res) {
     `;
 
     const equipos = await db.query(query, {
-      replacements: { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset },
+      replacements: {
+        perifericoId,
+        marcaId,
+        modeloId,
+        serieId,
+        inventario,
+        limit,
+        offset,
+      },
       type: QueryTypes.SELECT,
     });
 
@@ -916,7 +953,7 @@ export async function agregarEquipoRed(req, res) {
     puertos,
     puerto_ftp,
     idLampara,
-    nombre_equipo,
+    nombreEquipo,
   } = req.body;
 
   const parametros = {
@@ -931,7 +968,7 @@ export async function agregarEquipoRed(req, res) {
     puertos,
     puerto_ftp,
     idLampara,
-    nombre_equipo,
+    nombreEquipo,
   };
 
   try {
@@ -944,7 +981,7 @@ export async function agregarEquipoRed(req, res) {
         :idUsuario,
         :imagenRuta,
         :observacion,
-        :idLampara,
+        :idLampara
       );`,
       {
         replacements: parametros,
@@ -959,9 +996,9 @@ export async function agregarEquipoRed(req, res) {
 
     await db.query(
       `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp, nombre_equipo)
-         VALUES (:equipoId, :mac, :puertos, :puerto_ftp, :nombre_equipo)`,
+         VALUES (:equipoId, :mac, :puertos, :puerto_ftp, :nombreEquipo)`,
       {
-        replacements: { equipoId, mac, puertos, puerto_ftp, nombre_equipo },
+        replacements: { equipoId, mac, puertos, puerto_ftp, nombreEquipo },
         type: QueryTypes.INSERT,
       }
     );
