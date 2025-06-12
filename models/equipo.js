@@ -1,4 +1,4 @@
-import db from "../models/index.js";
+import db from "./index.js";
 import { DataTypes } from "sequelize";
 
 const Equipo = db.define('equipo', {

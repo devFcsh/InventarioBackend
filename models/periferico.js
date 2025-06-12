@@ -1,5 +1,5 @@
 
-import db from "../models/index.js";
+import db from "./index.js";
 import { DataTypes } from "sequelize";
 const Periferico = db.define('periferico', {
     id_periferico: {

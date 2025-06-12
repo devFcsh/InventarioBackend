@@ -8,12 +8,13 @@
     "autostart": "nodemon ./bin/www"
   },
   "dependencies": {
+    "axios": "^1.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "debug": "~2.6.9",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
-    "express": "^4.21.1",
+    "express": "^4.21.2",
     "express-session": "^1.18.1",
     "http-errors": "~1.6.3",
     "morgan": "~1.9.1",
@@ -22,6 +23,7 @@
     "nodemon": "^3.1.4",
     "passport": "^0.7.0",
     "passport-cas2": "^0.0.12",
-    "sequelize": "^6.37.3"
+    "sequelize": "^6.37.3",
+    "xmldom": "^0.6.0"
   }
 }
