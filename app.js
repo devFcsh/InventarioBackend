@@ -27,7 +27,29 @@ app.set('trust proxy', 1);
 // 2) CORS - Configuración específica para CAS
 // --------------------------------------------------
 app.use(cors({
-  origin: "*",
+  origin: function(origin, callback) {
+    // Permitir requests sin origin (mobile apps, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Lista de orígenes permitidos
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'https://auth.espol.edu.ec', // CAS server
+      'https://www.espol.edu.ec',   // ESPOL main site
+      'https://content-comfort-production.up.railway.app'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // En desarrollo, permitir localhost
+    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('No permitido por CORS'), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
