@@ -36,7 +36,6 @@ app.use(cors({
       process.env.FRONTEND_URL,
       'https://auth.espol.edu.ec', // CAS server
       'https://www.espol.edu.ec',   // ESPOL main site
-      'https://content-comfort-production.up.railway.app'
     ];
     
     if (allowedOrigins.includes(origin)) {
