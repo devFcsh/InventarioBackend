@@ -93,7 +93,7 @@ app.use('/auth', authRoutes);
 // --------------------------------------------------
 // 7) RUTAS API PROTEGIDAS
 // --------------------------------------------------
-app.use('/api', requireAuth, routes);
+app.use('/', requireAuth, routes);
 
 // --------------------------------------------------
 // 8) ARCHIVOS ESTÁTICOS
