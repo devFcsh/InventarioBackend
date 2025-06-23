@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { agregarUsuarioSistema, editarUsuarioSistema, eliminarUsuarioSistema, obtenerUsuariosSistema } from '../controllers/usuarioSistemaController';
+import { agregarUsuarioSistema, editarUsuarioSistema, eliminarUsuarioSistema, obtenerUsuariosSistema } from '../controllers/usuarioSistemaController.js';
 const router = Router();
 
 router.get('/', obtenerUsuariosSistema); 

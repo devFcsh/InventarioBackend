@@ -9,7 +9,7 @@ export async function obtenerUsuariosSistema(req, res) {
       SELECT 
         u.id_usuario_sistema, 
         u.correo,
-        r.nombre_rol AS rol,
+        r.nombre AS rol,
         COUNT(*) OVER() AS total
       FROM usuario_sistema u
       JOIN rol r ON u.id_rol = r.id_rol

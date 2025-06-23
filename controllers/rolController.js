@@ -1,4 +1,5 @@
 import { QueryTypes } from 'sequelize';
+import db from "../models/index.js";
 
 export async function obtenerRoles(req, res) {
   try {
@@ -19,26 +20,26 @@ export async function obtenerRoles(req, res) {
 }
 
 export async function agregarRol(req, res) {
-  const { nombre_rol } = req.body;
+  const { nombre } = req.body;
 
-  if (!nombre_rol) {
+  if (!nombre) {
     return res.status(400).json({ error: "Se requiere el nombre del rol" });
   }
 
   try {
     const query = `
-      INSERT INTO rol (nombre_rol)
-      VALUES (:nombre_rol)
+      INSERT INTO rol (nombre)
+      VALUES (:nombre)
     `;
 
     const result = await db.query(query, {
-      replacements: { nombre_rol },
+      replacements: { nombre },
       type: QueryTypes.INSERT,
     });
 
     res.status(201).json({
       mensaje: "Rol agregado exitosamente",
-      rol: { nombre_rol },
+      rol: { nombre },
       id_rol: result[0],
     });
   } catch (error) {
@@ -62,7 +63,7 @@ export async function editarRol(req, res) {
 
     const query = `
       UPDATE rol
-      SET nombre_rol = :nuevoNombre
+      SET nombre = :nuevoNombre
       WHERE id_rol = :id_rol
     `;
     

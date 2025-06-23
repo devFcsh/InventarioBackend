@@ -8,7 +8,7 @@ const Rol = db.define('rol', {
     allowNull: false,
     primaryKey: true,
   },
-  nombre_rol: {
+  nombre: {
     type: DataTypes.STRING(20),
     allowNull: false,
     unique: true,
@@ -26,10 +26,10 @@ const Rol = db.define('rol', {
       ]
     },
     {
-      name: "idx_rol_nombre_rol",
+      name: "idx_rol_nombre",
       using: "BTREE",
       fields: [
-        { name: "nombre_rol" },
+        { name: "nombre" },
       ]
     },
   ],
