@@ -24,13 +24,14 @@ export const sessionMiddleware = session({
 });
 
 // 2) Estrategia CAS personalizada para ESPOL
-class EspolCasStrategy {
+class EspolCasStrategy extends passport.Strategy {
   constructor(options, verify) {
+    super();
     this.name = 'cas';
     this.casURL = options.casURL;
     this.serviceURL = options.serviceURL;
     this.version = options.version || 'CAS2.0';
-    this.verify = verify;
+    this._verify = verify;
   }
 
   authenticate(req, options) {
@@ -38,24 +39,27 @@ class EspolCasStrategy {
     console.log('URL:', req.originalUrl);
     console.log('Query:', req.query);
 
-    // Si no hay ticket, redirigir a CAS login
     if (!req.query.ticket) {
       const loginURL = `${this.casURL}/login?service=${encodeURIComponent(this.serviceURL)}`;
       console.log('🔄 Redirigiendo a CAS login:', loginURL);
       return this.redirect(loginURL);
     }
 
-    // Validar ticket con CAS
     this.validateTicket(req.query.ticket, req)
-      .then(user => {
-        console.log('✅ Ticket válido, usuario:', user);
-        this.success(user);
+      .then(profile => {
+        // Aquí Passport espera que llames a la función de verificación con un callback tipo done
+        this._verify(profile, (err, user) => {
+          if (err) return this.error(err);
+          if (!user) return this.fail('No user');
+          this.success(user);
+        });
       })
       .catch(err => {
         console.error('❌ Error validando ticket:', err);
         this.fail(err.message);
       });
   }
+
 
   async validateTicket(ticket, req) {
     console.log('🎫 Validando ticket:', ticket);
@@ -149,11 +153,6 @@ console.log('🔧 Configuración CAS ESPOL:', CAS_CONFIG);
 passport.use(new EspolCasStrategy(CAS_CONFIG, function(profile, done) {
   console.log('🎯 === VERIFICACIÓN CAS ===');
   console.log('Perfil recibido:', profile);
-  
-  if (typeof done !== 'function') {
-    console.error('❌ done no es función');
-    return;
-  }
 
   try {
     console.log('✅ Usuario procesado correctamente');
