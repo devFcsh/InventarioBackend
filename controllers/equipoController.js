@@ -1048,7 +1048,7 @@ export const obtenerComputadora = async (req, res) => {
        LEFT JOIN marca m ON mm.id_marca = m.id_marca
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
-       JOIN version_SO vso ON vso.id_versionso = c.id_versionso
+       JOIN version_so vso ON vso.id_versionso = c.id_versionso
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
@@ -1245,7 +1245,7 @@ export const obtenerComputadoraBodega = async (req, res) => {
        LEFT JOIN marca m ON mm.id_marca = m.id_marca
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
-       LEFT JOIN version_SO vso ON vso.id_versionso = c.id_versionso
+       LEFT JOIN version_so vso ON vso.id_versionso = c.id_versionso
        WHERE e.id_equipo = :id`,
       {
         replacements: { id },
