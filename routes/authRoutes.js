@@ -172,7 +172,7 @@ router.get('/status', async (req, res) => {
         type: QueryTypes.SELECT,
       });
       const rol = result.length > 0 ? result[0].rol : null;
-
+      console.log("rol " + rol);
       return res.json({
         authenticated: true,
         sessionId: req.sessionID,
