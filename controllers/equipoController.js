@@ -60,7 +60,7 @@ export async function obtenerEquiposActivos(req, res) {
       JOIN marca m ON mm.id_marca = m.id_marca
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
-      JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+      JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
       JOIN usuario u ON ea.id_usuario = u.id_usuario
@@ -135,7 +135,7 @@ export async function obtenerEquiposRed(req, res) {
       JOIN marca m ON mm.id_marca = m.id_marca
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
-      JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+      JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
       JOIN usuario u ON ea.id_usuario = u.id_usuario
@@ -204,7 +204,7 @@ export async function obtenerEquiposBodega(req, res) {
       JOIN marca m ON mm.id_marca = m.id_marca
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
-      JOIN equipo_Bodega eb ON e.id_equipo = eb.id_equipo
+      JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
         AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
@@ -268,7 +268,7 @@ export async function obtenerEquiposRedBodega(req, res) {
       JOIN marca m ON mm.id_marca = m.id_marca
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
-      JOIN equipo_Bodega eb ON e.id_equipo = eb.id_equipo
+      JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
       JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
         AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
@@ -333,7 +333,7 @@ export async function obtenerEquiposBaja(req, res) {
       JOIN marca m ON mm.id_marca = m.id_marca
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
-      JOIN equipo_Baja eb ON e.id_equipo = eb.id_equipo
+      JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
         AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
@@ -397,7 +397,7 @@ export async function obtenerEquiposRedBaja(req, res) {
       JOIN marca m ON mm.id_marca = m.id_marca
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
-      JOIN equipo_Baja eb ON e.id_equipo = eb.id_equipo
+      JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
       JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
         AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
@@ -449,7 +449,7 @@ export async function obtenerEquiposPorUsuario(req, res) {
       JOIN marca m ON mm.id_marca = m.id_marca
       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
       JOIN periferico p ON mp.id_periferico = p.id_periferico
-      JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+      JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       JOIN usuario u ON ea.id_usuario = u.id_usuario
       WHERE u.id_usuario = :id_usuario
     `;
@@ -494,7 +494,7 @@ export async function cambiarUsuarioEquipo(req, res) {
     }
 
     const query = `
-      UPDATE equipo_Activo
+      UPDATE equipo_activo
       SET id_usuario = :usuarioId
       WHERE id_equipo = :equipoId;
     `;
@@ -511,7 +511,7 @@ export async function cambiarUsuarioEquipo(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo_Activo 
+      `UPDATE equipo_activo 
        SET id_usuario = :usuarioId 
        WHERE id_equipo IN (
          SELECT id_componente FROM componente WHERE id_computadora = :equipoId
@@ -1039,7 +1039,7 @@ export const obtenerComputadora = async (req, res) => {
          vso.id_sistemaoperativo,
          e.observacion
        FROM equipo e
-       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+       JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
        LEFT JOIN uso us ON u.id_uso = us.id_uso
@@ -1111,7 +1111,7 @@ export const obtenerActivoSimple = async (req, res) => {
          e.observacion,
          ep.id_lampara 
        FROM equipo e
-       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+       JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
        LEFT JOIN uso us ON u.id_uso = us.id_uso
        LEFT JOIN serie s ON e.id_serie = s.id_serie
@@ -1185,7 +1185,7 @@ export const obtenerActivoRed = async (req, res) => {
          er.puerto_ftp,
          er.nombre_equipo
        FROM equipo e
-       JOIN equipo_Activo ea ON e.id_equipo = ea.id_equipo
+       JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
        LEFT JOIN uso us ON u.id_uso = us.id_uso
        LEFT JOIN serie s ON e.id_serie = s.id_serie
@@ -1442,7 +1442,7 @@ export async function agregarComponentes(req, res) {
 
       if (tipo === "activo") {
         await db.query(
-          `INSERT INTO equipo_Activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
+          `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
           {
             replacements: {
               idComponente,
@@ -1463,7 +1463,7 @@ export async function agregarComponentes(req, res) {
         );
       } else if (tipo == "bodega") {
         await db.query(
-          `INSERT INTO equipo_Baja (id_equipo) VALUES (:idComponente);`,
+          `INSERT INTO equipo_baja (id_equipo) VALUES (:idComponente);`,
           {
             replacements: {
               idComponente,
@@ -1745,7 +1745,7 @@ export async function editarEquipoSimple(req, res) {
 
     if (tipo === "activo") {
       await db.query(
-        `UPDATE equipo_Activo SET
+        `UPDATE equipo_activo SET
           id_usuario = :id_usuario,
           id_ubicacion = :id_ubicacion
         WHERE id_equipo = :equipoId`,
@@ -2019,7 +2019,7 @@ export const pasarActivoABodega = async (req, res) => {
     }
 
     const equipoActivo = await db.query(
-      `SELECT * FROM equipo_Activo WHERE id_equipo = :equipoId`,
+      `SELECT * FROM equipo_activo WHERE id_equipo = :equipoId`,
       {
         replacements: { equipoId },
         type: QueryTypes.SELECT,
@@ -2074,13 +2074,13 @@ export const pasarActivoABodega = async (req, res) => {
         }
       }
 
-      await db.query(`DELETE FROM equipo_Activo WHERE id_equipo = :equipoId`, {
+      await db.query(`DELETE FROM equipo_activo WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
         type: QueryTypes.DELETE,
       });
 
       await db.query(
-        `INSERT INTO equipo_Bodega (id_equipo) VALUES (:equipoId)`,
+        `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
         {
           replacements: { equipoId },
           type: QueryTypes.INSERT,
@@ -2090,14 +2090,14 @@ export const pasarActivoABodega = async (req, res) => {
       if (componentes.length) {
         for (const componente of componentes) {
           await db.query(
-            `INSERT INTO equipo_Bodega (id_equipo) VALUES (:idComponente)`,
+            `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente)`,
             {
               replacements: { idComponente: componente.id_componente },
               type: QueryTypes.INSERT,
             }
           );
           await db.query(
-            `DELETE FROM equipo_Activo WHERE id_equipo = :idComponente`,
+            `DELETE FROM equipo_activo WHERE id_equipo = :idComponente`,
             {
               replacements: { idComponente: componente.id_componente },
               type: QueryTypes.DELETE,
@@ -2111,13 +2111,13 @@ export const pasarActivoABodega = async (req, res) => {
         type: QueryTypes.DELETE,
       });
 
-      await db.query(`DELETE FROM equipo_Activo WHERE id_equipo = :equipoId`, {
+      await db.query(`DELETE FROM equipo_activo WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
         type: QueryTypes.DELETE,
       });
 
       await db.query(
-        `INSERT INTO equipo_Bodega (id_equipo) VALUES (:equipoId)`,
+        `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
         {
           replacements: { equipoId },
           type: QueryTypes.INSERT,
@@ -2160,7 +2160,7 @@ export const pasarBodegaAActivo = async (req, res) => {
     }
 
     const equipoBodega = await db.query(
-      `SELECT * FROM equipo_Bodega WHERE id_equipo = :equipoId`,
+      `SELECT * FROM equipo_bodega WHERE id_equipo = :equipoId`,
       {
         replacements: { equipoId },
         type: QueryTypes.SELECT,
@@ -2200,7 +2200,7 @@ export const pasarBodegaAActivo = async (req, res) => {
       );
 
       await db.query(
-        `INSERT INTO equipo_Activo (id_equipo, id_usuario, id_ubicacion) VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
+        `INSERT INTO equipo_activo (id_equipo, id_usuario, id_ubicacion) VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
         {
           replacements: { equipoId, id_usuario, id_ubicacion },
           type: QueryTypes.INSERT,
@@ -2218,7 +2218,7 @@ export const pasarBodegaAActivo = async (req, res) => {
       if (componentes.length) {
         for (const componente of componentes) {
           await db.query(
-            `INSERT INTO equipo_Activo (id_equipo, id_usuario, id_ubicacion) VALUES (:idComponente, :id_usuario, :id_ubicacion)`,
+            `INSERT INTO equipo_activo (id_equipo, id_usuario, id_ubicacion) VALUES (:idComponente, :id_usuario, :id_ubicacion)`,
             {
               replacements: {
                 idComponente: componente.id_componente,
@@ -2242,7 +2242,7 @@ export const pasarBodegaAActivo = async (req, res) => {
         }
       }
 
-      await db.query(`DELETE FROM equipo_Bodega WHERE id_equipo = :equipoId`, {
+      await db.query(`DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
         type: QueryTypes.DELETE,
       });
@@ -2250,7 +2250,7 @@ export const pasarBodegaAActivo = async (req, res) => {
       if (componentes.length) {
         for (const componente of componentes) {
           await db.query(
-            `DELETE FROM equipo_Bodega WHERE id_equipo = :idComponente`,
+            `DELETE FROM equipo_bodega WHERE id_equipo = :idComponente`,
             {
               replacements: { idComponente: componente.id_componente },
               type: QueryTypes.DELETE,
@@ -2260,7 +2260,7 @@ export const pasarBodegaAActivo = async (req, res) => {
       }
     } else {
       await db.query(
-        `INSERT INTO equipo_Activo (id_equipo, id_usuario, id_ubicacion) VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
+        `INSERT INTO equipo_activo (id_equipo, id_usuario, id_ubicacion) VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
         {
           replacements: { equipoId, id_usuario, id_ubicacion },
           type: QueryTypes.INSERT,
@@ -2275,7 +2275,7 @@ export const pasarBodegaAActivo = async (req, res) => {
         }
       );
 
-      await db.query(`DELETE FROM equipo_Bodega WHERE id_equipo = :equipoId`, {
+      await db.query(`DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
         type: QueryTypes.DELETE,
       });

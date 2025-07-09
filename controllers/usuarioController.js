@@ -143,7 +143,7 @@ export async function eliminarUsuario(req, res) {
   try {
     const checkEquiposQuery = `
       SELECT COUNT(*) AS totalEquipos
-      FROM equipo_Activo ea
+      FROM equipo_activo ea
       WHERE ea.id_usuario = :id_usuario;
     `;
 
