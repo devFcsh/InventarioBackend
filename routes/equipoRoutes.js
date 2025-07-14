@@ -1,6 +1,6 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo } from '../controllers/equipoController.js'; 
+import { obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo, sacarEquipoDeBaja } from '../controllers/equipoController.js'; 
 import { exportarEquiposActivos, exportarEquiposBaja, exportarEquiposBodega } from '../controllers/exportarController.js';
 import upload from '../middlewares/uploadImageMiddleware.js';
 
@@ -24,6 +24,7 @@ router.get('/equipoSimple/:id', obtenerBodegaBajaSimple);
 router.delete('/computadora/:equipoId', eliminarEquipo);
 router.delete('/equipoSimple/:equipoId', eliminarEquipoSimple);
 router.put('/darDeBajaEquipo/:equipoId', darDeBajaEquipo);
+router.put('/sacarEquipoBaja/:equipoId', sacarEquipoDeBaja);
 router.put('/editarEquipo/:equipoId', editarEquipo);
 router.put('/editarEquipoSimple/:equipoId', editarEquipoSimple);
 router.put('/editarEquipoRed/:equipoId', editarEquipoRed);

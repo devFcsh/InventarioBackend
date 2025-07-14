@@ -696,9 +696,7 @@ export async function darDeBajaEquipo(req, res) {
       return res.status(400).json({ error: "Debe desligar el componente" });
     }
 
-    // === GUARDAR DATOS EN TABLA AUXILIAR ANTES DE BORRAR DE ACTIVO ===
     if (tipo === "activo") {
-      // Guardar usuario y ubicación antes de borrar
       const activoInfo = await db.query(
         `SELECT id_usuario, id_ubicacion FROM equipo_activo WHERE id_equipo = :equipoId`,
         {
@@ -874,7 +872,7 @@ export async function darDeBajaEquipo(req, res) {
   }
 }
 
-export async function pasarBajaAEquipo(req, res) {
+export async function sacarEquipoDeBaja(req, res) {
   const { equipoId } = req.params;
   const { tipo } = req.body;
 
