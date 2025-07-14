@@ -696,7 +696,32 @@ export async function darDeBajaEquipo(req, res) {
       return res.status(400).json({ error: "Debe desligar el componente" });
     }
 
+    // === GUARDAR DATOS EN TABLA AUXILIAR ANTES DE BORRAR DE ACTIVO ===
     if (tipo === "activo") {
+      // Guardar usuario y ubicación antes de borrar
+      const activoInfo = await db.query(
+        `SELECT id_usuario, id_ubicacion FROM equipo_activo WHERE id_equipo = :equipoId`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (activoInfo.length) {
+        await db.query(
+          `INSERT INTO equipo_baja_info (id_equipo, id_usuario, id_ubicacion)
+           VALUES (:equipoId, :id_usuario, :id_ubicacion)
+           ON DUPLICATE KEY UPDATE id_usuario = VALUES(id_usuario), id_ubicacion = VALUES(id_ubicacion)`,
+          {
+            replacements: {
+              equipoId,
+              id_usuario: activoInfo[0].id_usuario,
+              id_ubicacion: activoInfo[0].id_ubicacion,
+            },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+
       const imagen = await db.query(
         `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
         {
@@ -705,6 +730,7 @@ export async function darDeBajaEquipo(req, res) {
         }
       );
 
+      /*
       if (imagen.length) {
         await db.query(
           `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
@@ -724,6 +750,7 @@ export async function darDeBajaEquipo(req, res) {
           unlinkSync(imagePath);
         }
       }
+      */
     }
 
     const computadora = await db.query(
@@ -745,6 +772,31 @@ export async function darDeBajaEquipo(req, res) {
 
       const componenteIds = componentes.map((comp) => comp.id_componente);
       if (componenteIds.length > 0) {
+        if (tipo === "activo") {
+          const componentesActivos = await db.query(
+            `SELECT id_equipo, id_usuario, id_ubicacion FROM equipo_activo WHERE id_equipo IN (:componenteIds)`,
+            {
+              replacements: { componenteIds },
+              type: QueryTypes.SELECT,
+            }
+          );
+          for (const comp of componentesActivos) {
+            await db.query(
+              `INSERT INTO equipo_baja_info (id_equipo, id_usuario, id_ubicacion)
+               VALUES (:id_equipo, :id_usuario, :id_ubicacion)
+               ON DUPLICATE KEY UPDATE id_usuario = VALUES(id_usuario), id_ubicacion = VALUES(id_ubicacion)`,
+              {
+                replacements: {
+                  id_equipo: comp.id_equipo,
+                  id_usuario: comp.id_usuario,
+                  id_ubicacion: comp.id_ubicacion,
+                },
+                type: QueryTypes.INSERT,
+              }
+            );
+          }
+        }
+
         await db.query(
           `INSERT INTO equipo_baja (id_equipo)
                     SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
@@ -754,6 +806,7 @@ export async function darDeBajaEquipo(req, res) {
           }
         );
 
+        /*
         await db.query(
           `DELETE FROM componente WHERE id_computadora = :equipoId`,
           {
@@ -761,6 +814,7 @@ export async function darDeBajaEquipo(req, res) {
             type: QueryTypes.DELETE,
           }
         );
+        */
 
         if (tipo === "activo") {
           await db.query(
@@ -785,6 +839,7 @@ export async function darDeBajaEquipo(req, res) {
         type: QueryTypes.INSERT,
       });
 
+      /*
       await db.query(
         `DELETE FROM computadora WHERE id_computadora = :equipoId`,
         {
@@ -792,6 +847,7 @@ export async function darDeBajaEquipo(req, res) {
           type: QueryTypes.DELETE,
         }
       );
+      */
     } else {
       await db.query(`INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`, {
         replacements: { equipoId },
@@ -815,6 +871,162 @@ export async function darDeBajaEquipo(req, res) {
   } catch (error) {
     console.error("Error al dar de baja el equipo:", error);
     res.status(500).json({ error: "Error al dar de baja el equipo" });
+  }
+}
+
+export async function pasarBajaAEquipo(req, res) {
+  const { equipoId } = req.params;
+  const { tipo } = req.body;
+
+  try {
+    const equipo = await db.query(
+      `SELECT id_equipo FROM equipo WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+    if (!equipo.length) {
+      return res.status(400).json({ error: "El equipo no existe." });
+    }
+
+    const enBaja = await db.query(
+      `SELECT id_equipo FROM equipo_baja WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+    if (!enBaja.length) {
+      return res.status(400).json({ error: "El equipo no está en baja." });
+    }
+
+    const componente = await db.query(
+      `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+    if (componente.length) {
+      return res.status(400).json({ error: "No se puede mover un componente directamente." });
+    }
+
+    const computadora = await db.query(
+      `SELECT id_computadora FROM computadora WHERE id_computadora = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    let componentes = [];
+    if (computadora.length) {
+      componentes = await db.query(
+        `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+    }
+
+    let info = await db.query(
+      `SELECT id_usuario, id_ubicacion FROM equipo_baja_info WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+    if (!info.length) {
+      return res.status(400).json({ error: "No hay información previa de usuario y ubicación para este equipo. No se puede restaurar automáticamente." });
+    }
+    const { id_usuario, id_ubicacion } = info[0];
+
+    await db.query(
+      `DELETE FROM equipo_baja WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.DELETE,
+      }
+    );
+    await db.query(
+      `DELETE FROM equipo_baja_info WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.DELETE,
+      }
+    );
+    if (componentes.length) {
+      const componenteIds = componentes.map((c) => c.id_componente);
+      await db.query(
+        `DELETE FROM equipo_baja WHERE id_equipo IN (:componenteIds)`,
+        {
+          replacements: { componenteIds },
+          type: QueryTypes.DELETE,
+        }
+      );
+      await db.query(
+        `DELETE FROM equipo_baja_info WHERE id_equipo IN (:componenteIds)`,
+        {
+          replacements: { componenteIds },
+          type: QueryTypes.DELETE,
+        }
+      );
+    }
+
+    if (tipo === "activo") {
+
+      await db.query(
+        `INSERT INTO equipo_activo (id_equipo, id_usuario, id_ubicacion) VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
+        {
+          replacements: { equipoId, id_usuario, id_ubicacion },
+          type: QueryTypes.INSERT,
+        }
+      );
+
+      if (componentes.length) {
+        for (const comp of componentes) {
+          await db.query(
+            `INSERT INTO equipo_activo (id_equipo, id_usuario, id_ubicacion) VALUES (:idComponente, :id_usuario, :id_ubicacion)`,
+            {
+              replacements: {
+                idComponente: comp.id_componente,
+                id_usuario,
+                id_ubicacion,
+              },
+              type: QueryTypes.INSERT,
+            }
+          );
+        }
+      }
+    } else if (tipo === "bodega") {
+      await db.query(
+        `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.INSERT,
+        }
+      );
+      if (componentes.length) {
+        for (const comp of componentes) {
+          await db.query(
+            `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente)`,
+            {
+              replacements: { idComponente: comp.id_componente },
+              type: QueryTypes.INSERT,
+            }
+          );
+        }
+      }
+    } else {
+      return res.status(400).json({ error: "Tipo no válido. Debe ser 'activo' o 'bodega'." });
+    }
+
+    res.json({ message: `Equipo movido de baja a ${tipo} correctamente.` });
+  } catch (error) {
+    console.error("Error al mover equipo de baja:", error);
+    res.status(500).json({ error: "Error al mover equipo de baja" });
   }
 }
 
