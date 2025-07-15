@@ -706,14 +706,15 @@ export async function darDeBajaEquipo(req, res) {
       );
       if (activoInfo.length) {
         await db.query(
-          `INSERT INTO equipo_baja_info (id_equipo, id_usuario, id_ubicacion)
-           VALUES (:equipoId, :id_usuario, :id_ubicacion)
-           ON DUPLICATE KEY UPDATE id_usuario = VALUES(id_usuario), id_ubicacion = VALUES(id_ubicacion)`,
+          `INSERT INTO equipo_baja_info (id_equipo, id_usuario, id_ubicacion, tipo)
+           VALUES (:equipoId, :id_usuario, :id_ubicacion, :tipo)
+           ON DUPLICATE KEY UPDATE id_usuario = VALUES(id_usuario), id_ubicacion = VALUES(id_ubicacion), tipo = VALUES(tipo)`,
           {
             replacements: {
               equipoId,
               id_usuario: activoInfo[0].id_usuario,
               id_ubicacion: activoInfo[0].id_ubicacion,
+              tipo,
             },
             type: QueryTypes.INSERT,
           }
@@ -780,14 +781,15 @@ export async function darDeBajaEquipo(req, res) {
           );
           for (const comp of componentesActivos) {
             await db.query(
-              `INSERT INTO equipo_baja_info (id_equipo, id_usuario, id_ubicacion)
-               VALUES (:id_equipo, :id_usuario, :id_ubicacion)
-               ON DUPLICATE KEY UPDATE id_usuario = VALUES(id_usuario), id_ubicacion = VALUES(id_ubicacion)`,
+              `INSERT INTO equipo_baja_info (id_equipo, id_usuario, id_ubicacion, tipo)
+               VALUES (:id_equipo, :id_usuario, :id_ubicacion, :tipo)
+               ON DUPLICATE KEY UPDATE id_usuario = VALUES(id_usuario), id_ubicacion = VALUES(id_ubicacion), tipo = VALUES(tipo)`,
               {
                 replacements: {
                   id_equipo: comp.id_equipo,
                   id_usuario: comp.id_usuario,
                   id_ubicacion: comp.id_ubicacion,
+                  tipo,
                 },
                 type: QueryTypes.INSERT,
               }
@@ -874,7 +876,6 @@ export async function darDeBajaEquipo(req, res) {
 
 export async function sacarEquipoDeBaja(req, res) {
   const { equipoId } = req.params;
-  const { tipo } = req.body;
 
   try {
     const equipo = await db.query(
@@ -930,7 +931,7 @@ export async function sacarEquipoDeBaja(req, res) {
     }
 
     let info = await db.query(
-      `SELECT id_usuario, id_ubicacion FROM equipo_baja_info WHERE id_equipo = :equipoId`,
+      `SELECT id_usuario, id_ubicacion, tipo FROM equipo_baja_info WHERE id_equipo = :equipoId`,
       {
         replacements: { equipoId },
         type: QueryTypes.SELECT,
@@ -939,7 +940,7 @@ export async function sacarEquipoDeBaja(req, res) {
     if (!info.length) {
       return res.status(400).json({ error: "No hay información previa de usuario y ubicación para este equipo. No se puede restaurar automáticamente." });
     }
-    const { id_usuario, id_ubicacion } = info[0];
+    const { id_usuario, id_ubicacion, tipo } = info[0];
 
     await db.query(
       `DELETE FROM equipo_baja WHERE id_equipo = :equipoId`,
@@ -974,7 +975,6 @@ export async function sacarEquipoDeBaja(req, res) {
     }
 
     if (tipo === "activo") {
-
       await db.query(
         `INSERT INTO equipo_activo (id_equipo, id_usuario, id_ubicacion) VALUES (:equipoId, :id_usuario, :id_ubicacion)`,
         {
@@ -1018,7 +1018,7 @@ export async function sacarEquipoDeBaja(req, res) {
         }
       }
     } else {
-      return res.status(400).json({ error: "Tipo no válido. Debe ser 'activo' o 'bodega'." });
+      return res.status(400).json({ error: "Tipo no válido en equipo_baja_info. Debe ser 'activo' o 'bodega'." });
     }
 
     res.json({ message: `Equipo movido de baja a ${tipo} correctamente.` });
