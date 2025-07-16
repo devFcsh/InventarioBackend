@@ -758,8 +758,8 @@ export async function darDeBajaEquipo(req, res) {
         {
           replacements: {
             equipoId,
-            id_usuario: "",
-            id_ubicacion: "",
+            id_usuario: null,
+            id_ubicacion: null,
             tipo,
           },
           type: QueryTypes.INSERT,
@@ -819,8 +819,8 @@ export async function darDeBajaEquipo(req, res) {
               {
                 replacements: {
                   id_equipo: id,
-                  id_usuario: "",
-                  id_ubicacion: "",
+                  id_usuario: null,
+                  id_ubicacion: null,
                   tipo,
                 },
                 type: QueryTypes.INSERT,
