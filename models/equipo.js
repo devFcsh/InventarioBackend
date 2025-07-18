@@ -19,6 +19,10 @@ const Equipo = db.define('equipo', {
         model: 'serie',
         key: 'id_serie'
       }
+    },
+    anio_compra: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
     }
   }, {
     tableName: 'equipo',

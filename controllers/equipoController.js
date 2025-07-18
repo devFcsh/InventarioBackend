@@ -1066,6 +1066,7 @@ export async function agregarEquipo(req, res) {
   const {
     tipo,
     inventario,
+    anio_compra,
     serie,
     nombreEquipo,
     direccionIp,
@@ -1085,6 +1086,7 @@ export async function agregarEquipo(req, res) {
   const parametros = {
     tipo,
     inventario,
+    anio_compra,
     serie,
     nombreEquipo,
     direccionIp,
@@ -1106,6 +1108,7 @@ export async function agregarEquipo(req, res) {
       `CALL agregar_equipo(
         :tipo,
         :inventario,
+        :anio_compra,
         :serie,
         :nombreEquipo,
         :direccionIp,
@@ -1139,6 +1142,7 @@ export async function agregarEquipoSimple(req, res) {
   const {
     tipo,
     inventario,
+    anio_compra,
     serie,
     idUbicacion,
     idUsuario,
@@ -1150,6 +1154,7 @@ export async function agregarEquipoSimple(req, res) {
   const parametros = {
     tipo,
     inventario,
+    anio_compra,
     serie,
     idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
     idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
@@ -1163,6 +1168,7 @@ export async function agregarEquipoSimple(req, res) {
       `CALL agregar_equipo_simple(
         :tipo,
         :inventario,
+        :anio_compra,
         :serie,
         :idUbicacion,
         :idUsuario,
@@ -1188,6 +1194,7 @@ export async function agregarEquipoRed(req, res) {
   const {
     tipo,
     inventario,
+    anio_compra,
     serie,
     idUbicacion,
     idUsuario,
@@ -1203,6 +1210,7 @@ export async function agregarEquipoRed(req, res) {
   const parametros = {
     tipo,
     inventario,
+    anio_compra,
     serie,
     idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
     idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
@@ -1220,6 +1228,7 @@ export async function agregarEquipoRed(req, res) {
       `CALL agregar_equipo_simple(
         :tipo,
         :inventario,
+        :anio_compra,
         :serie,
         :idUbicacion,
         :idUsuario,
@@ -1262,6 +1271,7 @@ export const obtenerComputadora = async (req, res) => {
       `SELECT 
          e.id_equipo,
          e.inventario,
+         e.anio_compra,
          e.id_serie,
          ea.id_usuario,
          u.id_uso,
@@ -1343,6 +1353,7 @@ export const obtenerActivoSimple = async (req, res) => {
       `SELECT 
          e.id_equipo,
          e.inventario,
+         e.anio_compra,
          e.id_serie,
          ea.id_usuario,
          u.id_uso,
@@ -1414,6 +1425,7 @@ export const obtenerActivoRed = async (req, res) => {
       `SELECT 
          e.id_equipo,
          e.inventario,
+         e.anio_compra,
          e.id_serie,
          ea.id_usuario,
          u.id_uso,
@@ -1467,6 +1479,7 @@ export const obtenerComputadoraBodega = async (req, res) => {
       `SELECT 
          e.id_equipo,
          e.inventario,
+         e.anio_compra,
          e.id_serie,
          c.nombre_equipo,
          c.direccion_ip,
@@ -1539,6 +1552,7 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
       `SELECT 
          e.id_equipo,
          e.inventario,
+         e.anio_compra,
          e.id_serie,
          p.id_periferico,
          m.id_marca,
@@ -1601,6 +1615,7 @@ export const obtenerBodegaBajaRed = async (req, res) => {
       `SELECT 
          e.id_equipo,
          e.inventario,
+         e.anio_compra,
          e.id_serie,
          p.id_periferico,
          m.id_marca,
@@ -1749,6 +1764,7 @@ export async function editarEquipo(req, res) {
     id_dominio,
     id_serie,
     inventario,
+    anio_compra,
     nombre_equipo,
     direccion_ip,
     id_usuario,
@@ -1835,9 +1851,9 @@ export async function editarEquipo(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, id_serie, observacion },
+        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
         type: QueryTypes.UPDATE,
       }
     );
@@ -1901,6 +1917,7 @@ export async function editarEquipoSimple(req, res) {
     tipo,
     id_serie,
     inventario,
+    anio_compra,
     id_usuario,
     id_ubicacion,
     imagenRuta,
@@ -1980,9 +1997,9 @@ export async function editarEquipoSimple(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, id_serie, observacion },
+        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
         type: QueryTypes.UPDATE,
       }
     );
@@ -2027,6 +2044,7 @@ export async function editarEquipoRed(req, res) {
     tipo,
     id_serie,
     inventario,
+    anio_compra,
     id_usuario,
     id_ubicacion,
     imagenRuta,
@@ -2099,9 +2117,9 @@ export async function editarEquipoRed(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, id_serie, observacion },
+        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
         type: QueryTypes.UPDATE,
       }
     );
