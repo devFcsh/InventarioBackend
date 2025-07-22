@@ -24,7 +24,7 @@ const EquipoRed = db.define('equipo_red', {
         allowNull: false
       },
       nombre_equipo: {
-        type: DataTypes.STRING(10),
+        type: DataTypes.STRING(15),
         allowNull: false
       },
   }, {

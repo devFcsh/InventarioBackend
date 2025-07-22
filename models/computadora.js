@@ -12,7 +12,7 @@ const Computadora = db.define('computadora', {
       }
     },
     nombre_equipo: {
-      type: DataTypes.STRING(20),
+      type: DataTypes.STRING(15),
       allowNull: false
     },
     direccion_ip: {
