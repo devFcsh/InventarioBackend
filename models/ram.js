@@ -9,7 +9,7 @@ const Ram = db.define('ram', {
       primaryKey: true
     },
     tipo: {
-      type: DataTypes.STRING(6),
+      type: DataTypes.STRING(20),
       allowNull: false
     },
     capacidad: {
