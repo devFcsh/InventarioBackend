@@ -9,7 +9,7 @@ const Serie = db.define('serie', {
       primaryKey: true
     },
     nombre: {
-      type: DataTypes.STRING(20),
+      type: DataTypes.STRING(30),
       allowNull: true
     }
   }, {
