@@ -7,6 +7,35 @@ import { existsSync, unlinkSync } from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+async function obtenerOCrearSerie(nombreSerie) {
+  if (!nombreSerie) return null;
+  const serieExistente = await db.query(
+    `SELECT id_serie FROM serie WHERE nombre = :nombreSerie`,
+    { replacements: { nombreSerie }, type: QueryTypes.SELECT }
+  );
+  if (serieExistente.length) {
+    return serieExistente[0].id_serie;
+  }
+  const [result] = await db.query(
+    `INSERT INTO serie (nombre) VALUES (:nombreSerie)`,
+    { replacements: { nombreSerie }, type: QueryTypes.INSERT }
+  );
+  return result;
+}
+
+async function eliminarSerieSiNoUsada(id_serie) {
+  const equipos = await db.query(
+    `SELECT 1 FROM equipo WHERE id_serie = :id_serie LIMIT 1`,
+    { replacements: { id_serie }, type: QueryTypes.SELECT }
+  );
+  if (!equipos.length) {
+    await db.query(`DELETE FROM serie WHERE id_serie = :id_serie`, {
+      replacements: { id_serie },
+      type: QueryTypes.DELETE,
+    });
+  }
+}
+
 function validarTexto(input) {
   if (!input) return null;
 
@@ -1083,33 +1112,35 @@ export async function agregarEquipo(req, res) {
     observacion,
   } = req.body;
 
-  const parametros = {
-    tipo,
-    inventario,
-    anio_compra,
-    serie,
-    nombreEquipo,
-    direccionIp,
-    versionso,
-    versionoffice,
-    ram,
-    disco,
-    procesador,
-    antivirus,
-    dominio,
-    idUbicacion: tipo === "bodega" ? null : idUbicacion,
-    idUsuario: tipo === "bodega" ? null : idUsuario,
-    imagenRuta: tipo === "bodega" ? null : imagenRuta,
-    observacion,
-  };
-
   try {
+    const id_serie = await obtenerOCrearSerie(serie);
+
+    const parametros = {
+      tipo,
+      inventario,
+      anio_compra,
+      id_serie,
+      nombreEquipo,
+      direccionIp,
+      versionso,
+      versionoffice,
+      ram,
+      disco,
+      procesador,
+      antivirus,
+      dominio,
+      idUbicacion: tipo === "bodega" ? null : idUbicacion,
+      idUsuario: tipo === "bodega" ? null : idUsuario,
+      imagenRuta: tipo === "bodega" ? null : imagenRuta,
+      observacion,
+    };
+
     const result = await db.query(
       `CALL agregar_equipo(
         :tipo,
         :inventario,
         :anio_compra,
-        :serie,
+        :id_serie,
         :nombreEquipo,
         :direccionIp,
         :versionso,
@@ -1124,9 +1155,7 @@ export async function agregarEquipo(req, res) {
         :imagenRuta,
         :observacion
       );`,
-      {
-        replacements: parametros,
-      }
+      { replacements: parametros }
     );
 
     const equipoId = result[0]?.id_equipo;
@@ -1151,34 +1180,34 @@ export async function agregarEquipoSimple(req, res) {
     idLampara,
   } = req.body;
 
-  const parametros = {
-    tipo,
-    inventario,
-    anio_compra,
-    serie,
-    idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
-    idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
-    imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
-    observacion,
-    idLampara,
-  };
-
   try {
+    const id_serie = await obtenerOCrearSerie(serie);
+
+    const parametros = {
+      tipo,
+      inventario,
+      anio_compra,
+      id_serie,
+      idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
+      idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
+      imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
+      observacion,
+      idLampara,
+    };
+
     const result = await db.query(
       `CALL agregar_equipo_simple(
         :tipo,
         :inventario,
         :anio_compra,
-        :serie,
+        :id_serie,
         :idUbicacion,
         :idUsuario,
         :imagenRuta,
         :observacion,
         :idLampara
       );`,
-      {
-        replacements: parametros,
-      }
+      { replacements: parametros }
     );
 
     const equipoId = result[0]?.id_equipo;
@@ -1207,38 +1236,38 @@ export async function agregarEquipoRed(req, res) {
     nombreEquipo,
   } = req.body;
 
-  const parametros = {
-    tipo,
-    inventario,
-    anio_compra,
-    serie,
-    idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
-    idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
-    imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
-    observacion,
-    mac,
-    puertos,
-    puerto_ftp,
-    idLampara,
-    nombreEquipo,
-  };
-
   try {
+    const id_serie = await obtenerOCrearSerie(serie);
+
+    const parametros = {
+      tipo,
+      inventario,
+      anio_compra,
+      id_serie,
+      idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
+      idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
+      imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
+      observacion,
+      mac,
+      puertos,
+      puerto_ftp,
+      idLampara,
+      nombreEquipo,
+    };
+
     const result = await db.query(
       `CALL agregar_equipo_simple(
         :tipo,
         :inventario,
         :anio_compra,
-        :serie,
+        :id_serie,
         :idUbicacion,
         :idUsuario,
         :imagenRuta,
         :observacion,
         :idLampara
       );`,
-      {
-        replacements: parametros,
-      }
+      { replacements: parametros }
     );
 
     const equipoId = result[0]?.id_equipo;
@@ -1762,7 +1791,7 @@ export async function editarEquipo(req, res) {
     id_versionoffice,
     id_antivirus,
     id_dominio,
-    id_serie,
+    serie,
     inventario,
     anio_compra,
     nombre_equipo,
@@ -1785,6 +1814,10 @@ export async function editarEquipo(req, res) {
     if (!equipo.length) {
       return res.status(400).json({ error: "El equipo no existe." });
     }
+
+    const id_serie_anterior = equipo[0].id_serie;
+
+    const id_serie = await obtenerOCrearSerie(serie);
 
     if (imagenRuta && tipo === "activo") {
       const imagenActual = await db.query(
@@ -1853,7 +1886,13 @@ export async function editarEquipo(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
         type: QueryTypes.UPDATE,
       }
     );
@@ -1902,6 +1941,151 @@ export async function editarEquipo(req, res) {
           type: QueryTypes.UPDATE,
         }
       );
+    }
+
+    if (id_serie_anterior && id_serie_anterior !== id_serie) {
+      await eliminarSerieSiNoUsada(id_serie_anterior);
+    }
+
+    res.json({ message: "Equipo actualizado con éxito" });
+  } catch (error) {
+    console.error("Error al actualizar el equipo:", error);
+    res.status(500).json({ error: "Error al actualizar el equipo" });
+  }
+}
+
+export async function editarEquipoSimple(req, res) {
+  const { equipoId } = req.params;
+  const {
+    tipo,
+    serie,
+    inventario,
+    anio_compra,
+    id_usuario,
+    id_ubicacion,
+    imagenRuta,
+    observacion,
+    id_lampara,
+  } = req.body;
+
+  try {
+    const equipo = await db.query(
+      `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(400).json({ error: "El equipo no existe." });
+    }
+
+    const id_serie_anterior = equipo[0].id_serie;
+
+    const id_serie = await obtenerOCrearSerie(serie);
+
+    if (imagenRuta && tipo === "activo") {
+      const esComponente = await db.query(
+        `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      const imagenActual = await db.query(
+        `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      if (imagenActual.length) {
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen AND id_equipo = :equipoId`,
+          {
+            replacements: { idImagen: imagenActual[0].id_imagen, equipoId },
+            type: QueryTypes.DELETE,
+          }
+        );
+
+        if (!esComponente.length) {
+          await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+            replacements: { idImagen: imagenActual[0].id_imagen },
+            type: QueryTypes.DELETE,
+          });
+
+          const imagePath = join(__dirname, "..", imagenActual[0].ruta);
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+          }
+        }
+      }
+
+      const [result] = await db.query(
+        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+        {
+          replacements: { imagenRuta },
+          type: QueryTypes.INSERT,
+        }
+      );
+
+      const imagenId = result;
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
+        {
+          replacements: { equipoId, imagenId },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+
+    await db.query(
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      {
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
+        type: QueryTypes.UPDATE,
+      }
+    );
+
+    if (tipo === "activo") {
+      await db.query(
+        `UPDATE equipo_activo SET
+          id_usuario = :id_usuario,
+          id_ubicacion = :id_ubicacion
+        WHERE id_equipo = :equipoId`,
+        {
+          replacements: {
+            equipoId,
+            id_usuario,
+            id_ubicacion,
+          },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    if (id_lampara !== undefined && id_lampara !== 0) {
+      await db.query(
+        `UPDATE equipo_proyector SET id_lampara = :id_lampara WHERE id_equipo_proyector = :equipoId`,
+        {
+          replacements: { id_lampara, equipoId },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    if (id_serie_anterior && id_serie_anterior !== id_serie) {
+      await eliminarSerieSiNoUsada(id_serie_anterior);
     }
 
     res.json({ message: "Equipo actualizado con éxito" });
@@ -1999,7 +2183,13 @@ export async function editarEquipoSimple(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
         type: QueryTypes.UPDATE,
       }
     );
@@ -2119,7 +2309,13 @@ export async function editarEquipoRed(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
         type: QueryTypes.UPDATE,
       }
     );
@@ -2154,6 +2350,145 @@ export async function editarEquipoRed(req, res) {
           type: QueryTypes.UPDATE,
         }
       );
+    }
+
+    res.json({ message: "Equipo actualizado con éxito" });
+  } catch (error) {
+    console.error("Error al actualizar el equipo:", error);
+    res.status(500).json({ error: "Error al actualizar el equipo" });
+  }
+}
+
+export async function editarEquipoRed(req, res) {
+  const { equipoId } = req.params;
+  const {
+    tipo,
+    serie,
+    inventario,
+    anio_compra,
+    id_usuario,
+    id_ubicacion,
+    imagenRuta,
+    observacion,
+    mac,
+    puertos,
+    puerto_ftp,
+    nombre_equipo,
+  } = req.body;
+
+  try {
+    const equipo = await db.query(
+      `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!equipo.length) {
+      return res.status(400).json({ error: "El equipo no existe." });
+    }
+
+    const id_serie_anterior = equipo[0].id_serie;
+
+    const id_serie = await obtenerOCrearSerie(serie);
+
+    if (imagenRuta && tipo === "activo") {
+      const imagenActual = await db.query(
+        `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
+        {
+          replacements: { equipoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      if (imagenActual.length) {
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+          {
+            replacements: { idImagen: imagenActual[0].id_imagen },
+            type: QueryTypes.DELETE,
+          }
+        );
+
+        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+          replacements: { idImagen: imagenActual[0].id_imagen },
+          type: QueryTypes.DELETE,
+        });
+
+        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
+        if (existsSync(imagePath)) {
+          unlinkSync(imagePath);
+        }
+      }
+
+      const [result] = await db.query(
+        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+        {
+          replacements: { imagenRuta },
+          type: QueryTypes.INSERT,
+        }
+      );
+
+      const imagenId = result;
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
+        {
+          replacements: { equipoId, imagenId },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+
+    await db.query(
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      {
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
+        type: QueryTypes.UPDATE,
+      }
+    );
+
+    if (tipo === "activo") {
+      await db.query(
+        `UPDATE equipo_activo SET
+                  id_usuario = :id_usuario,
+                  id_ubicacion = :id_ubicacion
+              WHERE id_equipo = :equipoId`,
+        {
+          replacements: {
+            equipoId,
+            id_usuario,
+            id_ubicacion,
+          },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    if (mac || puertos || puerto_ftp) {
+      await db.query(
+        `UPDATE equipo_red 
+         SET mac = :mac, 
+             puertos = :puertos, 
+             puerto_ftp = :puerto_ftp,
+             nombre_equipo = :nombre_equipo
+         WHERE id_equipo_red = :equipoId`,
+        {
+          replacements: { equipoId, mac, puertos, puerto_ftp, nombre_equipo },
+          type: QueryTypes.UPDATE,
+        }
+      );
+    }
+
+    if (id_serie_anterior && id_serie_anterior !== id_serie) {
+      await eliminarSerieSiNoUsada(id_serie_anterior);
     }
 
     res.json({ message: "Equipo actualizado con éxito" });
