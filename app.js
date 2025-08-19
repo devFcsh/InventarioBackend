@@ -79,8 +79,8 @@ app.use(passport.session());
 
 // Middleware para logging de autenticación
 app.use((req, res, next) => {
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    console.log(`👤 Usuario autenticado: ${req.user?.username} (${req.sessionID})`);
+  if (true) {
+    //console.log(`👤 Usuario autenticado: ${req.user?.username} (${req.sessionID})`);
   }
   next();
 });
@@ -88,7 +88,7 @@ app.use((req, res, next) => {
 // --------------------------------------------------
 // 6) RUTAS DE AUTENTICACIÓN (PÚBLICAS)
 // --------------------------------------------------
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // --------------------------------------------------
 // 7) RUTAS API PROTEGIDAS

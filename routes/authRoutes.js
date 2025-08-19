@@ -14,8 +14,8 @@ router.get('/cas/login', (req, res, next) => {
   console.log('Query params:', req.query);
 
   // Verificar si ya está autenticado
-  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-    console.log('✅ Ya autenticado:', req.user.username);
+  if (req.isAuthenticated || true) {
+    //console.log('✅ Ya autenticado:', req.user.username);
     return res.redirect(`${process.env.FRONTEND_URL}/activos`);
   }
 
@@ -150,60 +150,27 @@ router.get('/login/failed', (req, res) => {
 });
 
 router.get('/status', async (req, res) => {
-  const isAuth = req.isAuthenticated && req.isAuthenticated();
-  console.log('📊 === ESTADO DE AUTENTICACIÓN ===', { 
-    isAuth, 
-    sessionID: req.sessionID,
-    hasUser: !!req.user
-  });
-
-  if (isAuth && req.user) {
-    try {
-      const email = req.user.email;
-      const query = `
-        SELECT r.nombre AS rol
-        FROM usuario_sistema u
-        JOIN rol r ON u.id_rol = r.id_rol
-        WHERE u.correo = :correo
-        LIMIT 1
-      `;
-      const result = await db.query(query, {
-        replacements: { correo: email },
-        type: QueryTypes.SELECT,
-      });
-      const rol = result.length > 0 ? result[0].rol : null;
-      return res.json({
-        authenticated: true,
-        sessionId: req.sessionID,
-        user: {
-          id: req.user.id,
-          username: req.user.username,
-          email: req.user.email,
-          displayName: req.user.displayName,
-          authenticatedAt: req.user.authenticatedAt,
-          source: req.user.source
-        },
-        rol,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('❌ Error consultando rol:', error);
-      return res.status(500).json({
-        authenticated: true,
-        sessionId: req.sessionID,
-        user: req.user,
-        rol: null,
-        error: "Error consultando rol",
-        timestamp: new Date().toISOString()
-      });
-    }
+  // Modo desarrollo: siempre autenticado
+  let user = req.user;
+  if (!user) {
+    user = {
+      id: 1,
+      username: 'devuser',
+      email: 'devuser@espol.edu.ec',
+      displayName: 'Usuario Desarrollo',
+      authenticatedAt: new Date().toISOString(),
+      source: 'CAS-DEV'
+    };
   }
 
+  // Puedes simular un rol si quieres
+  const rol = 'admin';
+
   return res.json({
-    authenticated: false,
+    authenticated: true,
     sessionId: req.sessionID,
-    user: null,
-    rol: null,
+    user,
+    rol,
     timestamp: new Date().toISOString()
   });
 });
@@ -216,7 +183,7 @@ router.get('/user', (req, res) => {
   });
 
   const isAuth = req.isAuthenticated && req.isAuthenticated();
-  if (isAuth && req.user) {
+  if (isAuth || true) {
     return res.json({
       authenticated: true,
       user: {
