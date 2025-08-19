@@ -3,6 +3,7 @@ import db from "../models/index.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { existsSync, unlinkSync } from "fs";
+import Ubicacion from "../models/ubicacion.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -2554,3 +2555,277 @@ export const pasarBodegaAActivo = async (req, res) => {
       .json({ error: "Error al transferir el equipo de bodega a activo." });
   }
 };
+
+export async function insertarEquiposDesdeJSON(equiposData) {
+  const registrados = [];
+  const noRegistrados = [];
+
+  try {
+    for (const equipoJson of equiposData) {
+      try {
+        const equipoExistente = await db.query(
+          `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
+          {
+            replacements: { inventario: equipoJson.inventario },
+            type: QueryTypes.SELECT,
+          }
+        );
+
+        if (equipoExistente.length > 0) {
+          noRegistrados.push({
+            inventario: equipoJson.inventario,
+            motivo: 'Ya existe en la base de datos',
+            datos: equipoJson
+          });
+          continue;
+        }
+
+        const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
+        const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
+        const dominioId = await obtenerIdDominio(equipoJson.dominio);
+        const sistemaOperativoId = await obtenerIdSistemaOperativo(equipoJson.version_so);
+        const procesadorId = await obtenerIdProcesador(equipoJson.procesador);
+        const ramId = await obtenerIdRam(equipoJson.capacidad_ram, equipoJson.tipo_ram);
+        const discoId = await obtenerIdDisco(equipoJson.capacidad_disco);
+
+        if (!ubicacionId || !usuarioId) {
+          noRegistrados.push({
+            inventario: equipoJson.inventario,
+            motivo: 'No se encontró ubicación o usuario',
+            datos: equipoJson
+          });
+          continue;
+        }
+
+        const parametrosEquipo = {
+          inventario: equipoJson.inventario,
+          anio_compra: equipoJson.anio_compra === 'S/N' ? null : equipoJson.anio_compra,
+          serie: equipoJson.serie === 'S/N' ? null : equipoJson.serie,
+          nombre: equipoJson.nombre === 'S/N' ? null : equipoJson.nombre,
+          direccion_ip: equipoJson.direccion_ip || null,
+          idUbicacion: ubicacionId,
+          idUsuario: usuarioId,
+          idDominio: dominioId,
+          idSistemaOperativo: sistemaOperativoId,
+          idProcesador: procesadorId,
+          idRam: ramId,
+          idDisco: discoId,
+          observacion: equipoJson.observacion || null,
+          tipo: equipoJson.tipo || 'activo'
+        };
+
+        const result = await db.query(
+          `CALL agregar_equipo(
+            :inventario,
+            :anio_compra,
+            :serie,
+            :nombre,
+            :direccion_ip,
+            :idUbicacion,
+            :idUsuario,
+            :idDominio,
+            :idSistemaOperativo,
+            :idProcesador,
+            :idRam,
+            :idDisco,
+            :observacion,
+            :tipo
+          );`,
+          {
+            replacements: parametrosEquipo,
+          }
+        );
+
+        const equipoId = result[0]?.id_equipo;
+
+        // Insertar componentes
+        const componentesRegistrados = [];
+        if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
+          for (const componente of equipoJson.componentes) {
+            if (componente.serie !== 'S/N' && componente.inventario !== 'S/N') {
+              try {
+                const parametrosComponente = {
+                  tipo: componente.tipo || 'activo',
+                  inventario: componente.inventario,
+                  anio_compra: componente.anio_compra || equipoJson.anio_compra,
+                  serie: componente.serie,
+                  idUbicacion: componente.tipo === "bodega" || componente.tipo === "baja" ? null : ubicacionId,
+                  idUsuario: componente.tipo === "bodega" || componente.tipo === "baja" ? null : usuarioId,
+                  imagenRuta: componente.tipo === "bodega" || componente.tipo === "baja" ? null : componente.imagenRuta,
+                  observacion: componente.observacion || null,
+                  idLampara: componente.idLampara || null,
+                };
+
+                await db.query(
+                  `CALL agregar_equipo_simple(
+                    :tipo,
+                    :inventario,
+                    :anio_compra,
+                    :serie,
+                    :idUbicacion,
+                    :idUsuario,
+                    :imagenRuta,
+                    :observacion,
+                    :idLampara
+                  );`,
+                  {
+                    replacements: parametrosComponente,
+                  }
+                );
+
+                componentesRegistrados.push(componente);
+              } catch (componenteError) {
+                console.error(`Error al insertar componente ${componente.serie}:`, componenteError);
+              }
+            }
+          }
+        }
+
+        registrados.push({
+          inventario: equipoJson.inventario,
+          equipoId: equipoId,
+          componentesRegistrados: componentesRegistrados.length,
+          datos: equipoJson
+        });
+
+      } catch (equipoError) {
+        console.error(`Error al procesar equipo ${equipoJson.inventario}:`, equipoError);
+        noRegistrados.push({
+          inventario: equipoJson.inventario,
+          motivo: equipoError.message,
+          datos: equipoJson
+        });
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Proceso completado',
+      resumen: {
+        totalProcesados: equiposData.length,
+        registrados: registrados.length,
+        noRegistrados: noRegistrados.length
+      },
+      registrados,
+      noRegistrados
+    };
+
+  } catch (error) {
+    console.error('Error general al insertar equipos:', error);
+    return {
+      success: false,
+      error: 'Error al insertar equipos desde JSON',
+      message: error.message
+    };
+  }
+}
+
+async function obtenerIdUbicacion(nombreUbicacion) {
+  if (!nombreUbicacion || nombreUbicacion === 'S/N') return null;
+  
+  try {
+    const ubicacion = await Ubicacion.findOne({
+      where: { nombre: nombreUbicacion },
+      attributes: ['id_ubicacion']
+    });
+    return ubicacion?.id_ubicacion || null;
+  } catch (error) {
+    console.error('Error al obtener ubicación:', error);
+    return null;
+  }
+}
+
+async function obtenerIdUsuario(nombreUsuario) {
+  if (!nombreUsuario || nombreUsuario === 'S/N') return null;
+  
+  try {
+    const usuario = await Usuario.findOne({
+      where: { nombre: nombreUsuario },
+      attributes: ['id_usuario']
+    });
+    return usuario?.id_usuario || null;
+  } catch (error) {
+    console.error('Error al obtener usuario:', error);
+    return null;
+  }
+}
+
+async function obtenerIdDominio(nombreDominio) {
+  if (!nombreDominio || nombreDominio === 'S/N') return null;
+  
+  try {
+    const dominio = await Dominio.findOne({
+      where: { nombre: nombreDominio },
+      attributes: ['id_dominio']
+    });
+    return dominio?.id_dominio || null;
+  } catch (error) {
+    console.error('Error al obtener dominio:', error);
+    return null;
+  }
+}
+
+async function obtenerIdSistemaOperativo(nombreSO) {
+  if (!nombreSO || nombreSO === 'S/N') return null;
+  
+  try {
+    const so = await SistemaOperativo.findOne({
+      where: { nombre: nombreSO },
+      attributes: ['id_sistema_operativo']
+    });
+    return so?.id_sistema_operativo || null;
+  } catch (error) {
+    console.error('Error al obtener sistema operativo:', error);
+    return null;
+  }
+}
+
+async function obtenerIdProcesador(nombreProcesador) {
+  if (!nombreProcesador || nombreProcesador === 'S/N') return null;
+  
+  try {
+    const procesador = await Procesador.findOne({
+      where: { nombre: nombreProcesador },
+      attributes: ['id_procesador']
+    });
+    return procesador?.id_procesador || null;
+  } catch (error) {
+    console.error('Error al obtener procesador:', error);
+    return null;
+  }
+}
+
+async function obtenerIdRam(capacidad, tipo) {
+  if (!capacidad || capacidad === 'S/N') return null;
+  
+  try {
+    const whereClause = { capacidad };
+    if (tipo && tipo !== 'S/N' && tipo !== '') {
+      whereClause.tipo = tipo;
+    }
+    
+    const ram = await Ram.findOne({
+      where: whereClause,
+      attributes: ['id_ram']
+    });
+    return ram?.id_ram || null;
+  } catch (error) {
+    console.error('Error al obtener RAM:', error);
+    return null;
+  }
+}
+
+async function obtenerIdDisco(capacidad) {
+  if (!capacidad || capacidad === 'S/N') return null;
+  
+  try {
+    const disco = await Disco.findOne({
+      where: { capacidad },
+      attributes: ['id_disco']
+    });
+    return disco?.id_disco || null;
+  } catch (error) {
+    console.error('Error al obtener disco:', error);
+    return null;
+  }
+}
