@@ -6,14 +6,13 @@ import { existsSync, unlinkSync } from "fs";
 import Ubicacion from "../models/ubicacion.js";
 import Usuario from "../models/usuario.js";
 import Dominio from "../models/dominio.js";
-import SistemaOperativo from "../models/sistema_operativo.js";
 import Procesador from "../models/procesador.js";
 import Ram from "../models/ram.js";
 import Disco from "../models/disco.js";
+import VersionSo from "../models/version_so.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
 
 async function obtenerOCrearSerie(nombreSerie) {
   if (!nombreSerie) return null;
@@ -676,14 +675,14 @@ export async function eliminarEquipo(req, res) {
         { replacements: { id_serie }, type: QueryTypes.SELECT }
       );
       if (!equiposConSerie.length) {
-        await db.query(
-          `DELETE FROM modelo_serie WHERE id_serie = :id_serie`,
-          { replacements: { id_serie }, type: QueryTypes.DELETE }
-        );
-        await db.query(
-          `DELETE FROM serie WHERE id_serie = :id_serie`,
-          { replacements: { id_serie }, type: QueryTypes.DELETE }
-        );
+        await db.query(`DELETE FROM modelo_serie WHERE id_serie = :id_serie`, {
+          replacements: { id_serie },
+          type: QueryTypes.DELETE,
+        });
+        await db.query(`DELETE FROM serie WHERE id_serie = :id_serie`, {
+          replacements: { id_serie },
+          type: QueryTypes.DELETE,
+        });
       }
     }
 
@@ -725,14 +724,14 @@ export async function eliminarEquipoSimple(req, res) {
         { replacements: { id_serie }, type: QueryTypes.SELECT }
       );
       if (!equiposConSerie.length) {
-        await db.query(
-          `DELETE FROM modelo_serie WHERE id_serie = :id_serie`,
-          { replacements: { id_serie }, type: QueryTypes.DELETE }
-        );
-        await db.query(
-          `DELETE FROM serie WHERE id_serie = :id_serie`,
-          { replacements: { id_serie }, type: QueryTypes.DELETE }
-        );
+        await db.query(`DELETE FROM modelo_serie WHERE id_serie = :id_serie`, {
+          replacements: { id_serie },
+          type: QueryTypes.DELETE,
+        });
+        await db.query(`DELETE FROM serie WHERE id_serie = :id_serie`, {
+          replacements: { id_serie },
+          type: QueryTypes.DELETE,
+        });
       }
     }
 
@@ -2013,7 +2012,13 @@ export async function editarEquipo(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
         type: QueryTypes.UPDATE,
       }
     );
@@ -2085,8 +2090,8 @@ export async function editarEquipoSimple(req, res) {
   const { equipoId } = req.params;
   const {
     tipo,
-    serie,         
-    modeloId,  
+    serie,
+    modeloId,
     inventario,
     anio_compra,
     id_usuario,
@@ -2193,7 +2198,13 @@ export async function editarEquipoSimple(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
         type: QueryTypes.UPDATE,
       }
     );
@@ -2238,7 +2249,7 @@ export async function editarEquipoSimple(req, res) {
     res.json({ message: "Equipo actualizado con éxito" });
   } catch (error) {
     console.error("Error al actualizar el equipo:", error);
-    res.status(500).json({ error: "Error al actualizar el equipo"});
+    res.status(500).json({ error: "Error al actualizar el equipo" });
   }
 }
 
@@ -2246,8 +2257,8 @@ export async function editarEquipoRed(req, res) {
   const { equipoId } = req.params;
   const {
     tipo,
-    serie,        
-    modeloId,     
+    serie,
+    modeloId,
     inventario,
     anio_compra,
     id_usuario,
@@ -2347,7 +2358,13 @@ export async function editarEquipoRed(req, res) {
     await db.query(
       `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
-        replacements: { equipoId, inventario, anio_compra, id_serie, observacion },
+        replacements: {
+          equipoId,
+          inventario,
+          anio_compra,
+          id_serie,
+          observacion,
+        },
         type: QueryTypes.UPDATE,
       }
     );
@@ -2798,7 +2815,6 @@ export async function insertarEquiposDesdeJSON(req, res) {
   const registrados = [];
   const noRegistrados = [];
 
-
   try {
     for (const equipoJson of equiposData) {
       try {
@@ -2813,8 +2829,8 @@ export async function insertarEquiposDesdeJSON(req, res) {
         if (equipoExistente.length > 0) {
           noRegistrados.push({
             inventario: equipoJson.inventario,
-            motivo: 'Ya existe en la base de datos',
-            datos: equipoJson
+            motivo: "Ya existe en la base de datos",
+            datos: equipoJson,
           });
           continue;
         }
@@ -2822,23 +2838,24 @@ export async function insertarEquiposDesdeJSON(req, res) {
         const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
         const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
         const dominioId = await obtenerIdDominio(equipoJson.dominio);
-        const sistemaOperativoId = await obtenerIdSistemaOperativo(equipoJson.version_so);
+        const sistemaOperativoId = await obtenerIdSistemaOperativo(
+          equipoJson.versionso
+        );
         const procesadorId = await obtenerIdProcesador(equipoJson.procesador);
-        const ramId = await obtenerIdRam(equipoJson.capacidad_ram, equipoJson.tipo_ram);
-        const discoId = await obtenerIdDisco(equipoJson.capacidad_disco);
-
+        const ramId = await obtenerIdRam(equipoJson.ram, equipoJson.tipo_ram);
+        //const versionOfficeId = await obtenerIdVersionOffice(equipoJson.versionoffice);
+        const versionOfficeId = 2;
+        const discoId = await obtenerIdDisco(equipoJson.disco);
         if (!ubicacionId || !usuarioId) {
           noRegistrados.push({
             inventario: equipoJson.inventario,
-            motivo: 'No se encontró ubicación o usuario',
-            datos: equipoJson
+            motivo: "No se encontró ubicación o usuario",
+            datos: equipoJson,
           });
           continue;
         }
 
-        const id_serie = await obtenerOCrearSerie(
-          equipoJson.serie === 'S/N' ? null : equipoJson.serie
-        );
+        const id_serie = await obtenerOCrearSerie(equipoJson.serie);
 
         if (id_serie && modeloId) {
           const existeRelacion = await db.query(
@@ -2860,42 +2877,45 @@ export async function insertarEquiposDesdeJSON(req, res) {
         }
 
         const parametrosEquipo = {
+          tipo: "activo",
           inventario: equipoJson.inventario,
-          anio_compra: equipoJson.anio_compra === 'S/N' ? null : equipoJson.anio_compra,
-          id_serie,
-          nombre: equipoJson.nombre === 'S/N' ? null : equipoJson.nombre,
-          direccion_ip: equipoJson.direccion_ip || null,
-          idUbicacion: ubicacionId,
-          idUsuario: usuarioId,
-          idDominio: dominioId,
-          idSistemaOperativo: sistemaOperativoId,
-          idProcesador: procesadorId,
-          idRam: ramId,
-          idDisco: discoId,
+          anio_compra:
+            equipoJson.anio_compra === "S/N" ? null : equipoJson.anio_compra,
+          id_serie: id_serie,
+          nombre_equipo: equipoJson.nombreEquipo,
+          direccion_ip: equipoJson.direccionIp || null,
+          versionso: sistemaOperativoId || null,
+          versionoffice: versionOfficeId || null,
+          ram: ramId || null,
+          disco: discoId || null,
+          procesador: procesadorId || null,
+          antivirus: 1,
+          dominio: dominioId || null,
+          id_ubicacion: ubicacionId,
+          id_usuario: usuarioId,
           observacion: equipoJson.observacion || null,
-          tipo: equipoJson.tipo || 'activo'
         };
 
         const result = await db.query(
-          `CALL agregar_equipo(
-            :inventario,
-            :anio_compra,
-            :id_serie,
-            :nombre,
-            :direccion_ip,
-            :idUbicacion,
-            :idUsuario,
-            :idDominio,
-            :idSistemaOperativo,
-            :idProcesador,
-            :idRam,
-            :idDisco,
-            :observacion,
-            :tipo
-          );`,
-          {
-            replacements: parametrosEquipo,
-          }
+          `CALL importar_equipo(
+    :tipo,
+    :inventario,
+    :anio_compra,
+    :id_serie,
+    :nombre_equipo,
+    :direccion_ip,
+    :versionso,
+    :versionoffice,
+    :ram,
+    :disco,
+    :procesador,
+    :antivirus,
+    :dominio,
+    :id_ubicacion,
+    :id_usuario,
+    :observacion
+  );`,
+          { replacements: parametrosEquipo }
         );
 
         const equipoId = result[0]?.id_equipo;
@@ -2903,16 +2923,21 @@ export async function insertarEquiposDesdeJSON(req, res) {
         const componentesRegistrados = [];
         if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
           for (const componente of equipoJson.componentes) {
-            if (componente.serie !== 'S/N' && componente.inventario !== 'S/N') {
+            if (componente.serie !== "S/N" && componente.inventario !== "S/N") {
               try {
-                const id_serie_componente = await obtenerOCrearSerie(componente.serie);
+                const id_serie_componente = await obtenerOCrearSerie(
+                  componente.serie
+                );
                 const modeloIdComponente = componente.modeloId;
 
                 if (id_serie_componente && modeloIdComponente) {
                   const existeRelacionComp = await db.query(
                     `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
                     {
-                      replacements: { modeloId: modeloIdComponente, id_serie: id_serie_componente },
+                      replacements: {
+                        modeloId: modeloIdComponente,
+                        id_serie: id_serie_componente,
+                      },
                       type: QueryTypes.SELECT,
                     }
                   );
@@ -2920,7 +2945,10 @@ export async function insertarEquiposDesdeJSON(req, res) {
                     await db.query(
                       `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
                       {
-                        replacements: { modeloId: modeloIdComponente, id_serie: id_serie_componente },
+                        replacements: {
+                          modeloId: modeloIdComponente,
+                          id_serie: id_serie_componente,
+                        },
                         type: QueryTypes.INSERT,
                       }
                     );
@@ -2928,26 +2956,30 @@ export async function insertarEquiposDesdeJSON(req, res) {
                 }
 
                 const parametrosComponente = {
-                  tipo: componente.tipo || 'activo',
+                  tipo: componente.tipo || "activo",
                   inventario: componente.inventario,
                   anio_compra: componente.anio_compra || equipoJson.anio_compra,
                   id_serie: id_serie_componente,
-                  idUbicacion: componente.tipo === "bodega" || componente.tipo === "baja" ? null : ubicacionId,
-                  idUsuario: componente.tipo === "bodega" || componente.tipo === "baja" ? null : usuarioId,
-                  imagenRuta: componente.tipo === "bodega" || componente.tipo === "baja" ? null : componente.imagenRuta,
+                  idUbicacion:
+                    componente.tipo === "bodega" || componente.tipo === "baja"
+                      ? null
+                      : ubicacionId,
+                  idUsuario:
+                    componente.tipo === "bodega" || componente.tipo === "baja"
+                      ? null
+                      : usuarioId,
                   observacion: componente.observacion || null,
                   idLampara: componente.idLampara || null,
                 };
 
                 await db.query(
-                  `CALL agregar_equipo_simple(
+                  `CALL importar_equipo_simple(
                     :tipo,
                     :inventario,
                     :anio_compra,
                     :id_serie,
                     :idUbicacion,
                     :idUsuario,
-                    :imagenRuta,
                     :observacion,
                     :idLampara
                   );`,
@@ -2958,7 +2990,10 @@ export async function insertarEquiposDesdeJSON(req, res) {
 
                 componentesRegistrados.push(componente);
               } catch (componenteError) {
-                console.error(`Error al insertar componente ${componente.serie}:`, componenteError);
+                console.error(
+                  `Error al insertar componente ${componente.serie}:`,
+                  componenteError
+                );
               }
             }
           }
@@ -2968,42 +3003,44 @@ export async function insertarEquiposDesdeJSON(req, res) {
           inventario: equipoJson.inventario,
           equipoId: equipoId,
           componentesRegistrados: componentesRegistrados.length,
-          datos: equipoJson
+          datos: equipoJson,
         });
-
       } catch (equipoError) {
-        console.error(`Error al procesar equipo ${equipoJson.inventario}:`, equipoError);
+        console.error(
+          `Error al procesar equipo ${equipoJson.inventario}:`,
+          equipoError
+        );
         noRegistrados.push({
           inventario: equipoJson.inventario,
           motivo: equipoError.message,
-          datos: equipoJson
+          datos: equipoJson,
         });
       }
     }
 
-     res.json({
+    res.json({
       success: true,
-      message: 'Proceso completado',
+      message: "Proceso completado",
       resumen: {
         totalProcesados: equiposData.length,
         registrados: registrados.length,
-        noRegistrados: noRegistrados.length
+        noRegistrados: noRegistrados.length,
       },
       registrados,
-      noRegistrados
+      noRegistrados,
     });
   } catch (error) {
-    console.error('Error general al insertar equipos:', error);
+    console.error("Error general al insertar equipos:", error);
     res.status(500).json({
       success: false,
-      error: 'Error al insertar equipos desde JSON',
-      message: error.message
+      error: "Error al insertar equipos desde JSON",
+      message: error.message,
     });
   }
 }
 
 async function obtenerIdModelo(nombreModelo) {
-  if (!nombreModelo || nombreModelo === 'S/N') return null;
+  if (!nombreModelo || nombreModelo === "S/N") return null;
   try {
     const modelo = await db.query(
       `SELECT id_modelo FROM modelo WHERE nombre = :nombreModelo`,
@@ -3014,117 +3051,190 @@ async function obtenerIdModelo(nombreModelo) {
     );
     return modelo.length ? modelo[0].id_modelo : null;
   } catch (error) {
-    console.error('Error al obtener modelo:', error);
+    console.error("Error al obtener modelo:", error);
     return null;
   }
 }
 
 async function obtenerIdUbicacion(nombreUbicacion) {
-  if (!nombreUbicacion || nombreUbicacion === 'S/N') return null;
-  
+  if (!nombreUbicacion || nombreUbicacion === "S/N") return null;
+
   try {
     const ubicacion = await Ubicacion.findOne({
       where: { nombre: nombreUbicacion },
-      attributes: ['id_ubicacion']
+      attributes: ["id_ubicacion"],
     });
     return ubicacion?.id_ubicacion || null;
   } catch (error) {
-    console.error('Error al obtener ubicación:', error);
+    console.error("Error al obtener ubicación:", error);
     return null;
   }
 }
 
 async function obtenerIdUsuario(nombreUsuario) {
-  if (!nombreUsuario || nombreUsuario === 'S/N') return null;
-  
+  if (!nombreUsuario || nombreUsuario === "S/N") return null;
+
   try {
     const usuario = await Usuario.findOne({
       where: { nombre: nombreUsuario },
-      attributes: ['id_usuario']
+      attributes: ["id_usuario"],
     });
     return usuario?.id_usuario || null;
   } catch (error) {
-    console.error('Error al obtener usuario:', error);
+    console.error("Error al obtener usuario:", error);
     return null;
   }
 }
 
 async function obtenerIdDominio(nombreDominio) {
-  if (!nombreDominio || nombreDominio === 'S/N') return null;
-  
+  if (!nombreDominio || nombreDominio.trim().toUpperCase() === "S/N") {
+    console.log("Dominio S/N o vacío, usando id 1");
+    return 1;
+  }
   try {
+    const nombre = nombreDominio.trim();
     const dominio = await Dominio.findOne({
-      where: { nombre: nombreDominio },
-      attributes: ['id_dominio']
+      where: { nombre },
+      attributes: ["id_dominio"],
     });
+    console.log("Buscando dominio:", nombre, "Resultado:", dominio?.id_dominio);
     return dominio?.id_dominio || null;
   } catch (error) {
-    console.error('Error al obtener dominio:', error);
+    console.error("Error al obtener dominio:", error);
     return null;
   }
 }
 
-async function obtenerIdSistemaOperativo(nombreSO) {
-  if (!nombreSO || nombreSO === 'S/N') return null;
-  
+async function obtenerIdVersionOffice(nombreOffice) {
+  if (!nombreOffice || nombreOffice.trim().toUpperCase() === "S/N") {
+    console.log("Office S/N o vacío, usando id 1");
+    return 1;
+  }
   try {
-    const so = await SistemaOperativo.findOne({
-      where: { nombre: nombreSO },
-      attributes: ['id_sistema_operativo']
-    });
-    return so?.id_sistema_operativo || null;
+    const nombre = nombreOffice.trim();
+    const office = await db.query(
+      `SELECT id_versionoffice FROM version_office WHERE nombre = :nombre`,
+      { replacements: { nombre }, type: QueryTypes.SELECT }
+    );
+    console.log(
+      "Buscando Office:",
+      nombre,
+      "Resultado:",
+      office[0]?.id_versionoffice
+    );
+    return office.length ? office[0].id_versionoffice : null;
   } catch (error) {
-    console.error('Error al obtener sistema operativo:', error);
+    console.error("Error al obtener version office:", error);
     return null;
   }
 }
 
 async function obtenerIdProcesador(nombreProcesador) {
-  if (!nombreProcesador || nombreProcesador === 'S/N') return null;
-  
+  if (!nombreProcesador || nombreProcesador.trim().toUpperCase() === "S/N") {
+    console.log("Procesador S/N o vacío, usando id 1");
+    return 1;
+  }
   try {
+    const nombre = nombreProcesador.trim();
     const procesador = await Procesador.findOne({
-      where: { nombre: nombreProcesador },
-      attributes: ['id_procesador']
+      where: { nombre },
+      attributes: ["id_procesador"],
     });
+    console.log(
+      "Buscando procesador:",
+      nombre,
+      "Resultado:",
+      procesador?.id_procesador
+    );
     return procesador?.id_procesador || null;
   } catch (error) {
-    console.error('Error al obtener procesador:', error);
+    console.error("Error al obtener procesador:", error);
     return null;
   }
 }
 
-async function obtenerIdRam(capacidad, tipo) {
-  if (!capacidad || capacidad === 'S/N') return null;
-  
+import { Op } from "sequelize";
+
+function esSN(valor) {
+  if (!valor) return true;
+  const v = String(valor).replace(/\s/g, "").toUpperCase();
+  return v === "S/N" || v === "SN" || v === "S/NS/N";
+}
+
+async function obtenerIdSistemaOperativo(nombreSO) {
+  if (esSN(nombreSO)) {
+    console.log("SO S/N o vacío, usando id 1");
+    return 1;
+  }
   try {
-    const whereClause = { capacidad };
-    if (tipo && tipo !== 'S/N' && tipo !== '') {
-      whereClause.tipo = tipo;
-    }
-    
-    const ram = await Ram.findOne({
-      where: whereClause,
-      attributes: ['id_ram']
+    const nombre = String(nombreSO).replace(/\s/g, "").toLowerCase();
+    const so = await VersionSo.findOne({
+      where: db.where(
+        db.fn("LOWER", db.fn("REPLACE", db.col("nombre"), " ", "")),
+        nombre
+      ),
+      attributes: ["id_versionso"],
     });
-    return ram?.id_ram || null;
+    console.log("Buscando SO:", nombre, "Resultado:", so?.id_versionso);
+    return so?.id_versionso || 1;
   } catch (error) {
-    console.error('Error al obtener RAM:', error);
-    return null;
+    console.error("Error al obtener sistema operativo:", error);
+    return 1;
   }
 }
 
 async function obtenerIdDisco(capacidad) {
-  if (!capacidad || capacidad === 'S/N') return null;
-  
+  if (esSN(capacidad)) {
+    console.log("Disco S/N o vacío, usando id 1");
+    return 1;
+  }
   try {
+    const cap = String(capacidad).replace(/\s/g, "").toLowerCase();
     const disco = await Disco.findOne({
-      where: { capacidad },
-      attributes: ['id_disco']
+      where: db.where(
+        db.fn("LOWER", db.fn("REPLACE", db.col("capacidad"), " ", "")),
+        cap
+      ),
+      attributes: ["id_disco"],
     });
-    return disco?.id_disco || null;
+    console.log("Buscando Disco:", cap, "Resultado:", disco?.id_disco);
+    return disco?.id_disco || 1;
   } catch (error) {
-    console.error('Error al obtener disco:', error);
-    return null;
+    console.error("Error al obtener disco:", error);
+    return 1;
+  }
+}
+
+async function obtenerIdRam(capacidad, tipo) {
+  if (esSN(capacidad)) {
+    console.log("RAM S/N o vacía, usando id 1");
+    return 1;
+  }
+  try {
+    const whereClause = {
+      [Op.and]: [
+        db.where(
+          db.fn("LOWER", db.col("capacidad")),
+          String(capacidad).trim().toLowerCase()
+        ),
+      ],
+    };
+    if (tipo && !esSN(tipo)) {
+      whereClause[Op.and].push(
+        db.where(
+          db.fn("LOWER", db.col("tipo")),
+          String(tipo).trim().toLowerCase()
+        )
+      );
+    }
+    const ram = await Ram.findOne({
+      where: whereClause,
+      attributes: ["id_ram"],
+    });
+    console.log("Buscando RAM:", whereClause, "Resultado:", ram?.id_ram);
+    return ram?.id_ram || 1;
+  } catch (error) {
+    console.error("Error al obtener RAM:", error);
+    return 1;
   }
 }
