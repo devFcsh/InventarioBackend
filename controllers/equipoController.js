@@ -101,11 +101,12 @@ export async function obtenerEquiposActivos(req, res) {
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
       JOIN usuario u ON ea.id_usuario = u.id_usuario
       JOIN uso ON u.id_uso = uso.id_uso
-      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+      WHERE (:perifericoId IS NULL OR e.id_periferico = :perifericoId)
       AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
       AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
       AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
       AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+      AND (e.id_periferico = p.id_periferico)
 
       LIMIT :limit OFFSET :offset;
     `;
@@ -124,7 +125,6 @@ export async function obtenerEquiposActivos(req, res) {
     });
 
     const total = equipos.length > 0 ? equipos[0].total : 0;
-
     res.json({ total, equipos });
   } catch (error) {
     console.error("Error al obtener equipos y contar activos:", error);
@@ -133,6 +133,7 @@ export async function obtenerEquiposActivos(req, res) {
       .json({ error: "Error al obtener equipos y contar activos" });
   }
 }
+
 
 export async function obtenerEquiposRed(req, res) {
   let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
@@ -1142,6 +1143,7 @@ export async function agregarEquipo(req, res) {
     tipo,
     inventario,
     anio_compra,
+    perifericoId,
     serie,
     modeloId,
     nombreEquipo,
@@ -1185,6 +1187,7 @@ export async function agregarEquipo(req, res) {
       tipo,
       inventario,
       anio_compra,
+      id_periferico: perifericoId,
       id_serie,
       nombreEquipo,
       direccionIp,
@@ -1206,6 +1209,7 @@ export async function agregarEquipo(req, res) {
         :tipo,
         :inventario,
         :anio_compra,
+        :id_periferico,
         :id_serie,
         :nombreEquipo,
         :direccionIp,
@@ -1238,6 +1242,7 @@ export async function agregarEquipoSimple(req, res) {
     tipo,
     inventario,
     anio_compra,
+    perifericoId,
     serie,
     modeloId,
     idUbicacion,
@@ -1273,6 +1278,7 @@ export async function agregarEquipoSimple(req, res) {
       tipo,
       inventario,
       anio_compra,
+      id_periferico: perifericoId,
       id_serie,
       idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
       idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
@@ -1286,6 +1292,7 @@ export async function agregarEquipoSimple(req, res) {
         :tipo,
         :inventario,
         :anio_compra,
+        :id_periferico,
         :id_serie,
         :idUbicacion,
         :idUsuario,
@@ -1310,6 +1317,7 @@ export async function agregarEquipoRed(req, res) {
     tipo,
     inventario,
     anio_compra,
+    perifericoId,
     serie,
     modeloId,
     idUbicacion,
@@ -1350,6 +1358,7 @@ export async function agregarEquipoRed(req, res) {
       inventario,
       anio_compra,
       id_serie,
+      id_periferico: perifericoId,
       idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
       idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
       imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
@@ -1366,6 +1375,7 @@ export async function agregarEquipoRed(req, res) {
         :tipo,
         :inventario,
         :anio_compra,
+        :id_periferico,
         :id_serie,
         :idUbicacion,
         :idUsuario,
@@ -1813,9 +1823,10 @@ export async function agregarComponentes(req, res) {
   try {
     for (const componente of componentes) {
       const result = await db.query(
-        `INSERT INTO equipo (inventario, id_serie) VALUES (:inventario, :serieId);`,
+        `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
         {
           replacements: {
+            perifericoId: componente.perifericoId,
             inventario: componente.inventario,
             serieId: componente.serieId,
           },
@@ -1897,6 +1908,7 @@ export async function editarEquipo(req, res) {
     id_versionoffice,
     id_antivirus,
     id_dominio,
+    perifericoId,
     serie,
     modeloId,
     inventario,
@@ -2010,13 +2022,14 @@ export async function editarEquipo(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
           inventario,
           anio_compra,
           id_serie,
+          perifericoId,
           observacion,
         },
         type: QueryTypes.UPDATE,
@@ -2090,6 +2103,7 @@ export async function editarEquipoSimple(req, res) {
   const { equipoId } = req.params;
   const {
     tipo,
+    perifericoId,
     serie,
     modeloId,
     inventario,
@@ -2196,13 +2210,14 @@ export async function editarEquipoSimple(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
           inventario,
           anio_compra,
           id_serie,
+          perifericoId,
           observacion,
         },
         type: QueryTypes.UPDATE,
@@ -2257,6 +2272,7 @@ export async function editarEquipoRed(req, res) {
   const { equipoId } = req.params;
   const {
     tipo,
+    perifericoId,
     serie,
     modeloId,
     inventario,
@@ -2356,13 +2372,14 @@ export async function editarEquipoRed(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
           inventario,
           anio_compra,
           id_serie,
+          perifericoId,
           observacion,
         },
         type: QueryTypes.UPDATE,
@@ -2455,11 +2472,12 @@ export async function gestionarComponentesEditados(req, res) {
       if (componente.id_componente) {
       } else {
         const result = await db.query(
-          `INSERT INTO equipo (inventario, id_serie) VALUES (:inventario, :serieId)`,
+          `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, perifericoId)`,
           {
             replacements: {
               inventario: componente.inventario,
               serieId: componente.serieId,
+              perifericoId: componente.perifericoId
             },
           }
         );
@@ -2816,10 +2834,10 @@ export async function insertarEquiposDesdeJSON(req, res) {
     const registrados = [];
     const noRegistrados = [];
     const componentesRegistrados = [];
-
+    console.log(equiposData)
     try {
         for (const equipoJson of equiposData) {
-            console.log(equipoJson);
+            console.log(equipoJson.componentes);
             try {
                 const equipoExistente = await db.query(
                     `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
@@ -2837,7 +2855,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
                     });
                     continue;
                 }
-                if (equipoJson.tipo.toLowerCase() === "computadora" || equipoJson.tipo.toLowerCase() === "laptop") {
+                if (equipoJson.tipo.toLowerCase() === "computadora" || equipoJson.tipo.toLowerCase() === "laptop" || equipoJson.tipo.toLowerCase() === "desktop" || equipoJson.tipo.toLowerCase() === "imac" || equipoJson.tipo.toLowerCase() === "all-in-one") {
                     await procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados, componentesRegistrados);
                 } else {
                     await procesarComponenteIndividual(equipoJson, componentesRegistrados, noRegistrados);
@@ -2874,7 +2892,102 @@ export async function insertarEquiposDesdeJSON(req, res) {
     }
 }
 
+async function agregarComponentesAEquipoPrincipal(componentes, equipoId, equipoJson, ubicacionId, usuarioId, componentesRegistrados) {
+    if (!Array.isArray(componentes)) return;
+
+    for (const componente of componentes) {
+        // Solo agrega si al menos uno de los campos es distinto de "S/N"
+        const campos = [componente.modelo, componente.serie, componente.inventario];
+        const tieneDatos = campos.some(
+            v => v && String(v).trim().toUpperCase() !== "S/N"
+        );
+        if (!tieneDatos) continue;
+
+        try {
+            const id_serie_componente = await obtenerOCrearSerie(componente.serie);
+            const modeloIdComponente = await obtenerIdModelo(componente.modelo);
+            const perifericoIdComponente = await obtenerIdPeriferico(componente.tipo) || componente.perifericoId;
+
+            if (id_serie_componente && modeloIdComponente) {
+                const existeRelacionComp = await db.query(
+                    `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+                    {
+                        replacements: {
+                            modeloId: modeloIdComponente,
+                            id_serie: id_serie_componente,
+                        },
+                        type: QueryTypes.SELECT,
+                    }
+                );
+                if (!existeRelacionComp.length) {
+                    await db.query(
+                        `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+                        {
+                            replacements: {
+                                modeloId: modeloIdComponente,
+                                id_serie: id_serie_componente,
+                            },
+                            type: QueryTypes.INSERT,
+                        }
+                    );
+                }
+            }
+
+            const resultComp = await db.query(
+                `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
+                {
+                    replacements: {
+                        inventario: componente.inventario,
+                        serieId: id_serie_componente,
+                        perifericoId: perifericoIdComponente,
+                    },
+                }
+            );
+            const idComponente = resultComp[0];
+
+            // Relaciona el componente con la computadora/laptop principal
+            await db.query(
+                `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId);`,
+                {
+                    replacements: {
+                        idComponente,
+                        equipoId,
+                    },
+                }
+            );
+
+            // Si es activo, inserta en equipo_activo
+            if ((equipoJson.tipo_inventario || "activo") === "activo") {
+                await db.query(
+                    `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
+                    {
+                        replacements: {
+                            idComponente,
+                            ubicacionId,
+                            usuarioId,
+                        },
+                    }
+                );
+            } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
+                await db.query(
+                    `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
+                    {
+                        replacements: {
+                            idComponente,
+                        },
+                    }
+                );
+            }
+
+            componentesRegistrados.push(componente);
+        } catch (componenteError) {
+            console.error(`Error al insertar componente ${componente.serie}:`, componenteError);
+        }
+    }
+}
+
 async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados, componentesRegistrados) {
+    const perifericoId = (equipoJson.tipo.toLowerCase() === "laptop") ? 2 : 1;
     const modeloId = await obtenerIdModelo(equipoJson.modelo);
     const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
     const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
@@ -2919,6 +3032,7 @@ async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados
         p_tipo: equipoJson.tipo_inventario || "activo",
         p_inventario: equipoJson.inventario,
         p_anio_compra: equipoJson.anio_compra === "S/N" ? null : equipoJson.anio_compra,
+        p_id_periferico: perifericoId,
         p_id_serie: id_serie,
         p_nombre_equipo: equipoJson.nombreEquipo,
         p_direccion_ip: equipoJson.direccionIp || null,
@@ -2939,6 +3053,7 @@ async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados
             :p_tipo,
             :p_inventario,
             :p_anio_compra,
+            :p_id_periferico,
             :p_id_serie,
             :p_nombre_equipo,
             :p_direccion_ip,
@@ -2958,17 +3073,15 @@ async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados
 
     const equipoId = result[0]?.id_equipo;
 
-    if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
-        for (const componente of equipoJson.componentes) {
-            if (componente.inventario !== "S/N") {
-                try {
-                    await procesarComponente(componente, equipoJson, ubicacionId, usuarioId, componentesRegistrados);
-                } catch (componenteError) {
-                    console.error(`Error al insertar componente ${componente.serie}:`, componenteError);
-                }
-            }
-        }
-    }
+    // Aquí llamas a la función auxiliar para agregar y asociar componentes
+    await agregarComponentesAEquipoPrincipal(
+        equipoJson.componentes,
+        equipoId,
+        equipoJson,
+        ubicacionId,
+        usuarioId,
+        componentesRegistrados
+    );
 
     registrados.push({
         inventario: equipoJson.inventario,
@@ -3015,7 +3128,6 @@ async function procesarComponenteIndividual(equipoJson, componentesRegistrados, 
 
 // Función auxiliar para procesar un componente
 async function procesarComponente(componente, equipoJson, ubicacionId, usuarioId, componentesRegistrados) {
-  console.log("otroooooooooooo",componente.serie)
     const id_serie_componente = await obtenerOCrearSerie(componente.serie);
     const modeloIdComponente = await obtenerIdModelo(componente.modelo) || componente.modeloId;
 
@@ -3043,11 +3155,13 @@ async function procesarComponente(componente, equipoJson, ubicacionId, usuarioId
             );
         }
     }
+    const perifericoIdComponente = await obtenerIdPeriferico(componente.tipo) || componente.perifericoId;
 
     const parametrosComponente = {
         p_tipo: componente.tipo_inventario || "activo",
         p_inventario: componente.inventario,
         p_anio_compra: componente.anio_compra || equipoJson.anio_compra,
+        p_id_periferico: perifericoIdComponente,
         p_id_serie: id_serie_componente,
         p_idUbicacion: (componente.tipo === "bodega" || componente.tipo === "baja") ? null : ubicacionId,
         p_idUsuario: (componente.tipo === "bodega" || componente.tipo === "baja") ? null : usuarioId,
@@ -3060,6 +3174,7 @@ async function procesarComponente(componente, equipoJson, ubicacionId, usuarioId
             :p_tipo,
             :p_inventario,
             :p_anio_compra,
+            :p_id_periferico,
             :p_id_serie,
             :p_idUbicacion,
             :p_idUsuario,
@@ -3074,9 +3189,26 @@ async function procesarComponente(componente, equipoJson, ubicacionId, usuarioId
     componentesRegistrados.push(componente);
 }
 
+async function obtenerIdPeriferico(nombrePeriferico) {
+  if (!nombrePeriferico) return null;
+  try {
+    const periferico = await db.query(
+      `SELECT id_periferico FROM periferico WHERE nombre = :nombrePeriferico`,
+      {
+        replacements: { nombrePeriferico: nombrePeriferico },
+        type: QueryTypes.SELECT,
+      }
+    );
+    return periferico.length ? periferico[0].id_periferico : null;
+  } catch (error) {
+    console.error("Error al obtener periferico:", error);
+    return null;
+  }
+}
+
 
 async function obtenerIdModelo(nombreModelo) {
-  if (!nombreModelo || nombreModelo === "S/N") return null;
+  if (!nombreModelo) return null;
   try {
     const modelo = await db.query(
       `SELECT id_modelo FROM modelo WHERE nombre = :nombreModelo`,
