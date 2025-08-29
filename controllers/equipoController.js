@@ -134,7 +134,6 @@ export async function obtenerEquiposActivos(req, res) {
   }
 }
 
-
 export async function obtenerEquiposRed(req, res) {
   let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
     req.query;
@@ -183,6 +182,7 @@ export async function obtenerEquiposRed(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+        AND (e.id_periferico = p.id_periferico)
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -247,7 +247,8 @@ export async function obtenerEquiposBodega(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-      LIMIT :limit OFFSET :offset;
+        AND (e.id_periferico = p.id_periferico)
+        LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
@@ -312,7 +313,8 @@ export async function obtenerEquiposRedBodega(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-      LIMIT :limit OFFSET :offset;
+        AND (e.id_periferico = p.id_periferico)
+        LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
@@ -376,6 +378,7 @@ export async function obtenerEquiposBaja(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+        AND (e.id_periferico = p.id_periferico)
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -441,7 +444,8 @@ export async function obtenerEquiposRedBaja(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-      LIMIT :limit OFFSET :offset;
+        AND (e.id_periferico = p.id_periferico)
+        LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
@@ -489,6 +493,7 @@ export async function obtenerEquiposPorUsuario(req, res) {
       JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       JOIN usuario u ON ea.id_usuario = u.id_usuario
       WHERE u.id_usuario = :id_usuario
+      AND (e.id_periferico = p.id_periferico)
     `;
 
     const equipos = await db.query(query, {
@@ -1441,7 +1446,8 @@ export const obtenerActivoSimple = async (req, res) => {
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
-       WHERE e.id_equipo = :id`,
+       WHERE e.id_equipo = :id
+      AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1516,7 +1522,8 @@ export const obtenerActivoRed = async (req, res) => {
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
-       WHERE e.id_equipo = :id`,
+       WHERE e.id_equipo = :id
+       AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1577,7 +1584,8 @@ export const obtenerComputadora = async (req, res) => {
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
-       WHERE e.id_equipo = :id`,
+       WHERE e.id_equipo = :id
+       AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1597,12 +1605,14 @@ export const obtenerComputadora = async (req, res) => {
               s.nombre AS serie 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN periferico p ON e.id_serie = p.id_periferico
-       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
        JOIN serie s ON e.id_serie = s.id_serie
-       WHERE c.id_computadora = :id`,
+      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+      JOIN marca m ON mm.id_marca = m.id_marca
+      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+      JOIN periferico p ON mp.id_periferico = p.id_periferico
+       WHERE c.id_computadora = :id AND e.id_periferico = p.id_periferico`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1648,7 +1658,8 @@ export const obtenerComputadoraBodega = async (req, res) => {
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
        LEFT JOIN version_so vso ON vso.id_versionso = c.id_versionso
-       WHERE e.id_equipo = :id`,
+       WHERE e.id_equipo = :id
+       AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1711,7 +1722,8 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
        LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
-       WHERE e.id_equipo = :id`,
+       WHERE e.id_equipo = :id
+       AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1777,7 +1789,8 @@ export const obtenerBodegaBajaRed = async (req, res) => {
        LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
        LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
        LEFT JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
-       WHERE e.id_equipo = :id`,
+       WHERE e.id_equipo = :id
+       AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -2896,7 +2909,6 @@ async function agregarComponentesAEquipoPrincipal(componentes, equipoId, equipoJ
     if (!Array.isArray(componentes)) return;
 
     for (const componente of componentes) {
-        // Solo agrega si al menos uno de los campos es distinto de "S/N"
         const campos = [componente.modelo, componente.serie, componente.inventario];
         const tieneDatos = campos.some(
             v => v && String(v).trim().toUpperCase() !== "S/N"
@@ -2945,7 +2957,6 @@ async function agregarComponentesAEquipoPrincipal(componentes, equipoId, equipoJ
             );
             const idComponente = resultComp[0];
 
-            // Relaciona el componente con la computadora/laptop principal
             await db.query(
                 `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId);`,
                 {
@@ -2956,7 +2967,6 @@ async function agregarComponentesAEquipoPrincipal(componentes, equipoId, equipoJ
                 }
             );
 
-            // Si es activo, inserta en equipo_activo
             if ((equipoJson.tipo_inventario || "activo") === "activo") {
                 await db.query(
                     `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
@@ -2967,6 +2977,15 @@ async function agregarComponentesAEquipoPrincipal(componentes, equipoId, equipoJ
                             usuarioId,
                         },
                     }
+                );
+
+                await db.query(
+                  `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, 1);`,
+                  {
+                    replacements: {
+                      idComponente,
+                    },
+                  }
                 );
             } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
                 await db.query(
@@ -3073,7 +3092,6 @@ async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados
 
     const equipoId = result[0]?.id_equipo;
 
-    // Aquí llamas a la función auxiliar para agregar y asociar componentes
     await agregarComponentesAEquipoPrincipal(
         equipoJson.componentes,
         equipoId,
@@ -3091,7 +3109,6 @@ async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados
     });
 }
 
-// Función auxiliar para procesar componentes individuales
 async function procesarComponenteIndividual(equipoJson, componentesRegistrados, noRegistrados) {
     if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
         for (const componente of equipoJson.componentes) {
@@ -3126,7 +3143,6 @@ async function procesarComponenteIndividual(equipoJson, componentesRegistrados, 
     }
 }
 
-// Función auxiliar para procesar un componente
 async function procesarComponente(componente, equipoJson, ubicacionId, usuarioId, componentesRegistrados) {
     const id_serie_componente = await obtenerOCrearSerie(componente.serie);
     const modeloIdComponente = await obtenerIdModelo(componente.modelo) || componente.modeloId;
