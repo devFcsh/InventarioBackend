@@ -36,6 +36,10 @@ async function eliminarSerieSiNoUsada(id_serie) {
     { replacements: { id_serie }, type: QueryTypes.SELECT }
   );
   if (!equipos.length) {
+    await db.query(`DELETE FROM modelo_serie WHERE id_serie = :id_serie`, {
+      replacements: { id_serie },
+      type: QueryTypes.DELETE,
+    });
     await db.query(`DELETE FROM serie WHERE id_serie = :id_serie`, {
       replacements: { id_serie },
       type: QueryTypes.DELETE,
@@ -101,7 +105,7 @@ export async function obtenerEquiposActivos(req, res) {
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
       JOIN usuario u ON ea.id_usuario = u.id_usuario
       JOIN uso ON u.id_uso = uso.id_uso
-      WHERE (:perifericoId IS NULL OR e.id_periferico = :perifericoId)
+      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
       AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
       AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
       AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
@@ -676,20 +680,7 @@ export async function eliminarEquipo(req, res) {
     });
 
     if (id_serie) {
-      const equiposConSerie = await db.query(
-        `SELECT 1 FROM equipo WHERE id_serie = :id_serie LIMIT 1`,
-        { replacements: { id_serie }, type: QueryTypes.SELECT }
-      );
-      if (!equiposConSerie.length) {
-        await db.query(`DELETE FROM modelo_serie WHERE id_serie = :id_serie`, {
-          replacements: { id_serie },
-          type: QueryTypes.DELETE,
-        });
-        await db.query(`DELETE FROM serie WHERE id_serie = :id_serie`, {
-          replacements: { id_serie },
-          type: QueryTypes.DELETE,
-        });
-      }
+      await eliminarSerieSiNoUsada(id_serie);
     }
 
     res.json({
@@ -725,20 +716,7 @@ export async function eliminarEquipoSimple(req, res) {
     });
 
     if (id_serie) {
-      const equiposConSerie = await db.query(
-        `SELECT 1 FROM equipo WHERE id_serie = :id_serie LIMIT 1`,
-        { replacements: { id_serie }, type: QueryTypes.SELECT }
-      );
-      if (!equiposConSerie.length) {
-        await db.query(`DELETE FROM modelo_serie WHERE id_serie = :id_serie`, {
-          replacements: { id_serie },
-          type: QueryTypes.DELETE,
-        });
-        await db.query(`DELETE FROM serie WHERE id_serie = :id_serie`, {
-          replacements: { id_serie },
-          type: QueryTypes.DELETE,
-        });
-      }
+      await eliminarSerieSiNoUsada(id_serie);
     }
 
     res.json({ message: "Equipo eliminado con éxito" });
@@ -1259,7 +1237,7 @@ export async function agregarEquipoSimple(req, res) {
 
   try {
     const id_serie = await obtenerOCrearSerie(serie);
-
+    console.log("modelosdsd", modeloId)
     if (id_serie && modeloId) {
       const existeRelacion = await db.query(
         `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
@@ -1291,6 +1269,7 @@ export async function agregarEquipoSimple(req, res) {
       observacion,
       idLampara,
     };
+    console.log("con id", perifericoId)
 
     const result = await db.query(
       `CALL agregar_equipo_simple(
@@ -1835,13 +1814,35 @@ export async function agregarComponentes(req, res) {
 
   try {
     for (const componente of componentes) {
+        const id_serie = await obtenerOCrearSerie(componente.serie);
+        const modeloId = componente.modeloId;
+
+        if (id_serie && modeloId) {
+      const existeRelacion = await db.query(
+        `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+        {
+          replacements: { modeloId, id_serie },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!existeRelacion.length) {
+        await db.query(
+          `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+          {
+            replacements: { modeloId, id_serie },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
       const result = await db.query(
         `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
         {
           replacements: {
             perifericoId: componente.perifericoId,
             inventario: componente.inventario,
-            serieId: componente.serieId,
+            serieId: id_serie,
           },
         }
       );
@@ -1948,6 +1949,14 @@ export async function editarEquipo(req, res) {
     }
 
     const id_serie_anterior = equipo[0].id_serie;
+    const modelo_serie_anterior = await db.query(
+      `SELECT id_modelo FROM modelo_serie WHERE id_serie = :id_serie_anterior LIMIT 1`,
+      {
+        replacements: { id_serie_anterior },
+        type: QueryTypes.SELECT,
+      }
+    );
+    const id_modelo_anterior = modelo_serie_anterior.length ? modelo_serie_anterior[0].id_modelo : null;
 
     const id_serie = await obtenerOCrearSerie(serie);
 
@@ -2103,6 +2112,22 @@ export async function editarEquipo(req, res) {
           type: QueryTypes.DELETE,
         }
       );
+      await eliminarSerieSiNoUsada(id_serie_anterior);
+    }
+
+    if (
+      id_modelo_anterior &&
+      modeloId &&
+      id_serie_anterior === id_serie &&
+      id_modelo_anterior !== modeloId
+    ) {
+      await db.query(
+        `DELETE FROM modelo_serie WHERE id_modelo = :id_modelo_anterior AND id_serie = :id_serie_anterior`,
+        {
+          replacements: { id_modelo_anterior, id_serie_anterior },
+          type: QueryTypes.DELETE,
+        }
+      );
     }
 
     res.json({ message: "Equipo actualizado con éxito" });
@@ -2142,6 +2167,14 @@ export async function editarEquipoSimple(req, res) {
     }
 
     const id_serie_anterior = equipo[0].id_serie;
+    const modelo_serie_anterior = await db.query(
+      `SELECT id_modelo FROM modelo_serie WHERE id_serie = :id_serie_anterior LIMIT 1`,
+      {
+        replacements: { id_serie_anterior },
+        type: QueryTypes.SELECT,
+      }
+    );
+    const id_modelo_anterior = modelo_serie_anterior.length ? modelo_serie_anterior[0].id_modelo : null;
 
     const id_serie = await obtenerOCrearSerie(serie);
 
@@ -2272,6 +2305,22 @@ export async function editarEquipoSimple(req, res) {
           type: QueryTypes.DELETE,
         }
       );
+      await eliminarSerieSiNoUsada(id_serie_anterior);
+    }
+
+    if (
+      id_modelo_anterior &&
+      modeloId &&
+      id_serie_anterior === id_serie &&
+      id_modelo_anterior !== modeloId
+    ) {
+      await db.query(
+        `DELETE FROM modelo_serie WHERE id_modelo = :id_modelo_anterior AND id_serie = :id_serie_anterior`,
+        {
+          replacements: { id_modelo_anterior, id_serie_anterior },
+          type: QueryTypes.DELETE,
+        }
+      );
     }
 
     res.json({ message: "Equipo actualizado con éxito" });
@@ -2314,6 +2363,14 @@ export async function editarEquipoRed(req, res) {
     }
 
     const id_serie_anterior = equipo[0].id_serie;
+    const modelo_serie_anterior = await db.query(
+      `SELECT id_modelo FROM modelo_serie WHERE id_serie = :id_serie_anterior LIMIT 1`,
+      {
+        replacements: { id_serie_anterior },
+        type: QueryTypes.SELECT,
+      }
+    );
+    const id_modelo_anterior = modelo_serie_anterior.length ? modelo_serie_anterior[0].id_modelo : null;
 
     const id_serie = await obtenerOCrearSerie(serie);
 
@@ -2441,6 +2498,21 @@ export async function editarEquipoRed(req, res) {
       );
     }
 
+    if (
+      id_modelo_anterior &&
+      modeloId &&
+      id_serie_anterior === id_serie &&
+      id_modelo_anterior !== modeloId
+    ) {
+      await db.query(
+        `DELETE FROM modelo_serie WHERE id_modelo = :id_modelo_anterior AND id_serie = :id_serie_anterior`,
+        {
+          replacements: { id_modelo_anterior, id_serie_anterior },
+          type: QueryTypes.DELETE,
+        }
+      );
+    }
+
     res.json({ message: "Equipo actualizado con éxito" });
   } catch (error) {
     console.error("Error al actualizar el equipo:", error);
@@ -2484,13 +2556,14 @@ export async function gestionarComponentesEditados(req, res) {
     for (const componente of componentes) {
       if (componente.id_componente) {
       } else {
+        const id_serie = await obtenerOCrearSerie(componente.serie);
         const result = await db.query(
-          `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, perifericoId)`,
+          `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId)`,
           {
             replacements: {
               inventario: componente.inventario,
-              serieId: componente.serieId,
-              perifericoId: componente.perifericoId
+              serieId: id_serie,
+              perifericoId: componente.perifericoId,
             },
           }
         );
@@ -2841,234 +2914,269 @@ export const pasarBodegaAActivo = async (req, res) => {
   }
 };
 
-
 export async function insertarEquiposDesdeJSON(req, res) {
-    const equiposData = req.body;
-    const registrados = [];
-    const noRegistrados = [];
-    const componentesRegistrados = [];
-    console.log(equiposData)
-    try {
-        for (const equipoJson of equiposData) {
-            console.log(equipoJson.componentes);
-            try {
-                const equipoExistente = await db.query(
-                    `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
-                    {
-                        replacements: { inventario: equipoJson.inventario },
-                        type: QueryTypes.SELECT,
-                    }
-                );
+  const equiposData = req.body;
+  const registrados = [];
+  const noRegistrados = [];
+  const componentesRegistrados = [];
+  console.log(equiposData);
+  try {
+    for (const equipoJson of equiposData) {
+      console.log(equipoJson.componentes);
+      try {
+        const equipoExistente = await db.query(
+          `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
+          {
+            replacements: { inventario: equipoJson.inventario },
+            type: QueryTypes.SELECT,
+          }
+        );
 
-                if (equipoExistente.length > 0) {
-                    noRegistrados.push({
-                        inventario: equipoJson.inventario,
-                        motivo: "Ya existe en la base de datos",
-                        datos: equipoJson,
-                    });
-                    continue;
-                }
-                if (equipoJson.tipo.toLowerCase() === "computadora" || equipoJson.tipo.toLowerCase() === "laptop" || equipoJson.tipo.toLowerCase() === "desktop" || equipoJson.tipo.toLowerCase() === "imac" || equipoJson.tipo.toLowerCase() === "all-in-one") {
-                    await procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados, componentesRegistrados);
-                } else {
-                    await procesarComponenteIndividual(equipoJson, componentesRegistrados, noRegistrados);
-                }
-
-            } catch (equipoError) {
-                console.error(`Error al procesar equipo ${equipoJson.inventario}:`, equipoError);
-                noRegistrados.push({
-                    inventario: equipoJson.inventario,
-                    motivo: equipoError.message,
-                    datos: equipoJson,
-                });
-            }
+        if (equipoExistente.length > 0) {
+          noRegistrados.push({
+            inventario: equipoJson.inventario,
+            motivo: "Ya existe en la base de datos",
+            datos: equipoJson,
+          });
+          continue;
         }
-
-        res.json({
-            success: true,
-            message: "Proceso completado",
-            resumen: {
-                totalProcesados: equiposData.length,
-                registrados: registrados.length,
-                noRegistrados: noRegistrados.length,
-            },
+        if (
+          equipoJson.tipo.toLowerCase() === "computadora" ||
+          equipoJson.tipo.toLowerCase() === "laptop" ||
+          equipoJson.tipo.toLowerCase() === "desktop" ||
+          equipoJson.tipo.toLowerCase() === "imac" ||
+          equipoJson.tipo.toLowerCase() === "all-in-one"
+        ) {
+          await procesarComputadoraOLaptop(
+            equipoJson,
             registrados,
             noRegistrados,
-        });
-    } catch (error) {
-        console.error("Error general al insertar equipos:", error);
-        res.status(500).json({
-            success: false,
-            error: "Error al insertar equipos desde JSON",
-            message: error.message,
-        });
-    }
-}
-
-async function agregarComponentesAEquipoPrincipal(componentes, equipoId, equipoJson, ubicacionId, usuarioId, componentesRegistrados) {
-    if (!Array.isArray(componentes)) return;
-
-    for (const componente of componentes) {
-        const campos = [componente.modelo, componente.serie, componente.inventario];
-        const tieneDatos = campos.some(
-            v => v && String(v).trim().toUpperCase() !== "S/N"
-        );
-        if (!tieneDatos) continue;
-
-        try {
-            const id_serie_componente = await obtenerOCrearSerie(componente.serie);
-            const modeloIdComponente = await obtenerIdModelo(componente.modelo);
-            const perifericoIdComponente = await obtenerIdPeriferico(componente.tipo) || componente.perifericoId;
-
-            if (id_serie_componente && modeloIdComponente) {
-                const existeRelacionComp = await db.query(
-                    `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
-                    {
-                        replacements: {
-                            modeloId: modeloIdComponente,
-                            id_serie: id_serie_componente,
-                        },
-                        type: QueryTypes.SELECT,
-                    }
-                );
-                if (!existeRelacionComp.length) {
-                    await db.query(
-                        `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
-                        {
-                            replacements: {
-                                modeloId: modeloIdComponente,
-                                id_serie: id_serie_componente,
-                            },
-                            type: QueryTypes.INSERT,
-                        }
-                    );
-                }
-            }
-
-            const resultComp = await db.query(
-                `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
-                {
-                    replacements: {
-                        inventario: componente.inventario,
-                        serieId: id_serie_componente,
-                        perifericoId: perifericoIdComponente,
-                    },
-                }
-            );
-            const idComponente = resultComp[0];
-
-            await db.query(
-                `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId);`,
-                {
-                    replacements: {
-                        idComponente,
-                        equipoId,
-                    },
-                }
-            );
-
-            if ((equipoJson.tipo_inventario || "activo") === "activo") {
-                await db.query(
-                    `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
-                    {
-                        replacements: {
-                            idComponente,
-                            ubicacionId,
-                            usuarioId,
-                        },
-                    }
-                );
-
-                await db.query(
-                  `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, 1);`,
-                  {
-                    replacements: {
-                      idComponente,
-                    },
-                  }
-                );
-            } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
-                await db.query(
-                    `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
-                    {
-                        replacements: {
-                            idComponente,
-                        },
-                    }
-                );
-            }
-
-            componentesRegistrados.push(componente);
-        } catch (componenteError) {
-            console.error(`Error al insertar componente ${componente.serie}:`, componenteError);
+            componentesRegistrados
+          );
+        } else {
+          await procesarComponenteIndividual(
+            equipoJson,
+            componentesRegistrados,
+            noRegistrados
+          );
         }
-    }
-}
-
-async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados, componentesRegistrados) {
-    const perifericoId = (equipoJson.tipo.toLowerCase() === "laptop") ? 2 : 1;
-    const modeloId = await obtenerIdModelo(equipoJson.modelo);
-    const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
-    const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
-    const dominioId = await obtenerIdDominio(equipoJson.dominio);
-    const sistemaOperativoId = await obtenerIdSistemaOperativo(equipoJson.versionso);
-    const procesadorId = await obtenerIdProcesador(equipoJson.procesador);
-    const ramId = await obtenerIdRam(equipoJson.ram, equipoJson.tipo_ram);
-    const versionOfficeId = 2;
-    const discoId = await obtenerIdDisco(equipoJson.disco);
-
-    if (!ubicacionId || !usuarioId) {
+      } catch (equipoError) {
+        console.error(
+          `Error al procesar equipo ${equipoJson.inventario}:`,
+          equipoError
+        );
         noRegistrados.push({
-            inventario: equipoJson.inventario,
-            motivo: "No se encontró ubicación o usuario",
-            datos: equipoJson,
+          inventario: equipoJson.inventario,
+          motivo: equipoError.message,
+          datos: equipoJson,
         });
-        return;
+      }
     }
 
-    const id_serie = await obtenerOCrearSerie(equipoJson.serie);
+    res.json({
+      success: true,
+      message: "Proceso completado",
+      resumen: {
+        totalProcesados: equiposData.length,
+        registrados: registrados.length,
+        noRegistrados: noRegistrados.length,
+      },
+      registrados,
+      noRegistrados,
+    });
+  } catch (error) {
+    console.error("Error general al insertar equipos:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error al insertar equipos desde JSON",
+      message: error.message,
+    });
+  }
+}
 
-    if (id_serie && modeloId) {
-        const existeRelacion = await db.query(
-            `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
-            {
-                replacements: { modeloId, id_serie },
-                type: QueryTypes.SELECT,
-            }
+async function agregarComponentesAEquipoPrincipal(
+  componentes,
+  equipoId,
+  equipoJson,
+  ubicacionId,
+  usuarioId,
+  componentesRegistrados
+) {
+  if (!Array.isArray(componentes)) return;
+
+  for (const componente of componentes) {
+    const campos = [componente.modelo, componente.serie, componente.inventario];
+    const tieneDatos = campos.some(
+      (v) => v && String(v).trim().toUpperCase() !== "S/N"
+    );
+    if (!tieneDatos) continue;
+
+    try {
+      const id_serie_componente = await obtenerOCrearSerie(componente.serie);
+      const modeloIdComponente = await obtenerIdModelo(componente.modelo);
+      const perifericoIdComponente =
+        (await obtenerIdPeriferico(componente.tipo)) || componente.perifericoId;
+
+      if (id_serie_componente && modeloIdComponente) {
+        const existeRelacionComp = await db.query(
+          `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+          {
+            replacements: {
+              modeloId: modeloIdComponente,
+              id_serie: id_serie_componente,
+            },
+            type: QueryTypes.SELECT,
+          }
         );
-        if (!existeRelacion.length) {
-            await db.query(
-                `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
-                {
-                    replacements: { modeloId, id_serie },
-                    type: QueryTypes.INSERT,
-                }
-            );
+        if (!existeRelacionComp.length) {
+          await db.query(
+            `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+            {
+              replacements: {
+                modeloId: modeloIdComponente,
+                id_serie: id_serie_componente,
+              },
+              type: QueryTypes.INSERT,
+            }
+          );
         }
+      }
+
+      const resultComp = await db.query(
+        `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
+        {
+          replacements: {
+            inventario: componente.inventario,
+            serieId: id_serie_componente,
+            perifericoId: perifericoIdComponente,
+          },
+        }
+      );
+      const idComponente = resultComp[0];
+
+      await db.query(
+        `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId);`,
+        {
+          replacements: {
+            idComponente,
+            equipoId,
+          },
+        }
+      );
+
+      if ((equipoJson.tipo_inventario || "activo") === "activo") {
+        await db.query(
+          `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
+          {
+            replacements: {
+              idComponente,
+              ubicacionId,
+              usuarioId,
+            },
+          }
+        );
+
+        await db.query(
+          `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, 1);`,
+          {
+            replacements: {
+              idComponente,
+            },
+          }
+        );
+      } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
+        await db.query(
+          `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
+          {
+            replacements: {
+              idComponente,
+            },
+          }
+        );
+      }
+
+      componentesRegistrados.push(componente);
+    } catch (componenteError) {
+      console.error(
+        `Error al insertar componente ${componente.serie}:`,
+        componenteError
+      );
     }
+  }
+}
 
-    const parametrosEquipo = {
-        p_tipo: equipoJson.tipo_inventario || "activo",
-        p_inventario: equipoJson.inventario,
-        p_anio_compra: equipoJson.anio_compra === "S/N" ? null : equipoJson.anio_compra,
-        p_id_periferico: perifericoId,
-        p_id_serie: id_serie,
-        p_nombre_equipo: equipoJson.nombreEquipo,
-        p_direccion_ip: equipoJson.direccionIp || null,
-        p_versionso: sistemaOperativoId || null,
-        p_versionoffice: versionOfficeId || null,
-        p_ram: ramId || null,
-        p_disco: discoId || null,
-        p_procesador: procesadorId || null,
-        p_antivirus: 1,
-        p_dominio: dominioId || null,
-        p_id_ubicacion: ubicacionId,
-        p_id_usuario: usuarioId,
-        p_observacion: equipoJson.observacion || null,
-    };
+async function procesarComputadoraOLaptop(
+  equipoJson,
+  registrados,
+  noRegistrados,
+  componentesRegistrados
+) {
+  const perifericoId = equipoJson.tipo.toLowerCase() === "laptop" ? 2 : 1;
+  const modeloId = await obtenerIdModelo(equipoJson.modelo);
+  const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
+  const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
+  const dominioId = await obtenerIdDominio(equipoJson.dominio);
+  const sistemaOperativoId = await obtenerIdSistemaOperativo(
+    equipoJson.versionso
+  );
+  const procesadorId = await obtenerIdProcesador(equipoJson.procesador);
+  const ramId = await obtenerIdRam(equipoJson.ram, equipoJson.tipo_ram);
+  const versionOfficeId = 2;
+  const discoId = await obtenerIdDisco(equipoJson.disco);
 
-    const result = await db.query(
-        `CALL importar_equipo(
+  if (!ubicacionId || !usuarioId) {
+    noRegistrados.push({
+      inventario: equipoJson.inventario,
+      motivo: "No se encontró ubicación o usuario",
+      datos: equipoJson,
+    });
+    return;
+  }
+
+  const id_serie = await obtenerOCrearSerie(equipoJson.serie);
+
+  if (id_serie && modeloId) {
+    const existeRelacion = await db.query(
+      `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+      {
+        replacements: { modeloId, id_serie },
+        type: QueryTypes.SELECT,
+      }
+    );
+    if (!existeRelacion.length) {
+      await db.query(
+        `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+        {
+          replacements: { modeloId, id_serie },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+  }
+
+  const parametrosEquipo = {
+    p_tipo: equipoJson.tipo_inventario || "activo",
+    p_inventario: equipoJson.inventario,
+    p_anio_compra:
+      equipoJson.anio_compra === "S/N" ? null : equipoJson.anio_compra,
+    p_id_periferico: perifericoId,
+    p_id_serie: id_serie,
+    p_nombre_equipo: equipoJson.nombreEquipo,
+    p_direccion_ip: equipoJson.direccionIp || null,
+    p_versionso: sistemaOperativoId || null,
+    p_versionoffice: versionOfficeId || null,
+    p_ram: ramId || null,
+    p_disco: discoId || null,
+    p_procesador: procesadorId || null,
+    p_antivirus: 1,
+    p_dominio: dominioId || null,
+    p_id_ubicacion: ubicacionId,
+    p_id_usuario: usuarioId,
+    p_observacion: equipoJson.observacion || null,
+  };
+
+  const result = await db.query(
+    `CALL importar_equipo(
             :p_tipo,
             :p_inventario,
             :p_anio_compra,
@@ -3087,106 +3195,132 @@ async function procesarComputadoraOLaptop(equipoJson, registrados, noRegistrados
             :p_id_usuario,
             :p_observacion
         );`,
-        { replacements: parametrosEquipo }
-    );
+    { replacements: parametrosEquipo }
+  );
 
-    const equipoId = result[0]?.id_equipo;
+  const equipoId = result[0]?.id_equipo;
 
-    await agregarComponentesAEquipoPrincipal(
-        equipoJson.componentes,
-        equipoId,
-        equipoJson,
-        ubicacionId,
-        usuarioId,
-        componentesRegistrados
-    );
+  await agregarComponentesAEquipoPrincipal(
+    equipoJson.componentes,
+    equipoId,
+    equipoJson,
+    ubicacionId,
+    usuarioId,
+    componentesRegistrados
+  );
 
-    registrados.push({
-        inventario: equipoJson.inventario,
-        equipoId: equipoId,
-        componentesRegistrados: componentesRegistrados.length,
-        datos: equipoJson,
-    });
+  registrados.push({
+    inventario: equipoJson.inventario,
+    equipoId: equipoId,
+    componentesRegistrados: componentesRegistrados.length,
+    datos: equipoJson,
+  });
 }
 
-async function procesarComponenteIndividual(equipoJson, componentesRegistrados, noRegistrados) {
-    if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
-        for (const componente of equipoJson.componentes) {
-            if (componente.tipo.toLowerCase() === equipoJson.tipo.toLowerCase()) {
-                try {
-                    const equipoExistente = await db.query(
-                        `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
-                        {
-                            replacements: { inventario: componente.inventario },
-                            type: QueryTypes.SELECT,
-                        }
-                    );
-
-                    if (equipoExistente.length > 0) {
-                        noRegistrados.push({
-                            inventario: equipoJson.inventario,
-                            motivo: "Ya existe en la base de datos",
-                            datos: equipoJson,
-                        });
-                        continue;
-                    }
-
-                    const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
-                    const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
-                    await procesarComponente(componente, equipoJson, ubicacionId, usuarioId, componentesRegistrados);
-
-                } catch (componenteError) {
-                    console.error(`Error al insertar componente ${componente.serie}:`, componenteError);
-                }
-            }
-        }
-    }
-}
-
-async function procesarComponente(componente, equipoJson, ubicacionId, usuarioId, componentesRegistrados) {
-    const id_serie_componente = await obtenerOCrearSerie(componente.serie);
-    const modeloIdComponente = await obtenerIdModelo(componente.modelo) || componente.modeloId;
-
-    if (id_serie_componente && modeloIdComponente) {
-        const existeRelacionComp = await db.query(
-            `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+async function procesarComponenteIndividual(
+  equipoJson,
+  componentesRegistrados,
+  noRegistrados
+) {
+  if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
+    for (const componente of equipoJson.componentes) {
+      if (componente.tipo.toLowerCase() === equipoJson.tipo.toLowerCase()) {
+        try {
+          const equipoExistente = await db.query(
+            `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
             {
-                replacements: {
-                    modeloId: modeloIdComponente,
-                    id_serie: id_serie_componente,
-                },
-                type: QueryTypes.SELECT,
+              replacements: { inventario: componente.inventario },
+              type: QueryTypes.SELECT,
             }
-        );
-        if (!existeRelacionComp.length) {
-            await db.query(
-                `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
-                {
-                    replacements: {
-                        modeloId: modeloIdComponente,
-                        id_serie: id_serie_componente,
-                    },
-                    type: QueryTypes.INSERT,
-                }
-            );
+          );
+
+          if (equipoExistente.length > 0) {
+            noRegistrados.push({
+              inventario: equipoJson.inventario,
+              motivo: "Ya existe en la base de datos",
+              datos: equipoJson,
+            });
+            continue;
+          }
+
+          const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
+          const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
+          await procesarComponente(
+            componente,
+            equipoJson,
+            ubicacionId,
+            usuarioId,
+            componentesRegistrados
+          );
+        } catch (componenteError) {
+          console.error(
+            `Error al insertar componente ${componente.serie}:`,
+            componenteError
+          );
         }
+      }
     }
-    const perifericoIdComponente = await obtenerIdPeriferico(componente.tipo) || componente.perifericoId;
+  }
+}
 
-    const parametrosComponente = {
-        p_tipo: componente.tipo_inventario || "activo",
-        p_inventario: componente.inventario,
-        p_anio_compra: componente.anio_compra || equipoJson.anio_compra,
-        p_id_periferico: perifericoIdComponente,
-        p_id_serie: id_serie_componente,
-        p_idUbicacion: (componente.tipo === "bodega" || componente.tipo === "baja") ? null : ubicacionId,
-        p_idUsuario: (componente.tipo === "bodega" || componente.tipo === "baja") ? null : usuarioId,
-        p_observacion: componente.observacion || null,
-        p_idLampara: componente.idLampara || null,
-    };
+async function procesarComponente(
+  componente,
+  equipoJson,
+  ubicacionId,
+  usuarioId,
+  componentesRegistrados
+) {
+  const id_serie_componente = await obtenerOCrearSerie(componente.serie);
+  const modeloIdComponente =
+    (await obtenerIdModelo(componente.modelo)) || componente.modeloId;
 
-    await db.query(
-        `CALL importar_equipo_simple(
+  if (id_serie_componente && modeloIdComponente) {
+    const existeRelacionComp = await db.query(
+      `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+      {
+        replacements: {
+          modeloId: modeloIdComponente,
+          id_serie: id_serie_componente,
+        },
+        type: QueryTypes.SELECT,
+      }
+    );
+    if (!existeRelacionComp.length) {
+      await db.query(
+        `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+        {
+          replacements: {
+            modeloId: modeloIdComponente,
+            id_serie: id_serie_componente,
+          },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+  }
+  const perifericoIdComponente =
+    (await obtenerIdPeriferico(componente.tipo)) || componente.perifericoId;
+
+  const parametrosComponente = {
+    p_tipo: componente.tipo_inventario || "activo",
+    p_inventario: componente.inventario,
+    p_anio_compra: componente.anio_compra || equipoJson.anio_compra,
+    p_id_periferico: perifericoIdComponente,
+    p_id_serie: id_serie_componente,
+    p_idUbicacion:
+      componente.tipo === "bodega" || componente.tipo === "baja"
+        ? null
+        : ubicacionId,
+    p_idUsuario:
+      componente.tipo === "bodega" || componente.tipo === "baja"
+        ? null
+        : usuarioId,
+    p_observacion: componente.observacion || null,
+    p_idLampara: componente.idLampara || null,
+  };
+
+  await db.query(
+    `CALL importar_equipo_simple(
             :p_tipo,
             :p_inventario,
             :p_anio_compra,
@@ -3197,12 +3331,12 @@ async function procesarComponente(componente, equipoJson, ubicacionId, usuarioId
             :p_observacion,
             :p_idLampara
         );`,
-        {
-            replacements: parametrosComponente,
-        }
-    );
+    {
+      replacements: parametrosComponente,
+    }
+  );
 
-    componentesRegistrados.push(componente);
+  componentesRegistrados.push(componente);
 }
 
 async function obtenerIdPeriferico(nombrePeriferico) {
@@ -3221,7 +3355,6 @@ async function obtenerIdPeriferico(nombrePeriferico) {
     return null;
   }
 }
-
 
 async function obtenerIdModelo(nombreModelo) {
   if (!nombreModelo) return null;
