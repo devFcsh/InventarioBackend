@@ -1237,7 +1237,7 @@ export async function agregarEquipoSimple(req, res) {
 
   try {
     const id_serie = await obtenerOCrearSerie(serie);
-    console.log("modelosdsd", modeloId)
+    console.log("modelosdsd", modeloId);
     if (id_serie && modeloId) {
       const existeRelacion = await db.query(
         `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
@@ -1269,7 +1269,7 @@ export async function agregarEquipoSimple(req, res) {
       observacion,
       idLampara,
     };
-    console.log("con id", perifericoId)
+    console.log("con id", perifericoId);
 
     const result = await db.query(
       `CALL agregar_equipo_simple(
@@ -1814,27 +1814,27 @@ export async function agregarComponentes(req, res) {
 
   try {
     for (const componente of componentes) {
-        const id_serie = await obtenerOCrearSerie(componente.serie);
-        const modeloId = componente.modeloId;
+      const id_serie = await obtenerOCrearSerie(componente.serie);
+      const modeloId = componente.modeloId;
 
-        if (id_serie && modeloId) {
-      const existeRelacion = await db.query(
-        `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
-        {
-          replacements: { modeloId, id_serie },
-          type: QueryTypes.SELECT,
-        }
-      );
-      if (!existeRelacion.length) {
-        await db.query(
-          `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+      if (id_serie && modeloId) {
+        const existeRelacion = await db.query(
+          `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
           {
             replacements: { modeloId, id_serie },
-            type: QueryTypes.INSERT,
+            type: QueryTypes.SELECT,
           }
         );
+        if (!existeRelacion.length) {
+          await db.query(
+            `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+            {
+              replacements: { modeloId, id_serie },
+              type: QueryTypes.INSERT,
+            }
+          );
+        }
       }
-    }
 
       const result = await db.query(
         `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
@@ -1956,7 +1956,9 @@ export async function editarEquipo(req, res) {
         type: QueryTypes.SELECT,
       }
     );
-    const id_modelo_anterior = modelo_serie_anterior.length ? modelo_serie_anterior[0].id_modelo : null;
+    const id_modelo_anterior = modelo_serie_anterior.length
+      ? modelo_serie_anterior[0].id_modelo
+      : null;
 
     const id_serie = await obtenerOCrearSerie(serie);
 
@@ -2174,7 +2176,9 @@ export async function editarEquipoSimple(req, res) {
         type: QueryTypes.SELECT,
       }
     );
-    const id_modelo_anterior = modelo_serie_anterior.length ? modelo_serie_anterior[0].id_modelo : null;
+    const id_modelo_anterior = modelo_serie_anterior.length
+      ? modelo_serie_anterior[0].id_modelo
+      : null;
 
     const id_serie = await obtenerOCrearSerie(serie);
 
@@ -2370,7 +2374,9 @@ export async function editarEquipoRed(req, res) {
         type: QueryTypes.SELECT,
       }
     );
-    const id_modelo_anterior = modelo_serie_anterior.length ? modelo_serie_anterior[0].id_modelo : null;
+    const id_modelo_anterior = modelo_serie_anterior.length
+      ? modelo_serie_anterior[0].id_modelo
+      : null;
 
     const id_serie = await obtenerOCrearSerie(serie);
 
@@ -2553,10 +2559,35 @@ export async function gestionarComponentesEditados(req, res) {
         }
       );
     }
+
     for (const componente of componentes) {
       if (componente.id_componente) {
       } else {
         const id_serie = await obtenerOCrearSerie(componente.serie);
+        const modeloId = componente.modeloId;
+        console.log("comoo", componente);
+        console.log("MODELLLO", modeloId);
+        console.log("SERIEE", id_serie);
+
+        if (id_serie && modeloId) {
+          const existeRelacion = await db.query(
+            `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+            {
+              replacements: { modeloId, id_serie },
+              type: QueryTypes.SELECT,
+            }
+          );
+          if (!existeRelacion.length) {
+            await db.query(
+              `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+              {
+                replacements: { modeloId, id_serie },
+                type: QueryTypes.INSERT,
+              }
+            );
+          }
+        }
+
         const result = await db.query(
           `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId)`,
           {
