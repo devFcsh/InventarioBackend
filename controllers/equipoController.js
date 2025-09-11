@@ -1237,7 +1237,6 @@ export async function agregarEquipoSimple(req, res) {
 
   try {
     const id_serie = await obtenerOCrearSerie(serie);
-    console.log("modelosdsd", modeloId);
     if (id_serie && modeloId) {
       const existeRelacion = await db.query(
         `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
@@ -1269,7 +1268,6 @@ export async function agregarEquipoSimple(req, res) {
       observacion,
       idLampara,
     };
-    console.log("con id", perifericoId);
 
     const result = await db.query(
       `CALL agregar_equipo_simple(
@@ -2527,8 +2525,7 @@ export async function editarEquipoRed(req, res) {
 }
 
 export async function gestionarComponentesEditados(req, res) {
-  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } =
-    req.body;
+  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } = req.body;
 
   try {
     const componentesActuales = await db.query(
@@ -2561,13 +2558,22 @@ export async function gestionarComponentesEditados(req, res) {
     }
 
     for (const componente of componentes) {
+      // Solo agrega si al menos uno de los campos es distinto de "S/N"
+      const campos = [componente.modelo, componente.serie, componente.inventario];
+      const tieneDatos = campos.some(
+        (v) => v && String(v).trim().toUpperCase() !== "S/N"
+      );
+      if (!tieneDatos) continue;
+
       if (componente.id_componente) {
+        // Ya existe, no lo agregues de nuevo
       } else {
         const id_serie = await obtenerOCrearSerie(componente.serie);
-        const modeloId = componente.modeloId;
-        console.log("comoo", componente);
-        console.log("MODELLLO", modeloId);
-        console.log("SERIEE", id_serie);
+        // Si no viene modeloId, obténlo por nombre
+        let modeloId = componente.modeloId;
+        if (!modeloId && componente.modelo) {
+          modeloId = await obtenerIdModelo(componente.modelo);
+        }
 
         if (id_serie && modeloId) {
           const existeRelacion = await db.query(
@@ -2950,10 +2956,8 @@ export async function insertarEquiposDesdeJSON(req, res) {
   const registrados = [];
   const noRegistrados = [];
   const componentesRegistrados = [];
-  console.log(equiposData);
   try {
     for (const equipoJson of equiposData) {
-      console.log(equipoJson.componentes);
       try {
         const equipoExistente = await db.query(
           `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
