@@ -209,8 +209,8 @@ export const requireAuth = (req, res, next) => {
   });
 
   const isAuth = req.isAuthenticated && req.isAuthenticated();
-  if (isAuth || true) {
-    //console.log("✅ Usuario autenticado:", req.user.username);
+  if (isAuth && req.user) {
+    console.log("✅ Usuario autenticado:", req.user.username);
     return next();
   }
 
