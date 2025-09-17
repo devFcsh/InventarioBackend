@@ -1,5 +1,5 @@
-import { QueryTypes } from "sequelize";
-import db from "../models/index.js";
+import { QueryTypes } from 'sequelize';
+import db from '../models/index.js';
 
 export async function obtenerInventarios(req, res) {
   try {
@@ -14,8 +14,8 @@ export async function obtenerInventarios(req, res) {
 
     res.json(inventarios);
   } catch (error) {
-    console.error("Error al obtener inventarios:", error);
-    res.status(500).json({ error: "Error al obtener inventarios" });
+    console.error('Error al obtener inventarios:', error);
+    res.status(500).json({ error: 'Error al obtener inventarios' });
   }
 }
 
@@ -48,7 +48,37 @@ export async function inventarioPorSerie(req, res) {
 
     res.json(inventarios);
   } catch (error) {
-    console.error("Error al obtener inventarios:", error);
-    res.status(500).json({ error: "Error al obtener inventarios" });
+    console.error('Error al obtener inventarios:', error);
+    res.status(500).json({ error: 'Error al obtener inventarios' });
+  }
+}
+
+export async function existeInventario(req, res) {
+  const { inventario } = req.query;
+
+  if (!inventario) {
+    return res.status(400).json({ error: 'Se requiere el inventario' });
+  }
+
+  try {
+    const resultado = await db.query(
+      `SELECT id_equipo, inventario FROM equipo WHERE LOWER(TRIM(inventario)) = :inventario LIMIT 1`,
+
+      {
+        replacements: { inventario: String(inventario).trim().toLowerCase() },
+
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (resultado.length) {
+      return res.json({ existe: true, equipo: resultado[0] });
+    } else {
+      return res.json({ existe: false });
+    }
+  } catch (error) {
+    console.error('Error al consultar inventario:', error);
+
+    return res.status(500).json({ error: 'Error al consultar inventario' });
   }
 }
