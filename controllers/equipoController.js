@@ -14,8 +14,82 @@ import VersionSo from "../models/version_so.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+async function obtenerOCrearMarca(nombreMarca, id_periferico) {
+  if (!nombreMarca) return null;
+  if (nombreMarca.length > 30)
+    throw new Error("El nombre de la marca excede 30 caracteres.");
+  const marcaExistente = await db.query(
+    `SELECT id_marca FROM marca WHERE nombre = :nombreMarca`,
+    { replacements: { nombreMarca }, type: QueryTypes.SELECT }
+  );
+  let id_marca;
+  if (marcaExistente.length) {
+    id_marca = marcaExistente[0].id_marca;
+  } else {
+    const [result] = await db.query(
+      `INSERT INTO marca (nombre) VALUES (:nombreMarca)`,
+      { replacements: { nombreMarca }, type: QueryTypes.INSERT }
+    );
+    id_marca = result;
+    if (id_periferico) {
+      await db.query(
+        `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :id_periferico)`,
+        { replacements: { id_marca, id_periferico }, type: QueryTypes.INSERT }
+      );
+    }
+  }
+  if (id_marca && id_periferico) {
+    const relacion = await db.query(
+      `SELECT 1 FROM marca_periferico WHERE id_marca = :id_marca AND id_periferico = :id_periferico`,
+      { replacements: { id_marca, id_periferico }, type: QueryTypes.SELECT }
+    );
+    if (!relacion.length) {
+      await db.query(
+        `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :id_periferico)`,
+        { replacements: { id_marca, id_periferico }, type: QueryTypes.INSERT }
+      );
+    }
+  }
+  return id_marca;
+}
+
+async function obtenerOCrearModelo(nombreModelo, id_marca) {
+  if (!nombreModelo) return null;
+  if (nombreModelo.length > 30)
+    throw new Error("El nombre del modelo excede 30 caracteres.");
+  const modeloExistente = await db.query(
+    `SELECT id_modelo FROM modelo WHERE nombre = :nombreModelo`,
+    { replacements: { nombreModelo }, type: QueryTypes.SELECT }
+  );
+  let id_modelo;
+  if (modeloExistente.length) {
+    id_modelo = modeloExistente[0].id_modelo;
+  } else {
+    const [result] = await db.query(
+      `INSERT INTO modelo (nombre) VALUES (:nombreModelo)`,
+      { replacements: { nombreModelo }, type: QueryTypes.INSERT }
+    );
+    id_modelo = result;
+  }
+  if (id_marca && id_modelo) {
+    const relacion = await db.query(
+      `SELECT 1 FROM marca_modelo WHERE id_marca = :id_marca AND id_modelo = :id_modelo`,
+      { replacements: { id_marca, id_modelo }, type: QueryTypes.SELECT }
+    );
+    if (!relacion.length) {
+      await db.query(
+        `INSERT INTO marca_modelo (id_marca, id_modelo) VALUES (:id_marca, :id_modelo)`,
+        { replacements: { id_marca, id_modelo }, type: QueryTypes.INSERT }
+      );
+    }
+  }
+  return id_modelo;
+}
+
 async function obtenerOCrearSerie(nombreSerie) {
   if (!nombreSerie) return null;
+  if (nombreSerie.length > 30)
+    throw new Error("El nombre de la serie excede 30 caracteres.");
   const serieExistente = await db.query(
     `SELECT id_serie FROM serie WHERE nombre = :nombreSerie`,
     { replacements: { nombreSerie }, type: QueryTypes.SELECT }
@@ -1649,19 +1723,21 @@ export const obtenerComputadoraBodega = async (req, res) => {
 
     const componentes = await db.query(
       `SELECT c.id_componente, 
-              e.inventario, 
-              p.nombre AS periferico, 
-              m.nombre AS marca, 
-              mo.nombre AS modelo, 
-              s.nombre AS serie 
-       FROM componente c
-       JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN periferico p ON e.id_serie = p.id_periferico
-       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
-       JOIN serie s ON e.id_serie = s.id_serie
-       WHERE c.id_computadora = :id`,
+          e.inventario, 
+          p.nombre AS periferico, 
+          m.nombre AS marca, 
+          mo.nombre AS modelo, 
+          s.nombre AS serie 
+   FROM componente c
+   JOIN equipo e ON c.id_componente = e.id_equipo
+   JOIN serie s ON e.id_serie = s.id_serie
+   JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+   JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+   JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+   JOIN marca m ON mm.id_marca = m.id_marca
+   JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+   JOIN periferico p ON mp.id_periferico = p.id_periferico
+   WHERE c.id_computadora = :id AND e.id_periferico = p.id_periferico`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1880,7 +1956,7 @@ export async function agregarComponentes(req, res) {
         );
       } else if (tipo == "bodega") {
         await db.query(
-          `INSERT INTO equipo_baja (id_equipo) VALUES (:idComponente);`,
+          `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
           {
             replacements: {
               idComponente,
@@ -2200,14 +2276,6 @@ export async function editarEquipoSimple(req, res) {
     }
 
     if (imagenRuta && tipo === "activo") {
-      const esComponente = await db.query(
-        `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
-        {
-          replacements: { equipoId },
-          type: QueryTypes.SELECT,
-        }
-      );
-
       const imagenActual = await db.query(
         `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
         {
@@ -2218,23 +2286,21 @@ export async function editarEquipoSimple(req, res) {
 
       if (imagenActual.length) {
         await db.query(
-          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen AND id_equipo = :equipoId`,
+          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
           {
-            replacements: { idImagen: imagenActual[0].id_imagen, equipoId },
+            replacements: { idImagen: imagenActual[0].id_imagen },
             type: QueryTypes.DELETE,
           }
         );
 
-        if (!esComponente.length) {
-          await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
-            replacements: { idImagen: imagenActual[0].id_imagen },
-            type: QueryTypes.DELETE,
-          });
+        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+          replacements: { idImagen: imagenActual[0].id_imagen },
+          type: QueryTypes.DELETE,
+        });
 
-          const imagePath = join(__dirname, "..", imagenActual[0].ruta);
-          if (existsSync(imagePath)) {
-            unlinkSync(imagePath);
-          }
+        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
+        if (existsSync(imagePath)) {
+          unlinkSync(imagePath);
         }
       }
 
@@ -2525,7 +2591,8 @@ export async function editarEquipoRed(req, res) {
 }
 
 export async function gestionarComponentesEditados(req, res) {
-  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } = req.body;
+  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } =
+    req.body;
 
   try {
     const componentesActuales = await db.query(
@@ -2558,57 +2625,72 @@ export async function gestionarComponentesEditados(req, res) {
     }
 
     for (const componente of componentes) {
-      // Solo agrega si al menos uno de los campos es distinto de "S/N"
-      const campos = [componente.modelo, componente.serie, componente.inventario];
+      const campos = [
+        componente.modelo,
+        componente.serie,
+        componente.inventario,
+      ];
       const tieneDatos = campos.some(
         (v) => v && String(v).trim().toUpperCase() !== "S/N"
       );
       if (!tieneDatos) continue;
 
-      if (componente.id_componente) {
-        // Ya existe, no lo agregues de nuevo
-      } else {
-        const id_serie = await obtenerOCrearSerie(componente.serie);
-        // Si no viene modeloId, obténlo por nombre
-        let modeloId = componente.modeloId;
-        if (!modeloId && componente.modelo) {
-          modeloId = await obtenerIdModelo(componente.modelo);
-        }
+      try {
+        const perifericoIdComponente =
+          (await obtenerIdPeriferico(componente.tipo)) ||
+          componente.perifericoId;
 
-        if (id_serie && modeloId) {
-          const existeRelacion = await db.query(
+        const id_marca = await obtenerOCrearMarca(
+          componente.marca,
+          perifericoIdComponente
+        );
+
+        const modeloIdComponente = await obtenerOCrearModelo(
+          componente.modelo,
+          id_marca
+        );
+
+        const id_serie_componente = await obtenerOCrearSerie(componente.serie);
+
+        if (id_serie_componente && modeloIdComponente) {
+          const existeRelacionComp = await db.query(
             `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
             {
-              replacements: { modeloId, id_serie },
+              replacements: {
+                modeloId: modeloIdComponente,
+                id_serie: id_serie_componente,
+              },
               type: QueryTypes.SELECT,
             }
           );
-          if (!existeRelacion.length) {
+          if (!existeRelacionComp.length) {
             await db.query(
               `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
               {
-                replacements: { modeloId, id_serie },
+                replacements: {
+                  modeloId: modeloIdComponente,
+                  id_serie: id_serie_componente,
+                },
                 type: QueryTypes.INSERT,
               }
             );
           }
         }
 
-        const result = await db.query(
-          `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId)`,
+        const resultComp = await db.query(
+          `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
           {
             replacements: {
               inventario: componente.inventario,
-              serieId: id_serie,
-              perifericoId: componente.perifericoId,
+              serieId: id_serie_componente,
+              perifericoId: perifericoIdComponente,
             },
           }
         );
-
-        const idComponente = result[0];
+        const idComponente = resultComp[0];
 
         await db.query(
-          `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId)`,
+          `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :equipoId);`,
           {
             replacements: {
               idComponente,
@@ -2617,9 +2699,9 @@ export async function gestionarComponentesEditados(req, res) {
           }
         );
 
-        if (tipo === "activo") {
+        if ((equipoJson.tipo_inventario || "activo") === "activo") {
           await db.query(
-            `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId)`,
+            `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
             {
               replacements: {
                 idComponente,
@@ -2630,17 +2712,16 @@ export async function gestionarComponentesEditados(req, res) {
           );
 
           await db.query(
-            `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, (SELECT id_imagen FROM imagen WHERE ruta = :imagenRuta))`,
+            `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, 1);`,
             {
               replacements: {
                 idComponente,
-                imagenRuta,
               },
             }
           );
-        } else if (tipo === "bodega") {
+        } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
           await db.query(
-            `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente)`,
+            `INSERT INTO equipo_baja (id_equipo) VALUES (:idComponente);`,
             {
               replacements: {
                 idComponente,
@@ -2648,6 +2729,13 @@ export async function gestionarComponentesEditados(req, res) {
             }
           );
         }
+
+        componentesRegistrados.push(componente);
+      } catch (componenteError) {
+        console.error(
+          `Error al insertar componente ${componente.serie}:`,
+          componenteError
+        );
       }
     }
 
@@ -2956,25 +3044,46 @@ export async function insertarEquiposDesdeJSON(req, res) {
   const registrados = [];
   const noRegistrados = [];
   const componentesRegistrados = [];
+  let equiposAgregados = 0;
+  let seInsertaronNuevos = false;
+
   try {
+    const existentes = await db.query(
+      `SELECT inventario, s.nombre AS serie FROM equipo e JOIN serie s ON e.id_serie = s.id_serie`,
+      { type: QueryTypes.SELECT }
+    );
+    const inventariosExistentes = new Set(existentes.map((e) => e.inventario));
+    const seriesExistentes = new Set(
+      existentes.map((e) => (e.serie || "").toUpperCase())
+    );
+
     for (const equipoJson of equiposData) {
       try {
-        const equipoExistente = await db.query(
-          `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
-          {
-            replacements: { inventario: equipoJson.inventario },
-            type: QueryTypes.SELECT,
-          }
-        );
+        const inventarioEquipo = (equipoJson.inventario || "").trim();
+        const serieEquipo = (equipoJson.serie || "").trim().toUpperCase();
 
-        if (equipoExistente.length > 0) {
+        const inventarioEsSN =
+          !inventarioEquipo ||
+          inventarioEquipo.replace(/\s/g, "").toUpperCase() === "S/N";
+        const serieEsSN =
+          !serieEquipo ||
+          serieEquipo.replace(/\s/g, "").toUpperCase() === "S/N";
+
+        if (
+          (!inventarioEsSN && inventariosExistentes.has(inventarioEquipo)) ||
+          (!serieEsSN && serieEquipo && seriesExistentes.has(serieEquipo))
+        ) {
           noRegistrados.push({
             inventario: equipoJson.inventario,
-            motivo: "Ya existe en la base de datos",
+            serie: equipoJson.serie,
+            motivo: "Ya existe un equipo con el mismo inventario o serie",
             datos: equipoJson,
           });
           continue;
         }
+
+        let fueInsertado = false;
+
         if (
           equipoJson.tipo.toLowerCase() === "computadora" ||
           equipoJson.tipo.toLowerCase() === "laptop" ||
@@ -2982,18 +3091,30 @@ export async function insertarEquiposDesdeJSON(req, res) {
           equipoJson.tipo.toLowerCase() === "imac" ||
           equipoJson.tipo.toLowerCase() === "all-in-one"
         ) {
-          await procesarComputadoraOLaptop(
+          fueInsertado = await procesarComputadoraOLaptop(
             equipoJson,
             registrados,
             noRegistrados,
             componentesRegistrados
           );
         } else {
-          await procesarComponenteIndividual(
+          fueInsertado = await procesarComponenteIndividual(
             equipoJson,
             componentesRegistrados,
             noRegistrados
           );
+        }
+
+        if (fueInsertado) {
+          equiposAgregados++;
+          seInsertaronNuevos = true;
+          inventariosExistentes.add(inventarioEquipo);
+          if (serieEquipo) seriesExistentes.add(serieEquipo);
+        }
+
+        if (equiposAgregados - 3 === 0) {
+          equiposAgregados = 0;
+          seInsertaronNuevos = false;
         }
       } catch (equipoError) {
         console.error(
@@ -3015,6 +3136,8 @@ export async function insertarEquiposDesdeJSON(req, res) {
         totalProcesados: equiposData.length,
         registrados: registrados.length,
         noRegistrados: noRegistrados.length,
+        equiposAgregados,
+        seInsertaronNuevos,
       },
       registrados,
       noRegistrados,
@@ -3040,6 +3163,9 @@ async function agregarComponentesAEquipoPrincipal(
   if (!Array.isArray(componentes)) return;
 
   for (const componente of componentes) {
+    if (!componente.inventario || String(componente.inventario).trim() === "") {
+      componente.inventario = "S/N";
+    }
     const campos = [componente.modelo, componente.serie, componente.inventario];
     const tieneDatos = campos.some(
       (v) => v && String(v).trim().toUpperCase() !== "S/N"
@@ -3047,10 +3173,20 @@ async function agregarComponentesAEquipoPrincipal(
     if (!tieneDatos) continue;
 
     try {
-      const id_serie_componente = await obtenerOCrearSerie(componente.serie);
-      const modeloIdComponente = await obtenerIdModelo(componente.modelo);
       const perifericoIdComponente =
         (await obtenerIdPeriferico(componente.tipo)) || componente.perifericoId;
+
+      const id_marca = await obtenerOCrearMarca(
+        componente.marca,
+        perifericoIdComponente
+      );
+
+      const modeloIdComponente = await obtenerOCrearModelo(
+        componente.modelo,
+        id_marca
+      );
+
+      const id_serie_componente = await obtenerOCrearSerie(componente.serie);
 
       if (id_serie_componente && modeloIdComponente) {
         const existeRelacionComp = await db.query(
@@ -3121,7 +3257,7 @@ async function agregarComponentesAEquipoPrincipal(
         );
       } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
         await db.query(
-          `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
+          `INSERT INTO equipo_baja (id_equipo) VALUES (:idComponente);`,
           {
             replacements: {
               idComponente,
@@ -3147,17 +3283,29 @@ async function procesarComputadoraOLaptop(
   componentesRegistrados
 ) {
   const perifericoId = equipoJson.tipo.toLowerCase() === "laptop" ? 2 : 1;
-  const modeloId = await obtenerIdModelo(equipoJson.modelo);
-  const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
-  const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
-  const dominioId = await obtenerIdDominio(equipoJson.dominio);
+
+  if (equipoJson.nombreEquipo && String(equipoJson.nombreEquipo).length > 15) {
+    throw new Error("El nombre del equipo excede 15 caracteres.");
+  }
+
+  const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
+  const modeloId = await obtenerOCrearModelo(equipoJson.modelo, id_marca);
+  const ubicacionId = await obtenerOCrearUbicacion(
+    equipoJson.ubicacion,
+    equipoJson.edificio
+  );
+  const usuarioId = await obtenerOCrearUsuario(
+    equipoJson.usuario,
+    equipoJson.uso
+  );
+  const dominioId = await obtenerOCrearDominio(equipoJson.dominio);
   const sistemaOperativoId = await obtenerIdSistemaOperativo(
     equipoJson.versionso
   );
-  const procesadorId = await obtenerIdProcesador(equipoJson.procesador);
-  const ramId = await obtenerIdRam(equipoJson.ram, equipoJson.tipo_ram);
+  const procesadorId = await obtenerOCrearProcesador(equipoJson.procesador);
+  const ramId = await obtenerOCrearRam(equipoJson.ram, equipoJson.tipo_ram);
   const versionOfficeId = 2;
-  const discoId = await obtenerIdDisco(equipoJson.disco);
+  const discoId = await obtenerOCrearDisco(equipoJson.disco);
 
   if (!ubicacionId || !usuarioId) {
     noRegistrados.push({
@@ -3165,7 +3313,7 @@ async function procesarComputadoraOLaptop(
       motivo: "No se encontró ubicación o usuario",
       datos: equipoJson,
     });
-    return;
+    return false;
   }
 
   const id_serie = await obtenerOCrearSerie(equipoJson.serie);
@@ -3187,6 +3335,10 @@ async function procesarComputadoraOLaptop(
         }
       );
     }
+  }
+
+  if (!equipoJson.inventario || String(equipoJson.inventario).trim() === "") {
+    equipoJson.inventario = "S/N";
   }
 
   const parametrosEquipo = {
@@ -3250,6 +3402,8 @@ async function procesarComputadoraOLaptop(
     componentesRegistrados: componentesRegistrados.length,
     datos: equipoJson,
   });
+
+  return true;
 }
 
 async function procesarComponenteIndividual(
@@ -3257,29 +3411,42 @@ async function procesarComponenteIndividual(
   componentesRegistrados,
   noRegistrados
 ) {
+  let insertado = false;
   if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
     for (const componente of equipoJson.componentes) {
       if (componente.tipo.toLowerCase() === equipoJson.tipo.toLowerCase()) {
         try {
-          const equipoExistente = await db.query(
-            `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
-            {
-              replacements: { inventario: componente.inventario },
-              type: QueryTypes.SELECT,
+          const inventarioComp = (componente.inventario || "").trim();
+          const inventarioEsSN =
+            !inventarioComp ||
+            inventarioComp.replace(/\s/g, "").toUpperCase() === "S/N";
+          if (!inventarioEsSN) {
+            const equipoExistente = await db.query(
+              `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
+              {
+                replacements: { inventario: inventarioComp },
+                type: QueryTypes.SELECT,
+              }
+            );
+            if (equipoExistente.length > 0) {
+              noRegistrados.push({
+                inventario: equipoJson.inventario,
+                motivo: "Ya existe en la base de datos",
+                datos: equipoJson,
+              });
+              continue;
             }
-          );
-
-          if (equipoExistente.length > 0) {
-            noRegistrados.push({
-              inventario: equipoJson.inventario,
-              motivo: "Ya existe en la base de datos",
-              datos: equipoJson,
-            });
-            continue;
           }
 
-          const ubicacionId = await obtenerIdUbicacion(equipoJson.ubicacion);
-          const usuarioId = await obtenerIdUsuario(equipoJson.usuario);
+          const ubicacionId = await obtenerOCrearUbicacion(
+            equipoJson.ubicacion,
+            equipoJson.edificio
+          );
+          const usuarioId = await obtenerOCrearUsuario(
+            equipoJson.usuario,
+            equipoJson.uso
+          );
+
           await procesarComponente(
             componente,
             equipoJson,
@@ -3287,6 +3454,7 @@ async function procesarComponenteIndividual(
             usuarioId,
             componentesRegistrados
           );
+          insertado = true;
         } catch (componenteError) {
           console.error(
             `Error al insertar componente ${componente.serie}:`,
@@ -3296,8 +3464,8 @@ async function procesarComponenteIndividual(
       }
     }
   }
+  return insertado;
 }
-
 async function procesarComponente(
   componente,
   equipoJson,
@@ -3305,9 +3473,20 @@ async function procesarComponente(
   usuarioId,
   componentesRegistrados
 ) {
+  const perifericoIdComponente =
+    (await obtenerIdPeriferico(componente.tipo)) || componente.perifericoId;
+
+  const id_marca = await obtenerOCrearMarca(
+    componente.marca,
+    perifericoIdComponente
+  );
+
+  const modeloIdComponente = await obtenerOCrearModelo(
+    componente.modelo,
+    id_marca
+  );
+
   const id_serie_componente = await obtenerOCrearSerie(componente.serie);
-  const modeloIdComponente =
-    (await obtenerIdModelo(componente.modelo)) || componente.modeloId;
 
   if (id_serie_componente && modeloIdComponente) {
     const existeRelacionComp = await db.query(
@@ -3333,8 +3512,10 @@ async function procesarComponente(
       );
     }
   }
-  const perifericoIdComponente =
-    (await obtenerIdPeriferico(componente.tipo)) || componente.perifericoId;
+
+  if (!componente.inventario || String(componente.inventario).trim() === "") {
+    componente.inventario = "S/N";
+  }
 
   const parametrosComponente = {
     p_tipo: componente.tipo_inventario || "activo",
@@ -3391,101 +3572,126 @@ async function obtenerIdPeriferico(nombrePeriferico) {
   }
 }
 
-async function obtenerIdModelo(nombreModelo) {
-  if (!nombreModelo) return null;
+async function obtenerOCrearEdificio(nombreEdificio) {
+  if (!nombreEdificio || nombreEdificio === "S/N") return null;
+  if (nombreEdificio.length > 50)
+    throw new Error("El nombre del edificio excede 50 caracteres.");
   try {
-    const modelo = await db.query(
-      `SELECT id_modelo FROM modelo WHERE nombre = :nombreModelo`,
-      {
-        replacements: { nombreModelo },
-        type: QueryTypes.SELECT,
-      }
+    let edificio = await db.query(
+      `SELECT id_edificio FROM edificio WHERE nombre = :nombreEdificio`,
+      { replacements: { nombreEdificio }, type: QueryTypes.SELECT }
     );
-    return modelo.length ? modelo[0].id_modelo : null;
+    if (edificio.length) return edificio[0].id_edificio;
+    const [result] = await db.query(
+      `INSERT INTO edificio (nombre) VALUES (:nombreEdificio)`,
+      { replacements: { nombreEdificio }, type: QueryTypes.INSERT }
+    );
+    return result;
   } catch (error) {
-    console.error("Error al obtener modelo:", error);
-    return null;
+    throw new Error("Error al obtener/crear edificio: " + error.message);
   }
 }
 
-async function obtenerIdUbicacion(nombreUbicacion) {
-  if (!nombreUbicacion || nombreUbicacion === "S/N") return null;
-
+async function obtenerOCrearUso(nombreUso) {
+  if (!nombreUso || nombreUso === "S/N") return null;
+  if (nombreUso.length > 20)
+    throw new Error("El nombre de uso excede 20 caracteres.");
   try {
-    const ubicacion = await Ubicacion.findOne({
+    let uso = await db.query(
+      `SELECT id_uso FROM uso WHERE nombre = :nombreUso`,
+      { replacements: { nombreUso }, type: QueryTypes.SELECT }
+    );
+    if (uso.length) return uso[0].id_uso;
+    const [result] = await db.query(
+      `INSERT INTO uso (nombre) VALUES (:nombreUso)`,
+      { replacements: { nombreUso }, type: QueryTypes.INSERT }
+    );
+    return result;
+  } catch (error) {
+    throw new Error("Error al obtener/crear uso: " + error.message);
+  }
+}
+
+async function obtenerOCrearUbicacion(nombreUbicacion, nombreEdificio) {
+  if (!nombreUbicacion || nombreUbicacion === "S/N" || !nombreEdificio)
+    return null;
+  if (nombreUbicacion.length > 20)
+    throw new Error("El nombre de la ubicación excede 20 caracteres.");
+  try {
+    const id_edificio = await obtenerOCrearEdificio(nombreEdificio);
+    let ubicacion = await Ubicacion.findOne({
       where: { nombre: nombreUbicacion },
       attributes: ["id_ubicacion"],
     });
-    return ubicacion?.id_ubicacion || null;
+    if (ubicacion) return ubicacion.id_ubicacion;
+    const nuevaUbicacion = await Ubicacion.create({
+      nombre: nombreUbicacion,
+      id_edificio: id_edificio,
+    });
+    return nuevaUbicacion.id_ubicacion;
   } catch (error) {
-    console.error("Error al obtener ubicación:", error);
-    return null;
+    throw new Error("Error al obtener/crear ubicación: " + error.message);
   }
 }
 
-async function obtenerIdUsuario(nombreUsuario) {
-  if (!nombreUsuario || nombreUsuario === "S/N") return null;
-
+async function obtenerOCrearUsuario(nombreUsuario, nombreUso) {
+  if (!nombreUsuario || nombreUsuario === "S/N" || !nombreUso) return null;
+  if (nombreUsuario.length > 30)
+    throw new Error("El nombre del usuario excede 30 caracteres.");
   try {
-    const usuario = await Usuario.findOne({
+    const id_uso = await obtenerOCrearUso(nombreUso);
+    let usuario = await Usuario.findOne({
       where: { nombre: nombreUsuario },
       attributes: ["id_usuario"],
     });
-    return usuario?.id_usuario || null;
+    if (usuario) return usuario.id_usuario;
+    const nuevoUsuario = await Usuario.create({
+      nombre: nombreUsuario,
+      id_uso: id_uso,
+    });
+    return nuevoUsuario.id_usuario;
   } catch (error) {
-    console.error("Error al obtener usuario:", error);
-    return null;
+    throw new Error("Error al obtener/crear usuario: " + error.message);
   }
 }
 
-async function obtenerIdDominio(nombreDominio) {
+async function obtenerOCrearDominio(nombreDominio) {
   if (!nombreDominio || nombreDominio.trim().toUpperCase() === "S/N") {
     return 1;
   }
+  if (nombreDominio.length > 50)
+    throw new Error("El nombre del dominio excede 50 caracteres.");
   try {
     const nombre = nombreDominio.trim();
-    const dominio = await Dominio.findOne({
+    let dominio = await Dominio.findOne({
       where: { nombre },
       attributes: ["id_dominio"],
     });
-    return dominio?.id_dominio || null;
+    if (dominio) return dominio.id_dominio;
+    dominio = await Dominio.create({ nombre });
+    return dominio.id_dominio;
   } catch (error) {
-    console.error("Error al obtener dominio:", error);
-    return null;
+    throw new Error("Error al obtener/crear dominio: " + error.message);
   }
 }
 
-async function obtenerIdVersionOffice(nombreOffice) {
-  if (!nombreOffice || nombreOffice.trim().toUpperCase() === "S/N") {
-    return 1;
-  }
-  try {
-    const nombre = nombreOffice.trim();
-    const office = await db.query(
-      `SELECT id_versionoffice FROM version_office WHERE nombre = :nombre`,
-      { replacements: { nombre }, type: QueryTypes.SELECT }
-    );
-    return office.length ? office[0].id_versionoffice : null;
-  } catch (error) {
-    console.error("Error al obtener version office:", error);
-    return null;
-  }
-}
-
-async function obtenerIdProcesador(nombreProcesador) {
+async function obtenerOCrearProcesador(nombreProcesador) {
   if (!nombreProcesador || nombreProcesador.trim().toUpperCase() === "S/N") {
     return 1;
   }
+  if (nombreProcesador.length > 50)
+    throw new Error("El nombre del procesador excede 50 caracteres.");
   try {
     const nombre = nombreProcesador.trim();
-    const procesador = await Procesador.findOne({
+    let procesador = await Procesador.findOne({
       where: { nombre },
       attributes: ["id_procesador"],
     });
-    return procesador?.id_procesador || null;
+    if (procesador) return procesador.id_procesador;
+    procesador = await Procesador.create({ nombre });
+    return procesador.id_procesador;
   } catch (error) {
-    console.error("Error al obtener procesador:", error);
-    return null;
+    throw new Error("Error al obtener/crear procesador: " + error.message);
   }
 }
 
@@ -3498,7 +3704,12 @@ function esSN(valor) {
 }
 
 async function obtenerIdSistemaOperativo(nombreSO) {
-  if (esSN(nombreSO)) {
+  if (
+    nombreSO === undefined ||
+    nombreSO === null ||
+    String(nombreSO).trim() === "" ||
+    esSN(nombreSO)
+  ) {
     return 1;
   }
   try {
@@ -3517,54 +3728,81 @@ async function obtenerIdSistemaOperativo(nombreSO) {
   }
 }
 
-async function obtenerIdDisco(capacidad) {
-  if (esSN(capacidad)) {
+async function obtenerOCrearDisco(capacidad) {
+  // Si capacidad es undefined, null, vacío o S/N, retorna 1
+  if (
+    capacidad === undefined ||
+    capacidad === null ||
+    String(capacidad).trim() === "" ||
+    esSN(capacidad)
+  ) {
     return 1;
+  }
+  if (String(capacidad).trim().length > 10) {
+    throw new Error("La capacidad del disco excede 10 caracteres.");
   }
   try {
     const cap = String(capacidad).replace(/\s/g, "").toLowerCase();
-    const disco = await Disco.findOne({
+    let disco = await Disco.findOne({
       where: db.where(
         db.fn("LOWER", db.fn("REPLACE", db.col("capacidad"), " ", "")),
         cap
       ),
       attributes: ["id_disco"],
     });
-    return disco?.id_disco || 1;
+    if (disco) return disco.id_disco;
+    disco = await Disco.create({ capacidad: String(capacidad).trim() });
+    return disco.id_disco;
   } catch (error) {
-    console.error("Error al obtener disco:", error);
-    return 1;
+    throw new Error("Error al obtener/crear disco: " + error.message);
   }
 }
 
-async function obtenerIdRam(capacidad, tipo) {
-  if (esSN(capacidad)) {
+async function obtenerOCrearRam(capacidad, tipo) {
+  // Si capacidad es undefined, null, vacío o S/N, retorna 1
+  if (
+    capacidad === undefined ||
+    capacidad === null ||
+    String(capacidad).trim() === "" ||
+    esSN(capacidad)
+  ) {
     return 1;
   }
+  // Si tipo es undefined, null, vacío o S/N, retorna 1
+  if (
+    tipo === undefined ||
+    tipo === null ||
+    String(tipo).trim() === "" ||
+    esSN(tipo)
+  ) {
+    return 1;
+  }
+  if (String(capacidad).trim().length > 6) {
+    throw new Error("La capacidad de la RAM excede 6 caracteres.");
+  }
+  if (String(tipo).trim().length > 20) {
+    throw new Error("El tipo de RAM excede 20 caracteres.");
+  }
   try {
+    const capacidadNorm = String(capacidad).trim().toLowerCase();
+    const tipoNorm = String(tipo).trim().toLowerCase();
     const whereClause = {
       [Op.and]: [
-        db.where(
-          db.fn("LOWER", db.col("capacidad")),
-          String(capacidad).trim().toLowerCase()
-        ),
+        db.where(db.fn("LOWER", db.col("capacidad")), capacidadNorm),
+        db.where(db.fn("LOWER", db.col("tipo")), tipoNorm),
       ],
     };
-    if (tipo && !esSN(tipo)) {
-      whereClause[Op.and].push(
-        db.where(
-          db.fn("LOWER", db.col("tipo")),
-          String(tipo).trim().toLowerCase()
-        )
-      );
-    }
-    const ram = await Ram.findOne({
+    let ram = await Ram.findOne({
       where: whereClause,
       attributes: ["id_ram"],
     });
-    return ram?.id_ram || 1;
+    if (ram) return ram.id_ram;
+    ram = await Ram.create({
+      capacidad: String(capacidad).trim(),
+      tipo: String(tipo).trim(),
+    });
+    return ram.id_ram;
   } catch (error) {
-    console.error("Error al obtener RAM:", error);
-    return 1;
+    throw new Error("Error al obtener/crear RAM: " + error.message);
   }
 }

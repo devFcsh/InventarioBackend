@@ -4,6 +4,7 @@ import { obtenerSeries, seriesPorModelo, agregarSerie, editarSerie, eliminarSeri
 
 router.get('/', obtenerSeries);
 router.get('/seriesPorModelo', seriesPorModelo);
+router.get('/existeSerie', existeSerie);
 router.post('/', agregarSerie);
 router.put('/', editarSerie);
 router.delete('/:id_serie', eliminarSerie)
