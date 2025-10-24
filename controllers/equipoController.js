@@ -2624,34 +2624,17 @@ export async function gestionarComponentesEditados(req, res) {
       );
     }
 
+
     for (const componente of componentes) {
-      const campos = [
-        componente.modelo,
-        componente.serie,
-        componente.inventario,
-      ];
-      const tieneDatos = campos.some(
-        (v) => v && String(v).trim().toUpperCase() !== "S/N"
-      );
-      if (!tieneDatos) continue;
+    if (componente.id_componente) {
+        continue;
+    }
 
       try {
-        const perifericoIdComponente =
-          (await obtenerIdPeriferico(componente.tipo)) ||
-          componente.perifericoId;
-
-        const id_marca = await obtenerOCrearMarca(
-          componente.marca,
-          perifericoIdComponente
-        );
-
-        const modeloIdComponente = await obtenerOCrearModelo(
-          componente.modelo,
-          id_marca
-        );
+        const perifericoIdComponente = componente.perifericoId;
 
         const id_serie_componente = await obtenerOCrearSerie(componente.serie);
-
+        const modeloIdComponente = componente.modeloId;
         if (id_serie_componente && modeloIdComponente) {
           const existeRelacionComp = await db.query(
             `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
@@ -2699,7 +2682,7 @@ export async function gestionarComponentesEditados(req, res) {
           }
         );
 
-        if ((equipoJson.tipo_inventario || "activo") === "activo") {
+        if (tipo === "activo") {
           await db.query(
             `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) VALUES (:idComponente, :ubicacionId, :usuarioId);`,
             {
@@ -2719,9 +2702,9 @@ export async function gestionarComponentesEditados(req, res) {
               },
             }
           );
-        } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
+        } else if (tipo === "bodega") {
           await db.query(
-            `INSERT INTO equipo_baja (id_equipo) VALUES (:idComponente);`,
+            `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
             {
               replacements: {
                 idComponente,
@@ -2730,7 +2713,6 @@ export async function gestionarComponentesEditados(req, res) {
           );
         }
 
-        componentesRegistrados.push(componente);
       } catch (componenteError) {
         console.error(
           `Error al insertar componente ${componente.serie}:`,
@@ -3729,7 +3711,6 @@ async function obtenerIdSistemaOperativo(nombreSO) {
 }
 
 async function obtenerOCrearDisco(capacidad) {
-  // Si capacidad es undefined, null, vacío o S/N, retorna 1
   if (
     capacidad === undefined ||
     capacidad === null ||
@@ -3759,7 +3740,6 @@ async function obtenerOCrearDisco(capacidad) {
 }
 
 async function obtenerOCrearRam(capacidad, tipo) {
-  // Si capacidad es undefined, null, vacío o S/N, retorna 1
   if (
     capacidad === undefined ||
     capacidad === null ||
@@ -3768,7 +3748,6 @@ async function obtenerOCrearRam(capacidad, tipo) {
   ) {
     return 1;
   }
-  // Si tipo es undefined, null, vacío o S/N, retorna 1
   if (
     tipo === undefined ||
     tipo === null ||
