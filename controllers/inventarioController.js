@@ -82,27 +82,3 @@ export async function existeInventario(req, res) {
     return res.status(500).json({ error: 'Error al consultar inventario' });
   }
 }
-
-export async function existeInventario(req, res) {
-  const { inventario } = req.query;
-  if (!inventario) {
-    return res.status(400).json({ error: "Se requiere el inventario" });
-  }
-  try {
-    const resultado = await db.query(
-      `SELECT id_equipo, inventario FROM equipo WHERE LOWER(TRIM(inventario)) = :inventario LIMIT 1`,
-      {
-        replacements: { inventario: String(inventario).trim().toLowerCase() },
-        type: QueryTypes.SELECT,
-      }
-    );
-    if (resultado.length) {
-      return res.json({ existe: true, equipo: resultado[0] });
-    } else {
-      return res.json({ existe: false });
-    }
-  } catch (error) {
-    console.error("Error al consultar inventario:", error);
-    return res.status(500).json({ error: "Error al consultar inventario" });
-  }
-}
