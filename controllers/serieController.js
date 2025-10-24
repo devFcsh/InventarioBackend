@@ -1,18 +1,17 @@
-import { QueryTypes } from 'sequelize';
-import db from '../models/index.js';
-import Serie from '../models/serie.js';
+import { QueryTypes } from "sequelize";
+import db from "../models/index.js";
+import Serie from "../models/serie.js";
 
 export async function obtenerSeries(req, res) {
   try {
     const series = await Serie.findAll({
-      attributes: ['id_serie', 'nombre']
+      attributes: ["id_serie", "nombre"],
     });
 
     return res.json(series);
-
   } catch (error) {
-    console.error('Error al obtener las series:', error);
-    return res.status(500).json({ error: 'Error al obtener las series' });
+    console.error("Error al obtener las series:", error);
+    return res.status(500).json({ error: "Error al obtener las series" });
   }
 }
 
@@ -42,10 +41,10 @@ export async function seriesPorModelo(req, res) {
 
     res.json(series);
   } catch (error) {
-    console.error('Error al obtener series:', error);
-    res.status(500).json({ error: 'Error al obtener series' });
+    console.error("Error al obtener series:", error);
+    res.status(500).json({ error: "Error al obtener series" });
   }
-};
+}
 
 export async function agregarSerie(req, res) {
   const { nombre, modeloId } = req.body;
@@ -53,7 +52,7 @@ export async function agregarSerie(req, res) {
   if (!nombre || !modeloId) {
     return res
       .status(400)
-      .json({ error: 'Se requiere tanto el nombre como el ID de modelo' });
+      .json({ error: "Se requiere tanto el nombre como el ID de modelo" });
   }
 
   try {
@@ -78,14 +77,14 @@ export async function agregarSerie(req, res) {
     });
 
     res.status(201).json({
-      mensaje: 'Serie agregada y asociada exitosamente al modelo',
+      mensaje: "Serie agregada y asociada exitosamente al modelo",
       serie: { nombre },
       id_serie,
       id_modelo: modeloId,
     });
   } catch (error) {
-    console.error('Error al agregar serie y asociar modelo:', error);
-    res.status(500).json({ error: 'Error al agregar serie y asociar modelo' });
+    console.error("Error al agregar serie y asociar modelo:", error);
+    res.status(500).json({ error: "Error al agregar serie y asociar modelo" });
   }
 }
 
@@ -96,15 +95,15 @@ export async function editarSerie(req, res) {
     const serie = await Serie.findByPk(id_serie);
 
     if (!serie) {
-      return res.status(404).json({ error: 'Serie no encontrado' });
+      return res.status(404).json({ error: "Serie no encontrado" });
     }
 
     await serie.update({ nombre: nuevoNombre });
 
-    return res.json({ message: 'Serie actualizado correctamente', serie });
+    return res.json({ message: "Serie actualizado correctamente", serie });
   } catch (error) {
-    console.error('Error al actualizar el serie:', error);
-    return res.status(500).json({ error: 'Error al actualizar el serie' });
+    console.error("Error al actualizar el serie:", error);
+    return res.status(500).json({ error: "Error al actualizar el serie" });
   }
 }
 
@@ -115,30 +114,30 @@ export async function eliminarSerie(req, res) {
     const serie = await Serie.findByPk(id_serie);
 
     if (!serie) {
-      return res.status(404).json({ error: 'Serie no encontrado' });
+      return res.status(404).json({ error: "Serie no encontrado" });
     }
 
     await serie.destroy();
 
-    return res.json({ message: 'Serie eliminado correctamente' });
+    return res.json({ message: "Serie eliminado correctamente" });
   } catch (error) {
-    console.error('Error al eliminar el serie:', error);
-    return res.status(500).json({ error: 'Error al eliminar el serie' });
+    console.error("Error al eliminar el serie:", error);
+    return res.status(500).json({ error: "Error al eliminar el serie" });
   }
 }
 
 export async function existeSerie(req, res) {
   const { nombre } = req.query;
   if (!nombre) {
-    return res.status(400).json({ error: 'Se requiere el nombre de la serie' });
+    return res.status(400).json({ error: "Se requiere el nombre de la serie" });
   }
   try {
     const serie = await Serie.findOne({
       where: db.where(
-        db.fn('LOWER', db.col('nombre')),
+        db.fn("LOWER", db.col("nombre")),
         String(nombre).trim().toLowerCase()
       ),
-      attributes: ['id_serie', 'nombre'],
+      attributes: ["id_serie", "nombre"],
     });
     if (serie) {
       return res.json({ existe: true, serie });
@@ -146,7 +145,7 @@ export async function existeSerie(req, res) {
       return res.json({ existe: false });
     }
   } catch (error) {
-    console.error('Error al consultar la serie:', error);
-    return res.status(500).json({ error: 'Error al consultar la serie' });
+    console.error("Error al consultar la serie:", error);
+    return res.status(500).json({ error: "Error al consultar la serie" });
   }
 }
