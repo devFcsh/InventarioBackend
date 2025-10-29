@@ -124,7 +124,6 @@ export async function editarUsuario(req, res) {
       },
       type: QueryTypes.UPDATE,
     });
-    console.log(result[1])
 
     if (id_usuario > 0) {
       res.json({ message: "Usuario actualizado correctamente" });
