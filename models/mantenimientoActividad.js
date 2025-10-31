@@ -10,12 +10,12 @@ const MantenimientoActividad = db.define('mantenimiento_actividad', {
       key: 'id_mantenimiento'
     }
   },
-  id_actividad_mantenimiento: {
+  id_actividad_periferico_tipo: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     references: {
-      model: 'actividad_mantenimiento',
-      key: 'id_actividad_mantenimiento'
+      model: 'actividad_periferico_tipo',
+      key: 'id_actividad_periferico_tipo'
     }
   },
   realizada: {

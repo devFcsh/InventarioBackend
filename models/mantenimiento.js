@@ -12,15 +12,11 @@ const Mantenimiento = db.define('mantenimiento', {
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
-  tipo: {
-    type: DataTypes.STRING(20),
-    allowNull: false
-  },
   hallazgos: {
     type: DataTypes.STRING(200),
     allowNull: true
   },
-  observaciones: {
+  recomendaciones: {
     type: DataTypes.STRING(200),
     allowNull: true
   },
