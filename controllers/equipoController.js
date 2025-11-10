@@ -1534,7 +1534,6 @@ export const obtenerActivoSimple = async (req, res) => {
       }
     );
 
-    // Si este equipo aparece como componente (id_componente = id), obtener info de la computadora padre
     const compRel = await db.query(
       `SELECT id_computadora FROM componente WHERE id_componente = :id LIMIT 1`,
       { replacements: { id }, type: QueryTypes.SELECT }
@@ -2254,7 +2253,7 @@ export async function editarEquipoSimple(req, res) {
     imagenRuta,
     observacion,
     id_lampara,
-    id_computadora, // nuevo campo opcional
+    id_computadora,
   } = req.body;
 
   try {
@@ -2419,9 +2418,7 @@ export async function editarEquipoSimple(req, res) {
       );
     }
 
-    // Si se envía id_computadora, relacionar este equipo como componente de la computadora indicada
     if (typeof id_computadora !== "undefined" && id_computadora !== null) {
-      // verificar que la computadora destino exista
       const pc = await db.query(
         `SELECT id_computadora FROM computadora WHERE id_computadora = :id_computadora`,
         { replacements: { id_computadora }, type: QueryTypes.SELECT }
@@ -2430,7 +2427,6 @@ export async function editarEquipoSimple(req, res) {
         return res.status(404).json({ error: "Computadora destino no encontrada" });
       }
 
-      // comprobar si ya existe relación en 'componente'
       const existe = await db.query(
         `SELECT id_componente, id_computadora FROM componente WHERE id_componente = :equipoId`,
         { replacements: { equipoId }, type: QueryTypes.SELECT }
@@ -4113,7 +4109,6 @@ export async function obtenerComputadorasPorPeriferico(req, res) {
   }
 
   try {
-    // Traer sólo las computadoras cuyo equipo tenga id_periferico = :id_periferico
     const computadoras = await db.query(
       `SELECT
          e.id_equipo AS id_equipo,

@@ -63,7 +63,6 @@ export async function obtenerMantenimientos(req, res) {
         }
       );
       mantenimiento.actividades = actividadesMantenimiento;
-      // exponer directamente el tipo de mantenimiento asociado al registro
       mantenimiento.tipo = mantenimiento.tipo_mantenimiento || null;
     }
 
@@ -86,7 +85,6 @@ export async function agregarMantenimiento(req, res) {
 
   const t = await db.transaction();
   try {
-    // obtener id_periferico del equipo
     const equipoRow = await db.query(
       `SELECT id_periferico FROM equipo WHERE id_equipo = :id_equipo`,
       { replacements: { id_equipo }, type: QueryTypes.SELECT, transaction: t }
@@ -97,7 +95,6 @@ export async function agregarMantenimiento(req, res) {
     }
     const id_periferico = equipoRow[0].id_periferico;
 
-    // obtener o crear tipo_mantenimiento
     let rowsTipo = await db.query(
       `SELECT id_tipo_mantenimiento FROM tipo_mantenimiento WHERE nombre = :tipo`,
       { replacements: { tipo }, type: QueryTypes.SELECT, transaction: t }
@@ -113,7 +110,6 @@ export async function agregarMantenimiento(req, res) {
       id_tipo_mantenimiento = insertTipoResult;
     }
 
-    // insertar mantenimiento (incluye fecha si fue provista)
     let insertMantenimientoResult;
     if (fecha) {
       [insertMantenimientoResult] = await db.query(
@@ -138,7 +134,6 @@ export async function agregarMantenimiento(req, res) {
     }
     const id_mantenimiento = insertMantenimientoResult;
 
-    // insertar actividades (si no vienen, obtener todas las apt del periférico+tipo)
     let aptRows = [];
     if (!Array.isArray(actividades) || actividades.length === 0) {
       aptRows = await db.query(
@@ -222,7 +217,7 @@ export async function agregarMantenimiento(req, res) {
 
 export async function obtenerActividadesEquipo(req, res) {
   const { id } = req.params;
-  const tipo = req.query.tipo; // optional: ?tipo=preventivo | correctivo | all
+  const tipo = req.query.tipo;
 
   try {
     const equipo = await db.query(
@@ -237,7 +232,6 @@ export async function obtenerActividadesEquipo(req, res) {
     }
     const id_periferico = equipo[0].id_periferico;
 
-    // si piden todas las actividades o no especifican tipo -> devolver todo para el periférico
     if (!tipo || tipo === "all") {
       const actividades = await db.query(
         `SELECT apt.id_actividad_periferico_tipo,
@@ -258,7 +252,6 @@ export async function obtenerActividadesEquipo(req, res) {
       return res.json({ actividades });
     }
 
-    // resolver id_tipo_mantenimiento por nombre
     const tipoRows = await db.query(
       `SELECT id_tipo_mantenimiento FROM tipo_mantenimiento WHERE nombre = :tipo`,
       { replacements: { tipo }, type: QueryTypes.SELECT }
@@ -291,14 +284,13 @@ export async function obtenerActividadesEquipo(req, res) {
 }
 
 export async function editarMantenimiento(req, res) {
-  const { id } = req.params; // id_mantenimiento
+  const { id } = req.params;
   const { tipo, hallazgos, recomendaciones, actividades, fecha } = req.body;
 
   if (!id) return res.status(400).json({ error: "Falta id de mantenimiento" });
 
   const t = await db.transaction();
   try {
-    // verificar existencia y obtener id_equipo
     const mantenimientoRow = await db.query(
       `SELECT id_mantenimiento, id_equipo FROM mantenimiento WHERE id_mantenimiento = :id`,
       { replacements: { id }, type: QueryTypes.SELECT, transaction: t }
@@ -309,7 +301,6 @@ export async function editarMantenimiento(req, res) {
     }
     const id_equipo = mantenimientoRow[0].id_equipo;
 
-    // obtener id_periferico del equipo
     const equipoRow = await db.query(
       `SELECT id_periferico FROM equipo WHERE id_equipo = :id_equipo`,
       { replacements: { id_equipo }, type: QueryTypes.SELECT, transaction: t }
@@ -320,7 +311,6 @@ export async function editarMantenimiento(req, res) {
     }
     const id_periferico = equipoRow[0].id_periferico;
 
-    // resolver id_tipo_mantenimiento si se indicó tipo
     let id_tipo_mantenimiento = null;
     if (tipo) {
       const tipoRows = await db.query(
@@ -338,7 +328,6 @@ export async function editarMantenimiento(req, res) {
       }
     }
 
-    // armar update dinámico
     const updates = [];
     const replacements = { id_mantenimiento: id };
     if (typeof hallazgos !== "undefined") {
@@ -363,15 +352,12 @@ export async function editarMantenimiento(req, res) {
       await db.query(sql, { replacements, type: QueryTypes.UPDATE, transaction: t });
     }
 
-    // si vienen actividades, reemplazar las existentes
     if (Array.isArray(actividades)) {
-      // eliminar existentes
       await db.query(
         `DELETE FROM mantenimiento_actividad WHERE id_mantenimiento = :id_mantenimiento`,
         { replacements: { id_mantenimiento: id }, type: QueryTypes.DELETE, transaction: t }
       );
 
-      // insertar nuevas actividades (resolver id_apt si es necesario)
       for (const act of actividades) {
         let id_apt = act.id_actividad_periferico_tipo || null;
 
@@ -439,7 +425,7 @@ export async function editarMantenimiento(req, res) {
 }
 
 export async function eliminarMantenimiento(req, res) {
-  const { id } = req.params; // id_mantenimiento
+  const { id } = req.params;
 
   if (!id) return res.status(400).json({ error: "Falta id de mantenimiento" });
 
