@@ -1468,7 +1468,7 @@ export const obtenerActivoSimple = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const equipo = await db.query(
+    const equipoRows = await db.query(
       `SELECT 
          e.id_equipo,
          e.inventario,
@@ -1498,16 +1498,18 @@ export const obtenerActivoSimple = async (req, res) => {
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
        WHERE e.id_equipo = :id
-      AND (e.id_periferico = p.id_periferico)`,
+       AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
       }
     );
 
-    if (!equipo.length) {
+    if (!equipoRows.length) {
       return res.status(404).json({ error: "Equipo no encontrado" });
     }
+
+    const equipo = equipoRows[0];
 
     const componentes = await db.query(
       `SELECT c.id_componente, 
@@ -1518,11 +1520,13 @@ export const obtenerActivoSimple = async (req, res) => {
               s.nombre AS serie 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN periferico p ON e.id_serie = p.id_periferico
-       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
        JOIN serie s ON e.id_serie = s.id_serie
+       JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+       JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+       JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+       JOIN marca m ON mm.id_marca = m.id_marca
+       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+       JOIN periferico p ON mp.id_periferico = p.id_periferico
        WHERE c.id_computadora = :id`,
       {
         replacements: { id },
@@ -1530,7 +1534,30 @@ export const obtenerActivoSimple = async (req, res) => {
       }
     );
 
-    res.json({ equipo: equipo[0], componentes });
+    // Si este equipo aparece como componente (id_componente = id), obtener info de la computadora padre
+    const compRel = await db.query(
+      `SELECT id_computadora FROM componente WHERE id_componente = :id LIMIT 1`,
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    const response = { equipo, componentes };
+
+    if (compRel.length) {
+      const id_computadora = compRel[0].id_computadora;
+      const padreInfo = await db.query(
+        `SELECT id_serie, id_periferico FROM equipo WHERE id_equipo = :idPadre LIMIT 1`,
+        { replacements: { idPadre: id_computadora }, type: QueryTypes.SELECT }
+      );
+
+      response.isComponente = true;
+      response.id_computadora = id_computadora;
+      response.id_serie_computadora = padreInfo.length ? padreInfo[0].id_serie : null;
+      response.id_periferico_computadora = padreInfo.length ? padreInfo[0].id_periferico : null;
+    } else {
+      response.isComponente = false;
+    }
+
+    res.json(response);
   } catch (error) {
     console.error("Error al obtener el equipo:", error);
     res.status(500).json({ error: "Error al obtener el equipo" });
@@ -2227,6 +2254,7 @@ export async function editarEquipoSimple(req, res) {
     imagenRuta,
     observacion,
     id_lampara,
+    id_computadora, // nuevo campo opcional
   } = req.body;
 
   try {
@@ -2389,6 +2417,36 @@ export async function editarEquipoSimple(req, res) {
           type: QueryTypes.DELETE,
         }
       );
+    }
+
+    // Si se envía id_computadora, relacionar este equipo como componente de la computadora indicada
+    if (typeof id_computadora !== "undefined" && id_computadora !== null) {
+      // verificar que la computadora destino exista
+      const pc = await db.query(
+        `SELECT id_computadora FROM computadora WHERE id_computadora = :id_computadora`,
+        { replacements: { id_computadora }, type: QueryTypes.SELECT }
+      );
+      if (!pc.length) {
+        return res.status(404).json({ error: "Computadora destino no encontrada" });
+      }
+
+      // comprobar si ya existe relación en 'componente'
+      const existe = await db.query(
+        `SELECT id_componente, id_computadora FROM componente WHERE id_componente = :equipoId`,
+        { replacements: { equipoId }, type: QueryTypes.SELECT }
+      );
+
+      if (!existe.length) {
+        await db.query(
+          `INSERT INTO componente (id_componente, id_computadora) VALUES (:equipoId, :id_computadora)`,
+          { replacements: { equipoId, id_computadora }, type: QueryTypes.INSERT }
+        );
+      } else if (existe[0].id_computadora !== id_computadora) {
+        await db.query(
+          `UPDATE componente SET id_computadora = :id_computadora WHERE id_componente = :equipoId`,
+          { replacements: { id_computadora, equipoId }, type: QueryTypes.UPDATE }
+        );
+      }
     }
 
     res.json({ message: "Equipo actualizado con éxito" });
@@ -4044,5 +4102,36 @@ async function obtenerOCrearRam(capacidad, tipo) {
     return ram.id_ram;
   } catch (error) {
     throw new Error("Error al obtener/crear RAM: " + error.message);
+  }
+}
+
+export async function obtenerComputadorasPorPeriferico(req, res) {
+  const { id } = req.params;
+  const id_periferico = parseInt(id, 10);
+  if (isNaN(id_periferico)) {
+    return res.status(400).json({ error: "id_periferico inválido" });
+  }
+
+  try {
+    // Traer sólo las computadoras cuyo equipo tenga id_periferico = :id_periferico
+    const computadoras = await db.query(
+      `SELECT
+         e.id_equipo AS id_equipo,
+         s.nombre AS serie
+       FROM equipo e
+       JOIN computadora c ON e.id_equipo = c.id_computadora
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       WHERE e.id_periferico = :id_periferico
+       ORDER BY s.nombre, e.id_equipo`,
+      {
+        replacements: { id_periferico },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.json({ computadoras });
+  } catch (error) {
+    console.error("Error al obtener computadoras por periferico:", error);
+    res.status(500).json({ error: "Error al obtener computadoras por periférico" });
   }
 }
