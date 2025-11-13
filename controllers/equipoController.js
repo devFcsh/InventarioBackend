@@ -138,8 +138,17 @@ function validarTexto(input) {
 }
 
 export async function obtenerEquiposActivos(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
-    req.query;
+  let {
+    perifericoId,
+    marcaId,
+    modeloId,
+    serieId,
+    inventario,
+    limit,
+    offset,
+    sortBy,
+    sortDir,
+  } = req.query;
 
   perifericoId = validarTexto(perifericoId);
   marcaId = validarTexto(marcaId);
@@ -149,9 +158,38 @@ export async function obtenerEquiposActivos(req, res) {
 
   limit = parseInt(limit, 10);
   offset = parseInt(offset, 10);
-
   if (isNaN(limit) || limit <= 0) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
+
+  const SORT_COLUMN_MAP = {
+    inventario: "e.inventario",
+    periferico: "p.nombre",
+    marca: "m.nombre",
+    modelo: "mo.nombre",
+    serie: "s.nombre",
+    usuario: "u.nombre",
+    uso: "uso.nombre",
+    edificio: "ed.nombre",
+  };
+
+  if (typeof sortBy === "string") sortBy = sortBy.trim();
+  else sortBy = null;
+
+  if (typeof sortDir === "string") {
+    sortDir = sortDir.trim().toLowerCase();
+    if (sortDir !== "asc" && sortDir !== "desc") sortDir = "asc";
+  } else {
+    sortDir = "asc";
+  }
+
+  let orderClause = "";
+  if (sortBy && SORT_COLUMN_MAP[sortBy]) {
+    const column = SORT_COLUMN_MAP[sortBy];
+    const direction = sortDir === "desc" ? "DESC" : "ASC";
+    orderClause = `ORDER BY ${column} ${direction}`;
+  } else {
+    orderClause = `ORDER BY e.inventario ASC`;
+  }
 
   try {
     const query = `
@@ -185,7 +223,7 @@ export async function obtenerEquiposActivos(req, res) {
       AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
       AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
       AND (e.id_periferico = p.id_periferico)
-
+      ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -206,9 +244,7 @@ export async function obtenerEquiposActivos(req, res) {
     res.json({ total, equipos });
   } catch (error) {
     console.error("Error al obtener equipos y contar activos:", error);
-    res
-      .status(500)
-      .json({ error: "Error al obtener equipos y contar activos" });
+    res.status(500).json({ error: "Error al obtener equipos y contar activos" });
   }
 }
 
@@ -287,7 +323,7 @@ export async function obtenerEquiposRed(req, res) {
 }
 
 export async function obtenerEquiposBodega(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset, sortBy, sortDir } =
     req.query;
 
   perifericoId = validarTexto(perifericoId);
@@ -301,6 +337,33 @@ export async function obtenerEquiposBodega(req, res) {
 
   if (isNaN(limit) || limit <= 0) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
+
+  const SORT_COLUMN_MAP = {
+    inventario: "e.inventario",
+    periferico: "p.nombre",
+    marca: "m.nombre",
+    modelo: "mo.nombre",
+    serie: "s.nombre",
+  };
+
+  if (typeof sortBy === "string") sortBy = sortBy.trim();
+  else sortBy = null;
+
+  if (typeof sortDir === "string") {
+    sortDir = sortDir.trim().toLowerCase();
+    if (sortDir !== "asc" && sortDir !== "desc") sortDir = "asc";
+  } else {
+    sortDir = "asc";
+  }
+
+  let orderClause = "";
+  if (sortBy && SORT_COLUMN_MAP[sortBy]) {
+    const column = SORT_COLUMN_MAP[sortBy];
+    const direction = sortDir === "desc" ? "DESC" : "ASC";
+    orderClause = `ORDER BY ${column} ${direction}`;
+  } else {
+    orderClause = `ORDER BY e.inventario ASC`;
+  }
 
   try {
     const query = `
@@ -326,18 +389,19 @@ export async function obtenerEquiposBodega(req, res) {
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
         AND (e.id_periferico = p.id_periferico)
-        LIMIT :limit OFFSET :offset;
+      ${orderClause}
+      LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
       replacements: {
-        perifericoId,
-        marcaId,
-        modeloId,
-        serieId,
-        inventario,
-        limit,
-        offset,
+        perifericoId: perifericoId || null,
+        marcaId: marcaId || null,
+        modeloId: modeloId || null,
+        serieId: serieId || null,
+        inventario: inventario || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
       },
       type: QueryTypes.SELECT,
     });
@@ -418,7 +482,7 @@ export async function obtenerEquiposRedBodega(req, res) {
 }
 
 export async function obtenerEquiposBaja(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset, sortBy, sortDir } =
     req.query;
 
   perifericoId = validarTexto(perifericoId);
@@ -432,6 +496,36 @@ export async function obtenerEquiposBaja(req, res) {
 
   if (isNaN(limit) || limit <= 0) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
+
+  const SORT_COLUMN_MAP = {
+    inventario: "e.inventario",
+    periferico: "p.nombre",
+    marca: "m.nombre",
+    modelo: "mo.nombre",
+    serie: "s.nombre",
+    usuario: "u.nombre",
+    uso: "uso.nombre",
+    edificio: "ed.nombre",
+  };
+
+  if (typeof sortBy === "string") sortBy = sortBy.trim();
+  else sortBy = null;
+
+  if (typeof sortDir === "string") {
+    sortDir = sortDir.trim().toLowerCase();
+    if (sortDir !== "asc" && sortDir !== "desc") sortDir = "asc";
+  } else {
+    sortDir = "asc";
+  }
+
+  let orderClause = "";
+  if (sortBy && SORT_COLUMN_MAP[sortBy]) {
+    const column = SORT_COLUMN_MAP[sortBy];
+    const direction = sortDir === "desc" ? "DESC" : "ASC";
+    orderClause = `ORDER BY ${column} ${direction}`;
+  } else {
+    orderClause = `ORDER BY e.inventario ASC`;
+  }
 
   try {
     const query = `
@@ -457,18 +551,19 @@ export async function obtenerEquiposBaja(req, res) {
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
         AND (e.id_periferico = p.id_periferico)
+      ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
       replacements: {
-        perifericoId,
-        marcaId,
-        modeloId,
-        serieId,
-        inventario,
-        limit,
-        offset,
+        perifericoId: perifericoId || null,
+        marcaId: marcaId || null,
+        modeloId: modeloId || null,
+        serieId: serieId || null,
+        inventario: inventario || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
       },
       type: QueryTypes.SELECT,
     });
@@ -4103,19 +4198,31 @@ async function obtenerOCrearRam(capacidad, tipo) {
 
 export async function obtenerComputadorasPorPeriferico(req, res) {
   const { id } = req.params;
+  const { tipo = "activo" } = req.query; // espera "activo" o "bodega"
   const id_periferico = parseInt(id, 10);
+
   if (isNaN(id_periferico)) {
     return res.status(400).json({ error: "id_periferico inválido" });
   }
+  if (tipo !== "activo" && tipo !== "bodega") {
+    return res.status(400).json({ error: "tipo inválido. Debe ser 'activo' o 'bodega'" });
+  }
 
   try {
+    const joinInventario =
+      tipo === "activo"
+        ? "JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo"
+        : "JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo";
+
     const computadoras = await db.query(
       `SELECT
          e.id_equipo AS id_equipo,
+         s.id_serie AS id_serie,
          s.nombre AS serie
        FROM equipo e
        JOIN computadora c ON e.id_equipo = c.id_computadora
        LEFT JOIN serie s ON e.id_serie = s.id_serie
+       ${joinInventario}
        WHERE e.id_periferico = :id_periferico
        ORDER BY s.nombre, e.id_equipo`,
       {
@@ -4124,7 +4231,7 @@ export async function obtenerComputadorasPorPeriferico(req, res) {
       }
     );
 
-    res.json({ computadoras });
+    res.json({ computadoras, tipo });
   } catch (error) {
     console.error("Error al obtener computadoras por periferico:", error);
     res.status(500).json({ error: "Error al obtener computadoras por periférico" });
