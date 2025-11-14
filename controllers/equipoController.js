@@ -138,8 +138,17 @@ function validarTexto(input) {
 }
 
 export async function obtenerEquiposActivos(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
-    req.query;
+  let {
+    perifericoId,
+    marcaId,
+    modeloId,
+    serieId,
+    inventario,
+    limit,
+    offset,
+    sortBy,
+    sortDir,
+  } = req.query;
 
   perifericoId = validarTexto(perifericoId);
   marcaId = validarTexto(marcaId);
@@ -149,9 +158,38 @@ export async function obtenerEquiposActivos(req, res) {
 
   limit = parseInt(limit, 10);
   offset = parseInt(offset, 10);
-
   if (isNaN(limit) || limit <= 0) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
+
+  const SORT_COLUMN_MAP = {
+    inventario: "e.inventario",
+    periferico: "p.nombre",
+    marca: "m.nombre",
+    modelo: "mo.nombre",
+    serie: "s.nombre",
+    usuario: "u.nombre",
+    uso: "uso.nombre",
+    edificio: "ed.nombre",
+  };
+
+  if (typeof sortBy === "string") sortBy = sortBy.trim();
+  else sortBy = null;
+
+  if (typeof sortDir === "string") {
+    sortDir = sortDir.trim().toLowerCase();
+    if (sortDir !== "asc" && sortDir !== "desc") sortDir = "asc";
+  } else {
+    sortDir = "asc";
+  }
+
+  let orderClause = "";
+  if (sortBy && SORT_COLUMN_MAP[sortBy]) {
+    const column = SORT_COLUMN_MAP[sortBy];
+    const direction = sortDir === "desc" ? "DESC" : "ASC";
+    orderClause = `ORDER BY ${column} ${direction}`;
+  } else {
+    orderClause = `ORDER BY e.inventario ASC`;
+  }
 
   try {
     const query = `
@@ -185,7 +223,7 @@ export async function obtenerEquiposActivos(req, res) {
       AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
       AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
       AND (e.id_periferico = p.id_periferico)
-
+      ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -206,9 +244,7 @@ export async function obtenerEquiposActivos(req, res) {
     res.json({ total, equipos });
   } catch (error) {
     console.error("Error al obtener equipos y contar activos:", error);
-    res
-      .status(500)
-      .json({ error: "Error al obtener equipos y contar activos" });
+    res.status(500).json({ error: "Error al obtener equipos y contar activos" });
   }
 }
 
@@ -287,7 +323,7 @@ export async function obtenerEquiposRed(req, res) {
 }
 
 export async function obtenerEquiposBodega(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset, sortBy, sortDir } =
     req.query;
 
   perifericoId = validarTexto(perifericoId);
@@ -301,6 +337,33 @@ export async function obtenerEquiposBodega(req, res) {
 
   if (isNaN(limit) || limit <= 0) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
+
+  const SORT_COLUMN_MAP = {
+    inventario: "e.inventario",
+    periferico: "p.nombre",
+    marca: "m.nombre",
+    modelo: "mo.nombre",
+    serie: "s.nombre",
+  };
+
+  if (typeof sortBy === "string") sortBy = sortBy.trim();
+  else sortBy = null;
+
+  if (typeof sortDir === "string") {
+    sortDir = sortDir.trim().toLowerCase();
+    if (sortDir !== "asc" && sortDir !== "desc") sortDir = "asc";
+  } else {
+    sortDir = "asc";
+  }
+
+  let orderClause = "";
+  if (sortBy && SORT_COLUMN_MAP[sortBy]) {
+    const column = SORT_COLUMN_MAP[sortBy];
+    const direction = sortDir === "desc" ? "DESC" : "ASC";
+    orderClause = `ORDER BY ${column} ${direction}`;
+  } else {
+    orderClause = `ORDER BY e.inventario ASC`;
+  }
 
   try {
     const query = `
@@ -326,18 +389,19 @@ export async function obtenerEquiposBodega(req, res) {
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
         AND (e.id_periferico = p.id_periferico)
-        LIMIT :limit OFFSET :offset;
+      ${orderClause}
+      LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
       replacements: {
-        perifericoId,
-        marcaId,
-        modeloId,
-        serieId,
-        inventario,
-        limit,
-        offset,
+        perifericoId: perifericoId || null,
+        marcaId: marcaId || null,
+        modeloId: modeloId || null,
+        serieId: serieId || null,
+        inventario: inventario || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
       },
       type: QueryTypes.SELECT,
     });
@@ -418,7 +482,7 @@ export async function obtenerEquiposRedBodega(req, res) {
 }
 
 export async function obtenerEquiposBaja(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset } =
+  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset, sortBy, sortDir } =
     req.query;
 
   perifericoId = validarTexto(perifericoId);
@@ -432,6 +496,36 @@ export async function obtenerEquiposBaja(req, res) {
 
   if (isNaN(limit) || limit <= 0) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
+
+  const SORT_COLUMN_MAP = {
+    inventario: "e.inventario",
+    periferico: "p.nombre",
+    marca: "m.nombre",
+    modelo: "mo.nombre",
+    serie: "s.nombre",
+    usuario: "u.nombre",
+    uso: "uso.nombre",
+    edificio: "ed.nombre",
+  };
+
+  if (typeof sortBy === "string") sortBy = sortBy.trim();
+  else sortBy = null;
+
+  if (typeof sortDir === "string") {
+    sortDir = sortDir.trim().toLowerCase();
+    if (sortDir !== "asc" && sortDir !== "desc") sortDir = "asc";
+  } else {
+    sortDir = "asc";
+  }
+
+  let orderClause = "";
+  if (sortBy && SORT_COLUMN_MAP[sortBy]) {
+    const column = SORT_COLUMN_MAP[sortBy];
+    const direction = sortDir === "desc" ? "DESC" : "ASC";
+    orderClause = `ORDER BY ${column} ${direction}`;
+  } else {
+    orderClause = `ORDER BY e.inventario ASC`;
+  }
 
   try {
     const query = `
@@ -457,18 +551,19 @@ export async function obtenerEquiposBaja(req, res) {
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
         AND (e.id_periferico = p.id_periferico)
+      ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
 
     const equipos = await db.query(query, {
       replacements: {
-        perifericoId,
-        marcaId,
-        modeloId,
-        serieId,
-        inventario,
-        limit,
-        offset,
+        perifericoId: perifericoId || null,
+        marcaId: marcaId || null,
+        modeloId: modeloId || null,
+        serieId: serieId || null,
+        inventario: inventario || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
       },
       type: QueryTypes.SELECT,
     });
@@ -1468,7 +1563,7 @@ export const obtenerActivoSimple = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const equipo = await db.query(
+    const equipoRows = await db.query(
       `SELECT 
          e.id_equipo,
          e.inventario,
@@ -1498,16 +1593,18 @@ export const obtenerActivoSimple = async (req, res) => {
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
        WHERE e.id_equipo = :id
-      AND (e.id_periferico = p.id_periferico)`,
+       AND (e.id_periferico = p.id_periferico)`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
       }
     );
 
-    if (!equipo.length) {
+    if (!equipoRows.length) {
       return res.status(404).json({ error: "Equipo no encontrado" });
     }
+
+    const equipo = equipoRows[0];
 
     const componentes = await db.query(
       `SELECT c.id_componente, 
@@ -1518,11 +1615,13 @@ export const obtenerActivoSimple = async (req, res) => {
               s.nombre AS serie 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN periferico p ON e.id_serie = p.id_periferico
-       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
        JOIN serie s ON e.id_serie = s.id_serie
+       JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+       JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+       JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
+       JOIN marca m ON mm.id_marca = m.id_marca
+       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
+       JOIN periferico p ON mp.id_periferico = p.id_periferico
        WHERE c.id_computadora = :id`,
       {
         replacements: { id },
@@ -1530,7 +1629,29 @@ export const obtenerActivoSimple = async (req, res) => {
       }
     );
 
-    res.json({ equipo: equipo[0], componentes });
+    const compRel = await db.query(
+      `SELECT id_computadora FROM componente WHERE id_componente = :id LIMIT 1`,
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    const response = { equipo, componentes };
+
+    if (compRel.length) {
+      const id_computadora = compRel[0].id_computadora;
+      const padreInfo = await db.query(
+        `SELECT id_serie, id_periferico FROM equipo WHERE id_equipo = :idPadre LIMIT 1`,
+        { replacements: { idPadre: id_computadora }, type: QueryTypes.SELECT }
+      );
+
+      response.isComponente = true;
+      response.id_computadora = id_computadora;
+      response.id_serie_computadora = padreInfo.length ? padreInfo[0].id_serie : null;
+      response.id_periferico_computadora = padreInfo.length ? padreInfo[0].id_periferico : null;
+    } else {
+      response.isComponente = false;
+    }
+
+    res.json(response);
   } catch (error) {
     console.error("Error al obtener el equipo:", error);
     res.status(500).json({ error: "Error al obtener el equipo" });
@@ -2227,6 +2348,7 @@ export async function editarEquipoSimple(req, res) {
     imagenRuta,
     observacion,
     id_lampara,
+    id_computadora,
   } = req.body;
 
   try {
@@ -2389,6 +2511,33 @@ export async function editarEquipoSimple(req, res) {
           type: QueryTypes.DELETE,
         }
       );
+    }
+
+    if (typeof id_computadora !== "undefined" && id_computadora !== null) {
+      const pc = await db.query(
+        `SELECT id_computadora FROM computadora WHERE id_computadora = :id_computadora`,
+        { replacements: { id_computadora }, type: QueryTypes.SELECT }
+      );
+      if (!pc.length) {
+        return res.status(404).json({ error: "Computadora destino no encontrada" });
+      }
+
+      const existe = await db.query(
+        `SELECT id_componente, id_computadora FROM componente WHERE id_componente = :equipoId`,
+        { replacements: { equipoId }, type: QueryTypes.SELECT }
+      );
+
+      if (!existe.length) {
+        await db.query(
+          `INSERT INTO componente (id_componente, id_computadora) VALUES (:equipoId, :id_computadora)`,
+          { replacements: { equipoId, id_computadora }, type: QueryTypes.INSERT }
+        );
+      } else if (existe[0].id_computadora !== id_computadora) {
+        await db.query(
+          `UPDATE componente SET id_computadora = :id_computadora WHERE id_componente = :equipoId`,
+          { replacements: { id_computadora, equipoId }, type: QueryTypes.UPDATE }
+        );
+      }
     }
 
     res.json({ message: "Equipo actualizado con éxito" });
@@ -4044,5 +4193,47 @@ async function obtenerOCrearRam(capacidad, tipo) {
     return ram.id_ram;
   } catch (error) {
     throw new Error("Error al obtener/crear RAM: " + error.message);
+  }
+}
+
+export async function obtenerComputadorasPorPeriferico(req, res) {
+  const { id } = req.params;
+  const { tipo = "activo" } = req.query; // espera "activo" o "bodega"
+  const id_periferico = parseInt(id, 10);
+
+  if (isNaN(id_periferico)) {
+    return res.status(400).json({ error: "id_periferico inválido" });
+  }
+  if (tipo !== "activo" && tipo !== "bodega") {
+    return res.status(400).json({ error: "tipo inválido. Debe ser 'activo' o 'bodega'" });
+  }
+
+  try {
+    const joinInventario =
+      tipo === "activo"
+        ? "JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo"
+        : "JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo";
+
+    const computadoras = await db.query(
+      `SELECT
+         e.id_equipo AS id_equipo,
+         s.id_serie AS id_serie,
+         s.nombre AS serie
+       FROM equipo e
+       JOIN computadora c ON e.id_equipo = c.id_computadora
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       ${joinInventario}
+       WHERE e.id_periferico = :id_periferico
+       ORDER BY s.nombre, e.id_equipo`,
+      {
+        replacements: { id_periferico },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.json({ computadoras, tipo });
+  } catch (error) {
+    console.error("Error al obtener computadoras por periferico:", error);
+    res.status(500).json({ error: "Error al obtener computadoras por periférico" });
   }
 }
