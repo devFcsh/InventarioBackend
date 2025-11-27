@@ -567,11 +567,37 @@ function validarTexto(input) {
 }
 
 export async function obtenerListaMantenimientos(req, res) {
-  let { inventario, serie, limit, offset, sortBy, sortDir } = req.query;
+  let { inventario, serie, limit, offset, sortBy, sortDir, fechaDesde, fechaHasta } = req.query;
+
+  const rawFechaDesde = fechaDesde;
+  const rawFechaHasta = fechaHasta;
+
   inventario = validarTexto(inventario);
   serie = validarTexto(serie);
 
-  console.log("inventarIOOOO ", inventario)
+  function pad(n) {
+    return n < 10 ? '0' + n : String(n);
+  }
+  function formatDateForMySQL(d) {
+    const date = new Date(d);
+    if (Number.isNaN(date.getTime())) return null;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+
+  fechaDesde = typeof rawFechaDesde === 'string' ? rawFechaDesde.trim() : rawFechaDesde;
+  fechaHasta = typeof rawFechaHasta === 'string' ? rawFechaHasta.trim() : rawFechaHasta;
+
+  let fechaDesdeFmt = null;
+  let fechaHastaFmt = null;
+  if (typeof fechaDesde !== 'undefined' && fechaDesde !== null && fechaDesde !== '') {
+    fechaDesdeFmt = formatDateForMySQL(fechaDesde);
+    if (!fechaDesdeFmt) return res.status(400).json({ error: 'fechaDesde inválida' });
+  }
+  if (typeof fechaHasta !== 'undefined' && fechaHasta !== null && fechaHasta !== '') {
+    fechaHastaFmt = formatDateForMySQL(fechaHasta);
+    if (!fechaHastaFmt) return res.status(400).json({ error: 'fechaHasta inválida' });
+  }
+
 
   limit = parseInt(limit, 10);
   offset = parseInt(offset, 10);
@@ -620,6 +646,8 @@ export async function obtenerListaMantenimientos(req, res) {
       LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
       WHERE (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
         AND (:serie IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serie), '%'))
+        AND (:fecha_desde IS NULL OR m.fecha >= :fecha_desde)
+        AND (:fecha_hasta IS NULL OR m.fecha <= :fecha_hasta)
       ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
@@ -628,6 +656,8 @@ export async function obtenerListaMantenimientos(req, res) {
       replacements: {
         inventario: inventario || null,
         serie: serie || null,
+        fecha_desde: fechaDesdeFmt || null,
+        fecha_hasta: fechaHastaFmt || null,
         limit: parseInt(limit, 10) || 10,
         offset: parseInt(offset, 10) || 0,
       },
