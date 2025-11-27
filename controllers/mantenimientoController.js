@@ -21,6 +21,7 @@ export async function obtenerMantenimientos(req, res) {
       `SELECT 
           m.id_mantenimiento,
           m.fecha,
+          m.autor,
           m.hallazgos,
           m.recomendaciones,
           m.id_tipo_mantenimiento,
@@ -77,11 +78,13 @@ export async function obtenerMantenimientos(req, res) {
 }
 
 export async function agregarMantenimiento(req, res) {
-  const { id_equipo, tipo, hallazgos, recomendaciones, actividades, fecha } = req.body;
+  const { id_equipo, tipo, hallazgos, recomendaciones, actividades, fecha, autor } = req.body;
 
   if (!id_equipo || !tipo) {
     return res.status(400).json({ error: "Datos incompletos (falta id_equipo o tipo)" });
   }
+
+  const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
 
   const t = await db.transaction();
   try {
@@ -113,20 +116,20 @@ export async function agregarMantenimiento(req, res) {
     let insertMantenimientoResult;
     if (fecha) {
       [insertMantenimientoResult] = await db.query(
-        `INSERT INTO mantenimiento (fecha, hallazgos, recomendaciones, id_equipo, id_tipo_mantenimiento) 
-         VALUES (:fecha, :hallazgos, :recomendaciones, :id_equipo, :id_tipo_mantenimiento)`,
+        `INSERT INTO mantenimiento (fecha, hallazgos, recomendaciones, id_equipo, id_tipo_mantenimiento, autor) 
+         VALUES (:fecha, :hallazgos, :recomendaciones, :id_equipo, :id_tipo_mantenimiento, :autor)`,
         {
-          replacements: { fecha, hallazgos: hallazgos || null, recomendaciones: recomendaciones || null, id_equipo, id_tipo_mantenimiento },
+          replacements: { fecha, hallazgos: hallazgos || null, recomendaciones: recomendaciones || null, id_equipo, id_tipo_mantenimiento, autor: autorValue },
           type: QueryTypes.INSERT,
           transaction: t,
         }
       );
     } else {
       [insertMantenimientoResult] = await db.query(
-        `INSERT INTO mantenimiento (hallazgos, recomendaciones, id_equipo, id_tipo_mantenimiento) 
-         VALUES (:hallazgos, :recomendaciones, :id_equipo, :id_tipo_mantenimiento)`,
+        `INSERT INTO mantenimiento (hallazgos, recomendaciones, id_equipo, id_tipo_mantenimiento, autor) 
+         VALUES (:hallazgos, :recomendaciones, :id_equipo, :id_tipo_mantenimiento, :autor)`,
         {
-          replacements: { hallazgos: hallazgos || null, recomendaciones: recomendaciones || null, id_equipo, id_tipo_mantenimiento },
+          replacements: { hallazgos: hallazgos || null, recomendaciones: recomendaciones || null, id_equipo, id_tipo_mantenimiento, autor: autorValue },
           type: QueryTypes.INSERT,
           transaction: t,
         }
@@ -285,7 +288,7 @@ export async function obtenerActividadesEquipo(req, res) {
 
 export async function editarMantenimiento(req, res) {
   const { id } = req.params;
-  const { tipo, hallazgos, recomendaciones, actividades, fecha } = req.body;
+  const { tipo, hallazgos, recomendaciones, actividades, fecha, autor } = req.body;
 
   if (!id) return res.status(400).json({ error: "Falta id de mantenimiento" });
 
@@ -341,6 +344,10 @@ export async function editarMantenimiento(req, res) {
     if (typeof fecha !== "undefined") {
       updates.push("fecha = :fecha");
       replacements.fecha = fecha || null;
+    }
+    if (typeof autor !== "undefined") {
+      updates.push("autor = :autor");
+      replacements.autor = typeof autor === 'string' ? autor.trim().slice(0,30) : '';
     }
     if (id_tipo_mantenimiento !== null) {
       updates.push("id_tipo_mantenimiento = :id_tipo_mantenimiento");
@@ -451,5 +458,266 @@ export async function eliminarMantenimiento(req, res) {
     await t.rollback();
     console.error("Error al eliminar mantenimiento:", error);
     return res.status(500).json({ error: "Error al eliminar mantenimiento" });
+  }
+}
+
+export async function agregarActividad(req, res) {
+  const { nombre, id_periferico, tipo } = req.body;
+  if (!nombre || String(nombre).trim() === "") {
+    return res.status(400).json({ error: "Falta nombre de la actividad" });
+  }
+
+  const t = await db.transaction();
+  try {
+    const existAct = await db.query(
+      `SELECT id_actividad_mantenimiento FROM actividad_mantenimiento WHERE nombre = :nombre`,
+      { replacements: { nombre }, type: QueryTypes.SELECT, transaction: t }
+    );
+
+    let id_actividad_mantenimiento;
+    if (existAct.length) {
+      id_actividad_mantenimiento = existAct[0].id_actividad_mantenimiento;
+    } else {
+      const [insertAct] = await db.query(
+        `INSERT INTO actividad_mantenimiento (nombre) VALUES (:nombre)`,
+        { replacements: { nombre }, type: QueryTypes.INSERT, transaction: t }
+      );
+      id_actividad_mantenimiento = insertAct;
+    }
+
+    let id_tipo_mantenimiento = null;
+    if (typeof tipo !== "undefined" && tipo !== null && String(tipo).trim() !== "") {
+      if (Number.isInteger(tipo)) {
+        id_tipo_mantenimiento = tipo;
+      } else {
+        const tipoRows = await db.query(
+          `SELECT id_tipo_mantenimiento FROM tipo_mantenimiento WHERE nombre = :tipo`,
+          { replacements: { tipo }, type: QueryTypes.SELECT, transaction: t }
+        );
+        if (tipoRows.length) {
+          id_tipo_mantenimiento = tipoRows[0].id_tipo_mantenimiento;
+        } else {
+          const [insertTipo] = await db.query(
+            `INSERT INTO tipo_mantenimiento (nombre) VALUES (:tipo)`,
+            { replacements: { tipo }, type: QueryTypes.INSERT, transaction: t }
+          );
+          id_tipo_mantenimiento = insertTipo;
+        }
+      }
+    }
+
+    let id_actividad_periferico_tipo = null;
+    if (id_periferico && id_tipo_mantenimiento) {
+      const mapping = await db.query(
+        `SELECT id_actividad_periferico_tipo FROM actividad_periferico_tipo
+         WHERE id_periferico = :id_periferico
+           AND id_actividad_mantenimiento = :id_actividad_mantenimiento
+           AND id_tipo_mantenimiento = :id_tipo_mantenimiento`,
+        {
+          replacements: { id_periferico, id_actividad_mantenimiento, id_tipo_mantenimiento },
+          type: QueryTypes.SELECT,
+          transaction: t,
+        }
+      );
+
+      if (mapping.length) {
+        id_actividad_periferico_tipo = mapping[0].id_actividad_periferico_tipo;
+      } else {
+        const [insertApt] = await db.query(
+          `INSERT INTO actividad_periferico_tipo (id_periferico, id_actividad_mantenimiento, id_tipo_mantenimiento)
+           VALUES (:id_periferico, :id_actividad_mantenimiento, :id_tipo_mantenimiento)`,
+          {
+            replacements: { id_periferico, id_actividad_mantenimiento, id_tipo_mantenimiento },
+            type: QueryTypes.INSERT,
+            transaction: t,
+          }
+        );
+        id_actividad_periferico_tipo = insertApt;
+      }
+    }
+
+    await t.commit();
+    return res.json({
+      ok: true,
+      id_actividad_mantenimiento,
+      id_tipo_mantenimiento: id_tipo_mantenimiento || null,
+      id_actividad_periferico_tipo: id_actividad_periferico_tipo,
+    });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error al agregar actividad:", error);
+    return res.status(500).json({ error: "Error al agregar actividad" });
+  }
+}
+
+function validarTexto(input) {
+  if (!input) return null;
+
+  if (typeof input !== "string") return null;
+
+  const trimmed = input.trim();
+
+  if (trimmed.length === 0 || trimmed.length > 30) return null;
+
+  const regex = /^[a-zA-Z0-9 _\-\/\.()#]+$/;
+
+  if (!regex.test(trimmed)) return null;
+
+  return trimmed;
+}
+
+export async function obtenerListaMantenimientos(req, res) {
+  let { inventario, serie, limit, offset, sortBy, sortDir } = req.query;
+  inventario = validarTexto(inventario);
+  serie = validarTexto(serie);
+
+  console.log("inventarIOOOO ", inventario)
+
+  limit = parseInt(limit, 10);
+  offset = parseInt(offset, 10);
+  if (isNaN(limit) || limit <= 0) limit = 10;
+  if (isNaN(offset) || offset < 0) offset = 0;
+
+  const SORT_COLUMN_MAP = {
+    inventario: "e.inventario",
+    serie: "s.nombre",
+    periferico: "p.nombre",
+    fecha: "m.fecha",
+  };
+
+  if (typeof sortBy === "string") sortBy = sortBy.trim();
+  else sortBy = null;
+
+  if (typeof sortDir === "string") {
+    sortDir = sortDir.trim().toLowerCase();
+    if (sortDir !== "asc" && sortDir !== "desc") sortDir = "desc";
+  } else {
+    sortDir = "desc";
+  }
+
+  let orderClause = "";
+  if (sortBy && SORT_COLUMN_MAP[sortBy]) {
+    const column = SORT_COLUMN_MAP[sortBy];
+    const direction = sortDir === "desc" ? "DESC" : "ASC";
+    orderClause = `ORDER BY ${column} ${direction}`;
+  } else {
+    orderClause = `ORDER BY m.fecha DESC`;
+  }
+
+  try {
+    const query = `
+      SELECT
+        m.id_mantenimiento,
+        m.fecha,
+        e.id_equipo,
+        e.inventario,
+        p.nombre AS periferico,
+        s.nombre AS serie,
+        COUNT(*) OVER() AS total
+      FROM mantenimiento m
+      JOIN equipo e ON m.id_equipo = e.id_equipo
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
+      WHERE (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+        AND (:serie IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serie), '%'))
+      ${orderClause}
+      LIMIT :limit OFFSET :offset;
+    `;
+
+    const mantenimientos = await db.query(query, {
+      replacements: {
+        inventario: inventario || null,
+        serie: serie || null,
+        limit: parseInt(limit, 10) || 10,
+        offset: parseInt(offset, 10) || 0,
+      },
+      type: QueryTypes.SELECT,
+    });
+
+    const total = mantenimientos.length > 0 ? mantenimientos[0].total : 0;
+    res.json({ total, mantenimientos });
+  } catch (error) {
+    console.error("Error al obtener lista de mantenimientos:", error);
+    res.status(500).json({ error: "Error al obtener lista de mantenimientos" });
+  }
+}
+
+
+export async function obtenerMantenimiento(req, res) {
+  const { id } = req.params;
+
+  try {
+    const rows = await db.query(
+      `SELECT 
+         m.id_mantenimiento,
+         m.fecha,
+         m.autor,
+         m.hallazgos,
+         m.recomendaciones,
+         m.id_equipo,
+         m.id_tipo_mantenimiento,
+         tm.nombre AS tipo_mantenimiento
+       FROM mantenimiento m
+       LEFT JOIN tipo_mantenimiento tm ON m.id_tipo_mantenimiento = tm.id_tipo_mantenimiento
+       WHERE m.id_mantenimiento = :id
+       LIMIT 1`,
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ error: "Mantenimiento no encontrado" });
+    }
+
+    const mantenimiento = rows[0];
+
+    const equipoRows = await db.query(
+      `SELECT id_equipo, inventario, id_serie, id_periferico FROM equipo WHERE id_equipo = :id_equipo LIMIT 1`,
+      { replacements: { id_equipo: mantenimiento.id_equipo }, type: QueryTypes.SELECT }
+    );
+
+    if (!equipoRows.length) {
+      mantenimiento.equipo = null;
+      mantenimiento.actividades = [];
+      mantenimiento.tipo = mantenimiento.tipo_mantenimiento || null;
+      return res.json({ mantenimiento });
+    }
+
+    const equipo = equipoRows[0];
+    mantenimiento.equipo = equipo;
+
+    const actividades = await db.query(
+      `SELECT
+         apt.id_actividad_periferico_tipo,
+         am.id_actividad_mantenimiento,
+         am.nombre AS actividad,
+         tm.id_tipo_mantenimiento,
+         tm.nombre AS tipo_mantenimiento,
+         COALESCE(ma.realizada, 0) AS realizada
+       FROM actividad_periferico_tipo apt
+       JOIN actividad_mantenimiento am 
+         ON apt.id_actividad_mantenimiento = am.id_actividad_mantenimiento
+       JOIN tipo_mantenimiento tm
+         ON apt.id_tipo_mantenimiento = tm.id_tipo_mantenimiento
+       LEFT JOIN mantenimiento_actividad ma
+         ON ma.id_actividad_periferico_tipo = apt.id_actividad_periferico_tipo
+         AND ma.id_mantenimiento = :id_mantenimiento
+       WHERE apt.id_periferico = :id_periferico
+       ORDER BY tm.nombre, am.nombre`,
+      {
+        replacements: {
+          id_mantenimiento: mantenimiento.id_mantenimiento,
+          id_periferico: equipo.id_periferico,
+        },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    mantenimiento.actividades = actividades;
+    mantenimiento.tipo = mantenimiento.tipo_mantenimiento || null;
+
+    res.json({ mantenimiento });
+  } catch (error) {
+    console.error("Error al obtener mantenimiento:", error);
+    res.status(500).json({ error: "Error al obtener mantenimiento" });
   }
 }
