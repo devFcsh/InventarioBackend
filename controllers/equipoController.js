@@ -128,7 +128,7 @@ function validarTexto(input) {
 
   const trimmed = input.trim();
 
-  if (trimmed.length === 0 || trimmed.length > 20) return null;
+  if (trimmed.length === 0 || trimmed.length > 30) return null;
 
   const regex = /^[a-zA-Z0-9 _-]+$/;
 
