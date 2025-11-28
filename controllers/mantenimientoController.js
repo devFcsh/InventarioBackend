@@ -22,6 +22,7 @@ export async function obtenerMantenimientos(req, res) {
           m.id_mantenimiento,
           m.fecha,
           m.autor,
+          m.editor,
           m.hallazgos,
           m.recomendaciones,
           m.id_tipo_mantenimiento,
@@ -288,7 +289,7 @@ export async function obtenerActividadesEquipo(req, res) {
 
 export async function editarMantenimiento(req, res) {
   const { id } = req.params;
-  const { tipo, hallazgos, recomendaciones, actividades, fecha, autor } = req.body;
+  const { tipo, hallazgos, recomendaciones, actividades, fecha, editor } = req.body;
 
   if (!id) return res.status(400).json({ error: "Falta id de mantenimiento" });
 
@@ -345,9 +346,9 @@ export async function editarMantenimiento(req, res) {
       updates.push("fecha = :fecha");
       replacements.fecha = fecha || null;
     }
-    if (typeof autor !== "undefined") {
-      updates.push("autor = :autor");
-      replacements.autor = typeof autor === 'string' ? autor.trim().slice(0,30) : '';
+    if (typeof editor !== "undefined") {
+      updates.push("editor = :editor");
+      replacements.editor = typeof editor === 'string' ? editor.trim().slice(0,30) : '';
     }
     if (id_tipo_mantenimiento !== null) {
       updates.push("id_tipo_mantenimiento = :id_tipo_mantenimiento");
@@ -682,6 +683,7 @@ export async function obtenerMantenimiento(req, res) {
          m.id_mantenimiento,
          m.fecha,
          m.autor,
+         m.editor,
          m.hallazgos,
          m.recomendaciones,
          m.id_equipo,
