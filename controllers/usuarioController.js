@@ -38,6 +38,31 @@ export async function obtenerUsuarios(req, res) {
   }
 }
 
+export async function obtenerTodosUsuarios(req, res) {
+  try {
+    const results = await db.query(
+      `SELECT u.id_usuario, u.nombre
+       FROM usuario u`,
+      {
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (!Array.isArray(results)) {
+      return res.status(500).json({ error: "Unexpected response format" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "No se encontraron usuarios" });
+    }
+
+    return res.json(results);
+  } catch (error) {
+    console.error("Error al obtener todos los usuarios:", error);
+    return res.status(500).json({ error: "Error al obtener los usuarios" });
+  }
+}
+
 export async function obtenerUsuariosPorUso(req, res) {
   const { idUso } = req.params;
 
