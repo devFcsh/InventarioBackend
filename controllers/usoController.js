@@ -80,6 +80,62 @@ export async function eliminarUso(req, res) {
       return res.status(404).json({ error: 'Uso no encontrado' });
     }
 
+    const usuariosRelacionados = await db.query(
+      `SELECT COUNT(*) as count FROM usuario WHERE id_uso = :id_uso`,
+      {
+        replacements: { id_uso },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (usuariosRelacionados[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el uso porque tiene usuarios asociados' 
+      });
+    }
+
+    const equiposActivos = await db.query(
+      `SELECT COUNT(*) as count FROM equipo_activo WHERE id_uso = :id_uso`,
+      {
+        replacements: { id_uso },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (equiposActivos[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el uso porque tiene equipos activos asociados' 
+      });
+    }
+
+    const equiposBodega = await db.query(
+      `SELECT COUNT(*) as count FROM equipo_bodega WHERE id_uso = :id_uso`,
+      {
+        replacements: { id_uso },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (equiposBodega[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el uso porque tiene equipos en bodega asociados' 
+      });
+    }
+
+    const equiposBaja = await db.query(
+      `SELECT COUNT(*) as count FROM equipo_baja WHERE id_uso = :id_uso`,
+      {
+        replacements: { id_uso },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (equiposBaja[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el uso porque tiene equipos dados de baja asociados' 
+      });
+    }
+
     await uso.destroy();
 
     return res.json({ message: 'Uso eliminado correctamente' });

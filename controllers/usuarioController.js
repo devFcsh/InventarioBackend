@@ -165,21 +165,45 @@ export async function eliminarUsuario(req, res) {
   const { id_usuario } = req.params;
 
   try {
-    const checkEquiposQuery = `
-      SELECT COUNT(*) AS totalEquipos
-      FROM equipo_activo ea
-      WHERE ea.id_usuario = :id_usuario;
-    `;
+    const equiposActivos = await db.query(
+      `SELECT COUNT(*) AS count FROM equipo_activo WHERE id_usuario = :id_usuario`,
+      {
+        replacements: { id_usuario },
+        type: QueryTypes.SELECT,
+      }
+    );
 
-    const result = await db.query(checkEquiposQuery, {
-      replacements: { id_usuario },
-      type: QueryTypes.SELECT,
-    });
-
-    if (result[0].totalEquipos > 0) {
+    if (equiposActivos[0].count > 0) {
       return res.status(400).json({
-        error: "No se puede eliminar al usuario porque tiene equipos asociados.",
-        tieneEquipos: true,
+        error: "No se puede eliminar al usuario porque tiene equipos activos asociados"
+      });
+    }
+
+    const equiposBodega = await db.query(
+      `SELECT COUNT(*) AS count FROM equipo_bodega WHERE id_usuario = :id_usuario`,
+      {
+        replacements: { id_usuario },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (equiposBodega[0].count > 0) {
+      return res.status(400).json({
+        error: "No se puede eliminar al usuario porque tiene equipos en bodega asociados"
+      });
+    }
+
+    const equiposBaja = await db.query(
+      `SELECT COUNT(*) AS count FROM equipo_baja WHERE id_usuario = :id_usuario`,
+      {
+        replacements: { id_usuario },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (equiposBaja[0].count > 0) {
+      return res.status(400).json({
+        error: "No se puede eliminar al usuario porque tiene equipos dados de baja asociados"
       });
     }
 
@@ -193,10 +217,10 @@ export async function eliminarUsuario(req, res) {
       type: QueryTypes.DELETE,
     });
 
-    res.json({ message: "Usuario eliminado con éxito." });
+    res.json({ message: "Usuario eliminado con éxito" });
   } catch (error) {
     console.error("Error al eliminar el usuario:", error);
-    res.status(500).json({ error: "Error al eliminar el usuario." });
+    res.status(500).json({ error: "Error al eliminar el usuario" });
   }
 }
 

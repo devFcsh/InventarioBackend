@@ -1,9 +1,10 @@
 import { Router } from 'express';
 const router = Router();
-import { obtenerModelos, modelosPorMarcaPeriferico, agregarModelo, editarModelo, eliminarModelo } from '../controllers/modeloController.js'; 
+import { obtenerModelos, modelosPorMarcaPeriferico, obtenerModeloDetalle, agregarModelo, editarModelo, eliminarModelo } from '../controllers/modeloController.js'; 
 
 router.get('/', obtenerModelos);
 router.get('/modelosPorMarcaPeriferico', modelosPorMarcaPeriferico);
+router.get('/:id_modelo/detalle', obtenerModeloDetalle);
 router.post('/', agregarModelo);
 router.put('/', editarModelo);
 router.delete('/:id_modelo', eliminarModelo)

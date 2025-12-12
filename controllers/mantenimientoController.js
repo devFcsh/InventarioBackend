@@ -564,13 +564,14 @@ function validarTexto(input) {
 }
 
 export async function obtenerListaMantenimientos(req, res) {
-  let { inventario, serie, limit, offset, sortBy, sortDir, fechaDesde, fechaHasta, usuarioId } = req.query;
+  let { inventario, serie, limit, offset, sortBy, sortDir, fechaDesde, fechaHasta, usuarioId, tipo } = req.query;
 
   const rawFechaDesde = fechaDesde;
   const rawFechaHasta = fechaHasta;
 
   inventario = validarTexto(inventario);
   serie = validarTexto(serie);
+  tipo = validarTexto(tipo);
 
   let usuarioIdNum = null;
   if (typeof usuarioId !== "undefined" && usuarioId !== null && String(usuarioId).trim() !== "") {
@@ -616,6 +617,7 @@ export async function obtenerListaMantenimientos(req, res) {
     periferico: "p.nombre",
     fecha: "m.fecha",
     usuario: "u.nombre",
+    tipo: "tm.nombre",
   };
 
   if (typeof sortBy === "string") sortBy = sortBy.trim();
@@ -649,6 +651,7 @@ export async function obtenerListaMantenimientos(req, res) {
         p.nombre AS periferico,
         s.nombre AS serie,
         u.nombre AS usuario,
+        tm.nombre AS tipo,
         COUNT(*) OVER() AS total
       FROM mantenimiento m
       JOIN equipo e ON m.id_equipo = e.id_equipo
@@ -656,11 +659,13 @@ export async function obtenerListaMantenimientos(req, res) {
       LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
       LEFT JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
+      LEFT JOIN tipo_mantenimiento tm ON m.id_tipo_mantenimiento = tm.id_tipo_mantenimiento
       WHERE (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
         AND (:serie IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serie), '%'))
         AND (:fecha_desde IS NULL OR m.fecha >= :fecha_desde)
         AND (:fecha_hasta IS NULL OR m.fecha <= :fecha_hasta)
         AND (:usuarioId IS NULL OR ea.id_usuario = :usuarioId)
+        AND (:tipo IS NULL OR LOWER(tm.nombre) LIKE CONCAT('%', LOWER(:tipo), '%'))
       ${orderClause}
       ${limitOffsetClause};
     `;
@@ -671,6 +676,7 @@ export async function obtenerListaMantenimientos(req, res) {
       fecha_desde: fechaDesdeFmt || null,
       fecha_hasta: fechaHastaFmt || null,
       usuarioId: usuarioIdNum,
+      tipo: tipo || null,
     };
 
     if (!noLimit) {

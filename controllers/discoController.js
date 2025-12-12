@@ -76,6 +76,20 @@ export async function eliminarDisco(req, res) {
       return res.status(404).json({ error: 'Disco no encontrado' });
     }
 
+    const computadorasRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM computadora WHERE id_disco = :id_disco`,
+      {
+        replacements: { id_disco },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (computadorasRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el disco porque tiene computadoras asociadas' 
+      });
+    }
+
     await disco.destroy();
 
     return res.json({ message: 'Disco eliminado correctamente' });

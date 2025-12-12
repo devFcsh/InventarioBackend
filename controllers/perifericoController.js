@@ -76,6 +76,48 @@ export async function eliminarPeriferico(req, res) {
       return res.status(404).json({ error: 'Periferico no encontrado' });
     }
 
+    const marcasRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM marca_periferico WHERE id_periferico = :id_periferico`,
+      {
+        replacements: { id_periferico },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (marcasRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el periférico porque tiene marcas asociadas' 
+      });
+    }
+
+    const actividadesRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM actividad_periferico_tipo WHERE id_periferico = :id_periferico`,
+      {
+        replacements: { id_periferico },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (actividadesRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el periférico porque tiene actividades de mantenimiento asociadas' 
+      });
+    }
+
+    const equiposRelacionados = await db.query(
+      `SELECT COUNT(*) as count FROM equipo WHERE id_periferico = :id_periferico`,
+      {
+        replacements: { id_periferico },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (equiposRelacionados[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el periférico porque tiene equipos asociados' 
+      });
+    }
+
     await periferico.destroy();
 
     return res.json({ message: 'Periferico eliminado correctamente' });

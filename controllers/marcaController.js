@@ -48,6 +48,39 @@ export async function obtenerMarcasPorPeriferico(req, res) {
   }
 }
 
+export async function obtenerMarcaDetalle(req, res) {
+  const { id_marca } = req.params;
+
+  try {
+    const marca = await Marca.findByPk(id_marca);
+
+    if (!marca) {
+      return res.status(404).json({ error: 'Marca no encontrada' });
+    }
+
+    const perifericos = await db.query(
+      `SELECT id_periferico
+       FROM marca_periferico
+       WHERE id_marca = :id_marca`,
+      {
+        replacements: { id_marca },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const perifericosIds = perifericos.map(p => p.id_periferico);
+
+    return res.json({
+      id_marca: marca.id_marca,
+      nombre: marca.nombre,
+      perifericos: perifericosIds
+    });
+  } catch (error) {
+    console.error('Error al obtener detalle de marca:', error);
+    return res.status(500).json({ error: 'Error al obtener detalle de marca' });
+  }
+}
+
 
 export async function agregarMarca(req, res) {
   const { nombre, perifericoId } = req.body;
@@ -92,21 +125,91 @@ export async function agregarMarca(req, res) {
 }
 
 export async function editarMarca(req, res) {
-  const { id_marca, nuevoNombre } = req.body;
+  const { id_marca, nuevoNombre, perifericosIds } = req.body;
 
+  const t = await db.transaction();
   try {
-    const marca = await Marca.findByPk(id_marca);
+    const marca = await Marca.findByPk(id_marca, { transaction: t });
 
     if (!marca) {
-      return res.status(404).json({ error: 'Marca no encontrado' });
+      await t.rollback();
+      return res.status(404).json({ error: 'Marca no encontrada' });
     }
 
-    await marca.update({ nombre: nuevoNombre });
+    if (nuevoNombre) {
+      await marca.update({ nombre: nuevoNombre }, { transaction: t });
+    }
 
-    return res.json({ message: 'Marca actualizado correctamente', marca });
+    if (Array.isArray(perifericosIds)) {
+      const relacionesActuales = await db.query(
+        `SELECT id_periferico FROM marca_periferico WHERE id_marca = :id_marca`,
+        {
+          replacements: { id_marca },
+          type: QueryTypes.SELECT,
+          transaction: t
+        }
+      );
+
+      const idsActuales = relacionesActuales.map(r => r.id_periferico);
+      const idsNuevos = perifericosIds;
+
+      const aEliminar = idsActuales.filter(id => !idsNuevos.includes(id));
+      const aAgregar = idsNuevos.filter(id => !idsActuales.includes(id));
+
+      if (aEliminar.length > 0) {
+        for (const id_periferico of aEliminar) {
+          const equiposConRelacion = await db.query(
+            `SELECT COUNT(DISTINCT e.id_equipo) as count 
+             FROM equipo e
+             JOIN modelo_serie ms ON e.id_serie = ms.id_serie
+             JOIN marca_modelo mm ON ms.id_modelo = mm.id_modelo
+             WHERE mm.id_marca = :id_marca 
+               AND e.id_periferico = :id_periferico`,
+            {
+              replacements: { id_marca, id_periferico },
+              type: QueryTypes.SELECT,
+              transaction: t
+            }
+          );
+
+          if (equiposConRelacion[0].count > 0) {
+            await t.rollback();
+            return res.status(400).json({ 
+              error: `No se puede eliminar la relación con el periférico porque existen equipos asociados a esta marca y periférico` 
+            });
+          }
+        }
+
+        await db.query(
+          `DELETE FROM marca_periferico 
+           WHERE id_marca = :id_marca AND id_periferico IN (:ids)`,
+          {
+            replacements: { id_marca, ids: aEliminar },
+            type: QueryTypes.DELETE,
+            transaction: t
+          }
+        );
+      }
+
+      for (const id_periferico of aAgregar) {
+        await db.query(
+          `INSERT INTO marca_periferico (id_marca, id_periferico)
+           VALUES (:id_marca, :id_periferico)`,
+          {
+            replacements: { id_marca, id_periferico },
+            type: QueryTypes.INSERT,
+            transaction: t
+          }
+        );
+      }
+    }
+
+    await t.commit();
+    return res.json({ message: 'Marca actualizada correctamente', marca });
   } catch (error) {
-    console.error('Error al actualizar el marca:', error);
-    return res.status(500).json({ error: 'Error al actualizar el marca' });
+    await t.rollback();
+    console.error('Error al actualizar la marca:', error);
+    return res.status(500).json({ error: 'Error al actualizar la marca' });
   }
 }
 
@@ -120,9 +223,37 @@ export async function eliminarMarca(req, res) {
       return res.status(404).json({ error: 'Marca no encontrada' });
     }
 
+    const perifericosRelacionados = await db.query(
+      `SELECT COUNT(*) as count FROM marca_periferico WHERE id_marca = :id_marca`,
+      {
+        replacements: { id_marca },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (perifericosRelacionados[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la marca porque tiene periféricos asociados' 
+      });
+    }
+
+    const modelosRelacionados = await db.query(
+      `SELECT COUNT(*) as count FROM marca_modelo WHERE id_marca = :id_marca`,
+      {
+        replacements: { id_marca },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (modelosRelacionados[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la marca porque tiene modelos asociados' 
+      });
+    }
+
     await marca.destroy();
 
-    return res.json({ message: 'Marca eliminado correctamente' });
+    return res.json({ message: 'Marca eliminada correctamente' });
   } catch (error) {
     console.error('Error al eliminar marca:', error);
     return res.status(500).json({ error: 'Error al eliminar marca' });

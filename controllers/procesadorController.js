@@ -75,6 +75,20 @@ export async function agregarProcesador(req, res) {
       if (!procesador) {
         return res.status(404).json({ error: 'Procesador no encontrado' });
       }
+
+      const computadorasRelacionadas = await db.query(
+        `SELECT COUNT(*) as count FROM computadora WHERE id_procesador = :id_procesador`,
+        {
+          replacements: { id_procesador },
+          type: QueryTypes.SELECT
+        }
+      );
+
+      if (computadorasRelacionadas[0].count > 0) {
+        return res.status(400).json({ 
+          error: 'No se puede eliminar el procesador porque tiene computadoras asociadas' 
+        });
+      }
   
       await procesador.destroy();
   
