@@ -76,6 +76,20 @@ export async function eliminarDominio(req, res) {
       return res.status(404).json({ error: 'Dominio no encontrado' });
     }
 
+    const computadorasRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM computadora WHERE id_dominio = :id_dominio`,
+      {
+        replacements: { id_dominio },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (computadorasRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el dominio porque tiene computadoras asociadas' 
+      });
+    }
+
     await dominio.destroy();
 
     return res.json({ message: 'Dominio eliminado correctamente' });

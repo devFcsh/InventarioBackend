@@ -553,28 +553,31 @@ export async function agregarActividad(req, res) {
 
 function validarTexto(input) {
   if (!input) return null;
-
   if (typeof input !== "string") return null;
-
   const trimmed = input.trim();
-
   if (trimmed.length === 0 || trimmed.length > 30) return null;
-
-  const regex = /^[a-zA-Z0-9 _\-\/\.()#]+$/;
-
+  
+  const regex = /^[a-zA-Z0-9 _\-\/]+$/;
+  
   if (!regex.test(trimmed)) return null;
-
   return trimmed;
 }
 
 export async function obtenerListaMantenimientos(req, res) {
-  let { inventario, serie, limit, offset, sortBy, sortDir, fechaDesde, fechaHasta } = req.query;
+  let { inventario, serie, limit, offset, sortBy, sortDir, fechaDesde, fechaHasta, usuarioId, tipo } = req.query;
 
   const rawFechaDesde = fechaDesde;
   const rawFechaHasta = fechaHasta;
 
   inventario = validarTexto(inventario);
   serie = validarTexto(serie);
+  tipo = validarTexto(tipo);
+
+  let usuarioIdNum = null;
+  if (typeof usuarioId !== "undefined" && usuarioId !== null && String(usuarioId).trim() !== "") {
+    const parsed = parseInt(usuarioId, 10);
+    usuarioIdNum = Number.isNaN(parsed) ? null : parsed;
+  }
 
   function pad(n) {
     return n < 10 ? '0' + n : String(n);
@@ -599,10 +602,13 @@ export async function obtenerListaMantenimientos(req, res) {
     if (!fechaHastaFmt) return res.status(400).json({ error: 'fechaHasta inválida' });
   }
 
+  const rawLimit = typeof req.query.limit === "string" ? req.query.limit.trim().toLowerCase() : req.query.limit;
+  const noLimit = rawLimit === "all" || rawLimit === "0";
 
-  limit = parseInt(limit, 10);
+  limit = noLimit ? null : parseInt(limit, 10);
   offset = parseInt(offset, 10);
-  if (isNaN(limit) || limit <= 0) limit = 10;
+
+  if (!noLimit && (isNaN(limit) || limit <= 0)) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
 
   const SORT_COLUMN_MAP = {
@@ -610,6 +616,8 @@ export async function obtenerListaMantenimientos(req, res) {
     serie: "s.nombre",
     periferico: "p.nombre",
     fecha: "m.fecha",
+    usuario: "u.nombre",
+    tipo: "tm.nombre",
   };
 
   if (typeof sortBy === "string") sortBy = sortBy.trim();
@@ -632,6 +640,8 @@ export async function obtenerListaMantenimientos(req, res) {
   }
 
   try {
+    const limitOffsetClause = noLimit ? "" : "LIMIT :limit OFFSET :offset";
+
     const query = `
       SELECT
         m.id_mantenimiento,
@@ -640,28 +650,42 @@ export async function obtenerListaMantenimientos(req, res) {
         e.inventario,
         p.nombre AS periferico,
         s.nombre AS serie,
+        u.nombre AS usuario,
+        tm.nombre AS tipo,
         COUNT(*) OVER() AS total
       FROM mantenimiento m
       JOIN equipo e ON m.id_equipo = e.id_equipo
       LEFT JOIN serie s ON e.id_serie = s.id_serie
       LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
+      LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
+      LEFT JOIN tipo_mantenimiento tm ON m.id_tipo_mantenimiento = tm.id_tipo_mantenimiento
       WHERE (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
         AND (:serie IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serie), '%'))
         AND (:fecha_desde IS NULL OR m.fecha >= :fecha_desde)
         AND (:fecha_hasta IS NULL OR m.fecha <= :fecha_hasta)
+        AND (:usuarioId IS NULL OR ea.id_usuario = :usuarioId)
+        AND (:tipo IS NULL OR LOWER(tm.nombre) LIKE CONCAT('%', LOWER(:tipo), '%'))
       ${orderClause}
-      LIMIT :limit OFFSET :offset;
+      ${limitOffsetClause};
     `;
 
+    const replacements = {
+      inventario: inventario || null,
+      serie: serie || null,
+      fecha_desde: fechaDesdeFmt || null,
+      fecha_hasta: fechaHastaFmt || null,
+      usuarioId: usuarioIdNum,
+      tipo: tipo || null,
+    };
+
+    if (!noLimit) {
+      replacements.limit = parseInt(limit, 10) || 10;
+      replacements.offset = parseInt(offset, 10) || 0;
+    }
+
     const mantenimientos = await db.query(query, {
-      replacements: {
-        inventario: inventario || null,
-        serie: serie || null,
-        fecha_desde: fechaDesdeFmt || null,
-        fecha_hasta: fechaHastaFmt || null,
-        limit: parseInt(limit, 10) || 10,
-        offset: parseInt(offset, 10) || 0,
-      },
+      replacements,
       type: QueryTypes.SELECT,
     });
 

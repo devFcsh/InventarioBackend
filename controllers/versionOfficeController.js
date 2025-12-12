@@ -74,14 +74,28 @@ export async function eliminarVersionOffice(req, res) {
     const version_office = await VersionOffice.findByPk(id_version_office);
 
     if (!version_office) {
-      return res.status(404).json({ error: 'Version Office no encontrado' });
+      return res.status(404).json({ error: 'Versión de Office no encontrada' });
+    }
+
+    const computadorasRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM computadora WHERE id_versionoffice = :id_version_office`,
+      {
+        replacements: { id_version_office },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (computadorasRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la versión de Office porque tiene computadoras asociadas' 
+      });
     }
 
     await version_office.destroy();
 
-    return res.json({ message: 'Version office eliminado correctamente' });
+    return res.json({ message: 'Versión de Office eliminada correctamente' });
   } catch (error) {
-    console.error('Error al eliminar el version office:', error);
-    return res.status(500).json({ error: 'Error al eliminar el version office' });
+    console.error('Error al eliminar la versión de Office:', error);
+    return res.status(500).json({ error: 'Error al eliminar la versión de Office' });
   }
 }

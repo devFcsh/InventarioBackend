@@ -93,14 +93,56 @@ export async function eliminarUbicacion(req, res) {
     const ubicacion = await Ubicacion.findByPk(id_ubicacion);
 
     if (!ubicacion) {
-      return res.status(404).json({ error: 'Ubicacion no encontrado' });
+      return res.status(404).json({ error: 'Ubicación no encontrada' });
+    }
+
+    const equiposActivos = await db.query(
+      `SELECT COUNT(*) as count FROM equipo_activo WHERE id_ubicacion = :id_ubicacion`,
+      {
+        replacements: { id_ubicacion },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (equiposActivos[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la ubicación porque tiene equipos activos asociados' 
+      });
+    }
+
+    const equiposBodega = await db.query(
+      `SELECT COUNT(*) as count FROM equipo_bodega WHERE id_ubicacion = :id_ubicacion`,
+      {
+        replacements: { id_ubicacion },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (equiposBodega[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la ubicación porque tiene equipos en bodega asociados' 
+      });
+    }
+
+    const equiposBaja = await db.query(
+      `SELECT COUNT(*) as count FROM equipo_baja WHERE id_ubicacion = :id_ubicacion`,
+      {
+        replacements: { id_ubicacion },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (equiposBaja[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la ubicación porque tiene equipos dados de baja asociados' 
+      });
     }
 
     await ubicacion.destroy();
 
-    return res.json({ message: 'Ubicacion eliminado correctamente' });
+    return res.json({ message: 'Ubicación eliminada correctamente' });
   } catch (error) {
-    console.error('Error al eliminar el ubicacion:', error);
-    return res.status(500).json({ error: 'Error al eliminar el ubicacion' });
+    console.error('Error al eliminar la ubicación:', error);
+    return res.status(500).json({ error: 'Error al eliminar la ubicación' });
   }
 }

@@ -73,14 +73,28 @@ export async function eliminarRAM(req, res) {
     const ram = await Ram.findByPk(id_ram);
 
     if (!ram) {
-      return res.status(404).json({ error: 'Ram no encontrado' });
+      return res.status(404).json({ error: 'RAM no encontrada' });
+    }
+
+    const computadorasRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM computadora WHERE id_ram = :id_ram`,
+      {
+        replacements: { id_ram },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (computadorasRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la RAM porque tiene computadoras asociadas' 
+      });
     }
 
     await ram.destroy();
 
-    return res.json({ message: 'Ram eliminado correctamente' });
+    return res.json({ message: 'RAM eliminada correctamente' });
   } catch (error) {
-    console.error('Error al eliminar el ram:', error);
-    return res.status(500).json({ error: 'Error al eliminar el ram' });
+    console.error('Error al eliminar la RAM:', error);
+    return res.status(500).json({ error: 'Error al eliminar la RAM' });
   }
 }

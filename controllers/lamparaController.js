@@ -115,14 +115,42 @@ export async function lamparasPorModelo(req, res) {
       const lampara = await Lampara.findByPk(id_lampara);
   
       if (!lampara) {
-        return res.status(404).json({ error: 'Lampara no encontrado' });
+        return res.status(404).json({ error: 'Lampara no encontrada' });
+      }
+
+      const modelosRelacionados = await db.query(
+        `SELECT COUNT(*) as count FROM modelo_lampara WHERE id_lampara = :id_lampara`,
+        {
+          replacements: { id_lampara },
+          type: QueryTypes.SELECT
+        }
+      );
+
+      if (modelosRelacionados[0].count > 0) {
+        return res.status(400).json({ 
+          error: 'No se puede eliminar la lámpara porque tiene modelos asociados' 
+        });
+      }
+
+      const proyectoresRelacionados = await db.query(
+        `SELECT COUNT(*) as count FROM equipo_proyector WHERE id_lampara = :id_lampara`,
+        {
+          replacements: { id_lampara },
+          type: QueryTypes.SELECT
+        }
+      );
+
+      if (proyectoresRelacionados[0].count > 0) {
+        return res.status(400).json({ 
+          error: 'No se puede eliminar la lámpara porque está siendo utilizada en proyectores' 
+        });
       }
   
       await lampara.destroy();
   
-      return res.json({ message: 'Lampara eliminado correctamente' });
+      return res.json({ message: 'Lámpara eliminada correctamente' });
     } catch (error) {
-      console.error('Error al eliminar el lampara:', error);
-      return res.status(500).json({ error: 'Error al eliminar el lampara' });
+      console.error('Error al eliminar la lámpara:', error);
+      return res.status(500).json({ error: 'Error al eliminar la lámpara' });
     }
   }

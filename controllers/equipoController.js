@@ -123,17 +123,13 @@ async function eliminarSerieSiNoUsada(id_serie) {
 
 function validarTexto(input) {
   if (!input) return null;
-
   if (typeof input !== "string") return null;
-
   const trimmed = input.trim();
-
   if (trimmed.length === 0 || trimmed.length > 30) return null;
-
-  const regex = /^[a-zA-Z0-9 _-]+$/;
-
+  
+  const regex = /^[a-zA-Z0-9 _\-\/]+$/;
+  
   if (!regex.test(trimmed)) return null;
-
   return trimmed;
 }
 
@@ -148,6 +144,7 @@ export async function obtenerEquiposActivos(req, res) {
     offset,
     sortBy,
     sortDir,
+    usuarioId,
   } = req.query;
 
   perifericoId = validarTexto(perifericoId);
@@ -156,9 +153,19 @@ export async function obtenerEquiposActivos(req, res) {
   serieId = validarTexto(serieId);
   inventario = validarTexto(inventario);
 
-  limit = parseInt(limit, 10);
+  let usuarioIdNum = null;
+  if (typeof usuarioId !== "undefined" && usuarioId !== null && String(usuarioId).trim() !== "") {
+    const parsed = parseInt(usuarioId, 10);
+    usuarioIdNum = Number.isNaN(parsed) ? null : parsed;
+  }
+
+  const rawLimit = typeof req.query.limit === "string" ? req.query.limit.trim().toLowerCase() : req.query.limit;
+  const noLimit = rawLimit === "all" || rawLimit === "0";
+
+  limit = noLimit ? null : parseInt(limit, 10);
   offset = parseInt(offset, 10);
-  if (isNaN(limit) || limit <= 0) limit = 10;
+
+  if (!noLimit && (isNaN(limit) || limit <= 0)) limit = 10;
   if (isNaN(offset) || offset < 0) offset = 0;
 
   const SORT_COLUMN_MAP = {
@@ -192,6 +199,8 @@ export async function obtenerEquiposActivos(req, res) {
   }
 
   try {
+    const limitOffsetClause = noLimit ? "" : "LIMIT :limit OFFSET :offset";
+
     const query = `
       SELECT 
         e.*, 
@@ -222,21 +231,28 @@ export async function obtenerEquiposActivos(req, res) {
       AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
       AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
       AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+      AND (:usuarioId IS NULL OR ea.id_usuario = :usuarioId)
       AND (e.id_periferico = p.id_periferico)
       ${orderClause}
-      LIMIT :limit OFFSET :offset;
+      ${limitOffsetClause};
     `;
 
+    const replacements = {
+      perifericoId: perifericoId || null,
+      marcaId: marcaId || null,
+      modeloId: modeloId || null,
+      serieId: serieId || null,
+      inventario: inventario || null,
+      usuarioId: usuarioIdNum,
+    };
+
+    if (!noLimit) {
+      replacements.limit = parseInt(limit, 10) || 10;
+      replacements.offset = parseInt(offset, 10) || 0;
+    }
+
     const equipos = await db.query(query, {
-      replacements: {
-        perifericoId: perifericoId || null,
-        marcaId: marcaId || null,
-        modeloId: modeloId || null,
-        serieId: serieId || null,
-        inventario: inventario || null,
-        limit: parseInt(limit, 10) || 10,
-        offset: parseInt(offset, 10) || 0,
-      },
+      replacements,
       type: QueryTypes.SELECT,
     });
 
@@ -395,11 +411,11 @@ export async function obtenerEquiposBodega(req, res) {
 
     const equipos = await db.query(query, {
       replacements: {
-        perifericoId: perifericoId || null,
-        marcaId: marcaId || null,
-        modeloId: modeloId || null,
-        serieId: serieId || null,
-        inventario: inventario || null,
+      perifericoId: perifericoId || null,
+      marcaId: marcaId || null,
+      modeloId: modeloId || null,
+      serieId: serieId || null,
+      inventario: inventario || null,
         limit: parseInt(limit, 10) || 10,
         offset: parseInt(offset, 10) || 0,
       },
@@ -557,11 +573,11 @@ export async function obtenerEquiposBaja(req, res) {
 
     const equipos = await db.query(query, {
       replacements: {
-        perifericoId: perifericoId || null,
-        marcaId: marcaId || null,
-        modeloId: modeloId || null,
-        serieId: serieId || null,
-        inventario: inventario || null,
+      perifericoId: perifericoId || null,
+      marcaId: marcaId || null,
+      modeloId: modeloId || null,
+      serieId: serieId || null,
+      inventario: inventario || null,
         limit: parseInt(limit, 10) || 10,
         offset: parseInt(offset, 10) || 0,
       },

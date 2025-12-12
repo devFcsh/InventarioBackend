@@ -76,6 +76,20 @@ export async function eliminarSistemaOperativo(req, res) {
       return res.status(404).json({ error: 'Sistema Operativo no encontrado' });
     }
 
+    const versionesRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM version_so WHERE id_sistemaoperativo = :id_sistemaoperativo`,
+      {
+        replacements: { id_sistemaoperativo },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (versionesRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el Sistema Operativo porque tiene versiones asociadas' 
+      });
+    }
+
     await sistema_operativo.destroy();
 
     return res.json({ message: 'Sistema Operativo eliminado correctamente' });

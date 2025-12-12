@@ -95,14 +95,28 @@ export async function eliminarVersionSO(req, res) {
     const version_so = await VersionSo.findByPk(id_versionso);
 
     if (!version_so) {
-      return res.status(404).json({ error: 'Version SO no encontrado' });
+      return res.status(404).json({ error: 'Versión de SO no encontrada' });
+    }
+
+    const computadorasRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM computadora WHERE id_versionso = :id_versionso`,
+      {
+        replacements: { id_versionso },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (computadorasRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar la versión de SO porque tiene computadoras asociadas' 
+      });
     }
 
     await version_so.destroy();
 
-    return res.json({ message: 'Version SO eliminado correctamente' });
+    return res.json({ message: 'Versión de SO eliminada correctamente' });
   } catch (error) {
-    console.error('Error al eliminar version SO:', error);
-    return res.status(500).json({ error: 'Error al eliminar version SO' });
+    console.error('Error al eliminar versión de SO:', error);
+    return res.status(500).json({ error: 'Error al eliminar versión de SO' });
   }
 }

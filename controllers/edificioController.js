@@ -77,6 +77,20 @@ export async function eliminarEdificio(req, res) {
       return res.status(404).json({ error: 'Edificio no encontrado' });
     }
 
+    const ubicacionesRelacionadas = await db.query(
+      `SELECT COUNT(*) as count FROM ubicacion WHERE id_edificio = :id_edificio`,
+      {
+        replacements: { id_edificio },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (ubicacionesRelacionadas[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el edificio porque tiene ubicaciones asociadas' 
+      });
+    }
+
     await edificio.destroy();
 
     return res.json({ message: 'Edificio eliminado correctamente' });
