@@ -128,7 +128,7 @@ export async function exportarEquiposActivos(req, res) {
   LEFT JOIN marca ma ON mm_com.id_marca = ma.id_marca
   LEFT JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
   LEFT JOIN periferico pe ON mp.id_periferico = pe.id_periferico
-  GROUP BY e.id_equipo, ed.nombre, ub.nombre, uo.nombre, us.nombre, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, ea.fecha_ultima_modificacion, e.observacion
+  GROUP BY e.id_equipo, ed.nombre, ub.nombre, uo.nombre, us.nombre, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, vso.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, ea.fecha_ultima_modificacion, e.observacion
   ORDER BY e.id_equipo;
       `;
   
@@ -205,7 +205,7 @@ export async function exportarEquiposActivos(req, res) {
   LEFT JOIN marca ma ON mm_com.id_marca = ma.id_marca
   LEFT JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
   LEFT JOIN periferico pe ON mp.id_periferico = pe.id_periferico
-  GROUP BY e.id_equipo, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, eb.fecha_ultima_modificacion, e.observacion
+  GROUP BY e.id_equipo, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, vso.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, eb.fecha_ultima_modificacion, e.observacion
   ORDER BY e.id_equipo;
       `;
   
@@ -496,8 +496,7 @@ export async function exportarEquiposActivos(req, res) {
   JOIN modelo mo ON ms.id_modelo = mo.id_modelo
   JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
   JOIN marca ma ON mm.id_marca = ma.id_marca
-  JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-  JOIN periferico pe ON mp.id_periferico = pe.id_periferico
+  JOIN periferico pe ON e.id_periferico = pe.id_periferico
   LEFT JOIN usuario us ON ea.id_usuario = us.id_usuario
   LEFT JOIN uso u ON us.id_uso = u.id_uso
   WHERE pe.nombre != 'Proyector' 
@@ -543,8 +542,7 @@ export async function exportarEquiposActivos(req, res) {
   JOIN modelo mo ON ms.id_modelo = mo.id_modelo
   JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
   JOIN marca ma ON mm.id_marca = ma.id_marca
-  JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-  JOIN periferico pe ON mp.id_periferico = pe.id_periferico
+  JOIN periferico pe ON e.id_periferico = pe.id_periferico
   WHERE pe.nombre != 'Proyector' 
     AND e.id_equipo NOT IN (
       SELECT id_equipo_red FROM equipo_red
