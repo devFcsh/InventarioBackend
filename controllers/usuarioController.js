@@ -179,34 +179,6 @@ export async function eliminarUsuario(req, res) {
       });
     }
 
-    const equiposBodega = await db.query(
-      `SELECT COUNT(*) AS count FROM equipo_bodega WHERE id_usuario = :id_usuario`,
-      {
-        replacements: { id_usuario },
-        type: QueryTypes.SELECT,
-      }
-    );
-
-    if (equiposBodega[0].count > 0) {
-      return res.status(400).json({
-        error: "No se puede eliminar al usuario porque tiene equipos en bodega asociados"
-      });
-    }
-
-    const equiposBaja = await db.query(
-      `SELECT COUNT(*) AS count FROM equipo_baja WHERE id_usuario = :id_usuario`,
-      {
-        replacements: { id_usuario },
-        type: QueryTypes.SELECT,
-      }
-    );
-
-    if (equiposBaja[0].count > 0) {
-      return res.status(400).json({
-        error: "No se puede eliminar al usuario porque tiene equipos dados de baja asociados"
-      });
-    }
-
     const deleteUserQuery = `
       DELETE FROM usuario
       WHERE id_usuario = :id_usuario;
