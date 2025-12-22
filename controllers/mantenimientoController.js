@@ -449,6 +449,11 @@ export async function eliminarMantenimiento(req, res) {
     }
 
     await db.query(
+      `DELETE FROM mantenimiento_actividad WHERE id_mantenimiento = :id`,
+      { replacements: { id }, type: QueryTypes.DELETE, transaction: t }
+    );
+
+    await db.query(
       `DELETE FROM mantenimiento WHERE id_mantenimiento = :id`,
       { replacements: { id }, type: QueryTypes.DELETE, transaction: t }
     );
@@ -548,6 +553,115 @@ export async function agregarActividad(req, res) {
     await t.rollback();
     console.error("Error al agregar actividad:", error);
     return res.status(500).json({ error: "Error al agregar actividad" });
+  }
+}
+
+export async function obtenerTodasActividades(req, res) {
+  try {
+    const actividades = await db.query(
+      `SELECT DISTINCT
+         am.id_actividad_mantenimiento AS id,
+         am.nombre AS actividad,
+         tm.nombre AS tipo
+       FROM actividad_periferico_tipo apt
+       JOIN actividad_mantenimiento am ON apt.id_actividad_mantenimiento = am.id_actividad_mantenimiento
+       JOIN tipo_mantenimiento tm ON apt.id_tipo_mantenimiento = tm.id_tipo_mantenimiento
+       ORDER BY tm.nombre, am.nombre`,
+      { type: QueryTypes.SELECT }
+    );
+
+    res.json({ actividades });
+  } catch (error) {
+    console.error("Error al obtener todas las actividades:", error);
+    res.status(500).json({ error: "Error al obtener todas las actividades" });
+  }
+}
+
+export async function editarActividad(req, res) {
+  const { id } = req.params;
+  const { nombre } = req.body;
+
+  if (!id) return res.status(400).json({ error: "Falta id de actividad" });
+  if (!nombre || String(nombre).trim() === "") {
+    return res.status(400).json({ error: "Falta nombre de la actividad" });
+  }
+
+  const t = await db.transaction();
+  try {
+    const actividadRow = await db.query(
+      `SELECT id_actividad_mantenimiento FROM actividad_mantenimiento WHERE id_actividad_mantenimiento = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT, transaction: t }
+    );
+
+    if (!actividadRow.length) {
+      await t.rollback();
+      return res.status(404).json({ error: "Actividad no encontrada" });
+    }
+
+    await db.query(
+      `UPDATE actividad_mantenimiento SET nombre = :nombre WHERE id_actividad_mantenimiento = :id`,
+      { replacements: { id, nombre: nombre.trim() }, type: QueryTypes.UPDATE, transaction: t }
+    );
+
+    await t.commit();
+    return res.json({ ok: true, id_actividad_mantenimiento: id });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error al editar actividad:", error);
+    return res.status(500).json({ error: "Error al editar actividad" });
+  }
+}
+
+export async function eliminarActividad(req, res) {
+  const { id } = req.params;
+
+  if (!id) return res.status(400).json({ error: "Falta id de actividad" });
+
+  const t = await db.transaction();
+  try {
+    const actividadRow = await db.query(
+      `SELECT id_actividad_mantenimiento FROM actividad_mantenimiento WHERE id_actividad_mantenimiento = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT, transaction: t }
+    );
+
+    if (!actividadRow.length) {
+      await t.rollback();
+      return res.status(404).json({ error: "Actividad no encontrada" });
+    }
+
+    const relacionesMantenimiento = await db.query(
+      `SELECT COUNT(*) as total
+       FROM mantenimiento_actividad ma
+       JOIN actividad_periferico_tipo apt ON ma.id_actividad_periferico_tipo = apt.id_actividad_periferico_tipo
+       WHERE apt.id_actividad_mantenimiento = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT, transaction: t }
+    );
+
+    if (relacionesMantenimiento.length > 0 && relacionesMantenimiento[0].total > 0) {
+      await t.rollback();
+      return res.status(409).json({ 
+        error: "No se puede eliminar la actividad porque está relacionada con uno o más mantenimientos. Elimine primero los mantenimientos asociados.",
+        enUso: true,
+        cantidadMantenimientos: relacionesMantenimiento[0].total
+      });
+    }
+
+    await db.query(
+      `DELETE FROM actividad_periferico_tipo WHERE id_actividad_mantenimiento = :id`,
+      { replacements: { id }, type: QueryTypes.DELETE, transaction: t }
+    );
+
+    await db.query(
+      `DELETE FROM actividad_mantenimiento WHERE id_actividad_mantenimiento = :id`,
+      { replacements: { id }, type: QueryTypes.DELETE, transaction: t }
+    );
+
+    await t.commit();
+    return res.json({ ok: true, id_actividad_mantenimiento: id });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error al eliminar actividad:", error);
+    return res.status(500).json({ error: "Error al eliminar actividad" });
   }
 }
 
