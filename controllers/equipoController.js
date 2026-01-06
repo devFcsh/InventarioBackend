@@ -177,6 +177,9 @@ export async function obtenerEquiposActivos(req, res) {
     usuario: "u.nombre",
     uso: "uso.nombre",
     edificio: "ed.nombre",
+    fecha_creacion: "e.fecha_creacion",
+    editor: "e.editor",
+    autor: "e.autor",
   };
 
   if (typeof sortBy === "string") sortBy = sortBy.trim();
@@ -360,6 +363,9 @@ export async function obtenerEquiposBodega(req, res) {
     marca: "m.nombre",
     modelo: "mo.nombre",
     serie: "s.nombre",
+    fecha_creacion: "e.fecha_creacion",
+    editor: "e.editor",
+    autor: "e.autor",
   };
 
   if (typeof sortBy === "string") sortBy = sortBy.trim();
@@ -522,6 +528,9 @@ export async function obtenerEquiposBaja(req, res) {
     usuario: "u.nombre",
     uso: "uso.nombre",
     edificio: "ed.nombre",
+    fecha_creacion: "e.fecha_creacion",
+    editor: "e.editor",
+    autor: "e.autor",
   };
 
   if (typeof sortBy === "string") sortBy = sortBy.trim();
@@ -1327,9 +1336,12 @@ export async function agregarEquipo(req, res) {
     idUsuario,
     imagenRuta,
     observacion,
+    autor,
   } = req.body;
 
   try {
+    const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
+
     const id_serie = await obtenerOCrearSerie(serie);
 
     if (id_serie && modeloId) {
@@ -1370,6 +1382,7 @@ export async function agregarEquipo(req, res) {
       idUsuario: tipo === "bodega" ? null : idUsuario,
       imagenRuta: tipo === "bodega" ? null : imagenRuta,
       observacion,
+      autor: autorValue,
     };
 
     const result = await db.query(
@@ -1391,7 +1404,8 @@ export async function agregarEquipo(req, res) {
         :idUbicacion,
         :idUsuario,
         :imagenRuta,
-        :observacion
+        :observacion,
+        :autor
       );`,
       { replacements: parametros }
     );
@@ -1418,9 +1432,12 @@ export async function agregarEquipoSimple(req, res) {
     imagenRuta,
     observacion,
     idLampara,
+    autor,
   } = req.body;
 
   try {
+    const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
+
     const id_serie = await obtenerOCrearSerie(serie);
     if (id_serie && modeloId) {
       const existeRelacion = await db.query(
@@ -1452,6 +1469,7 @@ export async function agregarEquipoSimple(req, res) {
       imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
       observacion,
       idLampara,
+      autor: autorValue,
     };
 
     const result = await db.query(
@@ -1465,7 +1483,8 @@ export async function agregarEquipoSimple(req, res) {
         :idUsuario,
         :imagenRuta,
         :observacion,
-        :idLampara
+        :idLampara,
+        :autor
       );`,
       { replacements: parametros }
     );
@@ -1496,9 +1515,12 @@ export async function agregarEquipoRed(req, res) {
     puerto_ftp,
     idLampara,
     nombreEquipo,
+    autor,
   } = req.body;
 
   try {
+    const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
+
     const id_serie = await obtenerOCrearSerie(serie);
 
     if (id_serie && modeloId) {
@@ -1535,6 +1557,7 @@ export async function agregarEquipoRed(req, res) {
       puerto_ftp,
       idLampara,
       nombreEquipo,
+      autor: autorValue,
     };
 
     const result = await db.query(
@@ -1548,7 +1571,8 @@ export async function agregarEquipoRed(req, res) {
         :idUsuario,
         :imagenRuta,
         :observacion,
-        :idLampara
+        :idLampara,
+        :autor
       );`,
       { replacements: parametros }
     );
@@ -2020,10 +2044,12 @@ export const obtenerBodegaBajaRed = async (req, res) => {
 };
 
 export async function agregarComponentes(req, res) {
-  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } =
+  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta, autor } =
     req.body;
 
   try {
+    const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
+
     for (const componente of componentes) {
       const id_serie = await obtenerOCrearSerie(componente.serie);
       const modeloId = componente.modeloId;
@@ -2048,12 +2074,13 @@ export async function agregarComponentes(req, res) {
       }
 
       const result = await db.query(
-        `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
+        `INSERT INTO equipo (inventario, id_serie, id_periferico, autor) VALUES (:inventario, :serieId, :perifericoId, :autor);`,
         {
           replacements: {
             perifericoId: componente.perifericoId,
             inventario: componente.inventario,
             serieId: id_serie,
+            autor: autorValue,
           },
         }
       );
@@ -2144,9 +2171,12 @@ export async function editarEquipo(req, res) {
     id_ubicacion,
     imagenRuta,
     observacion,
+    editor,
   } = req.body;
 
   try {
+    const editorValue = typeof editor === 'string' ? editor.trim().slice(0, 30) : '';
+
     const equipo = await db.query(
       `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
       {
@@ -2257,7 +2287,7 @@ export async function editarEquipo(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2266,6 +2296,7 @@ export async function editarEquipo(req, res) {
           id_serie,
           perifericoId,
           observacion,
+          editor: editorValue,
         },
         type: QueryTypes.UPDATE,
       }
@@ -2365,9 +2396,12 @@ export async function editarEquipoSimple(req, res) {
     observacion,
     id_lampara,
     id_computadora,
+    editor,
   } = req.body;
 
   try {
+    const editorValue = typeof editor === 'string' ? editor.trim().slice(0, 30) : '';
+
     const equipo = await db.query(
       `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
       {
@@ -2462,7 +2496,7 @@ export async function editarEquipoSimple(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2471,6 +2505,7 @@ export async function editarEquipoSimple(req, res) {
           id_serie,
           perifericoId,
           observacion,
+          editor: editorValue,
         },
         type: QueryTypes.UPDATE,
       }
@@ -2531,28 +2566,70 @@ export async function editarEquipoSimple(req, res) {
 
     if (typeof id_computadora !== "undefined" && id_computadora !== null) {
       const pc = await db.query(
-        `SELECT id_computadora FROM computadora WHERE id_computadora = :id_computadora`,
-        { replacements: { id_computadora }, type: QueryTypes.SELECT }
+      `SELECT id_computadora FROM computadora WHERE id_computadora = :id_computadora`,
+      { replacements: { id_computadora }, type: QueryTypes.SELECT }
       );
       if (!pc.length) {
-        return res.status(404).json({ error: "Computadora destino no encontrada" });
+      return res.status(404).json({ error: "Computadora destino no encontrada" });
       }
 
       const existe = await db.query(
-        `SELECT id_componente, id_computadora FROM componente WHERE id_componente = :equipoId`,
-        { replacements: { equipoId }, type: QueryTypes.SELECT }
+      `SELECT id_componente, id_computadora FROM componente WHERE id_componente = :equipoId`,
+      { replacements: { equipoId }, type: QueryTypes.SELECT }
       );
 
+      if (perifericoId) {
+        const componentesExistentes = await db.query(
+          `SELECT COUNT(*) as count FROM componente c 
+           INNER JOIN equipo e ON c.id_componente = e.id_equipo 
+           WHERE c.id_computadora = :id_computadora 
+           AND e.id_periferico = :perifericoId 
+           AND c.id_componente != :equipoId`,
+          { 
+            replacements: { id_computadora, perifericoId, equipoId }, 
+            type: QueryTypes.SELECT 
+          }
+        );
+
+        const cantidadActual = componentesExistentes[0].count;
+
+        if (parseInt(perifericoId) === 3 && parseInt(id_computadora) === 1) {
+          if (cantidadActual >= 2) {
+            return res.status(400).json({ 
+              error: "Ya se tiene el número máximo (2) de este componente agregado a esta computadora" 
+            });
+          }
+        } else {
+          if (cantidadActual >= 1) {
+            return res.status(400).json({ 
+              error: "Ya se tiene el número máximo de este componente agregado a esta computadora" 
+            });
+          }
+        }
+      }
+
       if (!existe.length) {
-        await db.query(
-          `INSERT INTO componente (id_componente, id_computadora) VALUES (:equipoId, :id_computadora)`,
-          { replacements: { equipoId, id_computadora }, type: QueryTypes.INSERT }
-        );
+      await db.query(
+        `INSERT INTO componente (id_componente, id_computadora) VALUES (:equipoId, :id_computadora)`,
+        { replacements: { equipoId, id_computadora }, type: QueryTypes.INSERT }
+      );
       } else if (existe[0].id_computadora !== id_computadora) {
-        await db.query(
-          `UPDATE componente SET id_computadora = :id_computadora WHERE id_componente = :equipoId`,
-          { replacements: { id_computadora, equipoId }, type: QueryTypes.UPDATE }
-        );
+      await db.query(
+        `UPDATE componente SET id_computadora = :id_computadora WHERE id_componente = :equipoId`,
+        { replacements: { id_computadora, equipoId }, type: QueryTypes.UPDATE }
+      );
+      }
+    } else {
+      const esComponente = await db.query(
+      `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+      { replacements: { equipoId }, type: QueryTypes.SELECT }
+      );
+
+      if (esComponente.length) {
+      await db.query(
+        `DELETE FROM componente WHERE id_componente = :equipoId`,
+        { replacements: { equipoId }, type: QueryTypes.DELETE }
+      );
       }
     }
 
@@ -2580,9 +2657,12 @@ export async function editarEquipoRed(req, res) {
     puertos,
     puerto_ftp,
     nombre_equipo,
+    editor,
   } = req.body;
 
   try {
+    const editorValue = typeof editor === 'string' ? editor.trim().slice(0, 30) : '';
+
     const equipo = await db.query(
       `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
       {
@@ -2677,7 +2757,7 @@ export async function editarEquipoRed(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2686,6 +2766,7 @@ export async function editarEquipoRed(req, res) {
           id_serie,
           perifericoId,
           observacion,
+          editor: editorValue,
         },
         type: QueryTypes.UPDATE,
       }
@@ -2756,10 +2837,13 @@ export async function editarEquipoRed(req, res) {
 }
 
 export async function gestionarComponentesEditados(req, res) {
-  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta } =
+  const { tipo, equipoId, componentes, ubicacionId, usuarioId, imagenRuta, autor, editor } =
     req.body;
 
   try {
+    const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
+    const editorValue = typeof editor === 'string' ? editor.trim().slice(0, 30) : '';
+
     const componentesActuales = await db.query(
       `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
       {
@@ -2792,6 +2876,16 @@ export async function gestionarComponentesEditados(req, res) {
 
     for (const componente of componentes) {
     if (componente.id_componente) {
+        await db.query(
+          `UPDATE equipo SET editor = :editor WHERE id_equipo = :id_componente`,
+          {
+            replacements: {
+              editor: editorValue,
+              id_componente: componente.id_componente,
+            },
+            type: QueryTypes.UPDATE,
+          }
+        );
         continue;
     }
 
@@ -2826,12 +2920,13 @@ export async function gestionarComponentesEditados(req, res) {
         }
 
         const resultComp = await db.query(
-          `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
+          `INSERT INTO equipo (inventario, id_serie, id_periferico, autor) VALUES (:inventario, :serieId, :perifericoId, :editor);`,
           {
             replacements: {
               inventario: componente.inventario,
               serieId: id_serie_componente,
               perifericoId: perifericoIdComponente,
+              editor: editorValue,
             },
           }
         );
