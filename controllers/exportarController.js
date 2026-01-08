@@ -3,7 +3,7 @@ import db from "../models/index.js";
 
 export async function exportarEquiposActivos(req, res) {
     try {
-      const [computadoras, ap, switches, proyectores, simples] =
+      const [computadoras, accesspoint, switches, proyectores, simples] =
         await Promise.all([
           exportarComputadorasActivos(),
           exportarEquiposRedAPActivos(),
@@ -14,7 +14,7 @@ export async function exportarEquiposActivos(req, res) {
   
       const resultado = {
         Computadoras: computadoras,
-        AP: ap,
+        AccessPoint: accesspoint,
         Switch: switches,
         Proyector: proyectores,
         EquiposSimples: simples,
@@ -29,7 +29,7 @@ export async function exportarEquiposActivos(req, res) {
 
   export async function exportarEquiposBodega(req, res) {
     try {
-      const [computadoras, ap, switches, proyectores, simples] =
+      const [computadoras, accesspoint, switches, proyectores, simples] =
         await Promise.all([
           exportarComputadorasBodega(),
           exportarEquiposRedAPBodega(),
@@ -40,7 +40,7 @@ export async function exportarEquiposActivos(req, res) {
   
       const resultado = {
         Computadoras: computadoras,
-        AP: ap,
+        AccessPoint: accesspoint,
         Switch: switches,
         Proyector: proyectores,
         EquiposSimples: simples,
@@ -248,13 +248,13 @@ export async function exportarEquiposActivos(req, res) {
         JOIN marca ma ON mm.id_marca = ma.id_marca
         JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
         JOIN periferico pe ON mp.id_periferico = pe.id_periferico
-        WHERE pe.nombre = 'AP'
+        WHERE pe.nombre = 'AccessPoint'
         ORDER BY e.id_equipo;
       `;
   
       return await db.query(query, { type: QueryTypes.SELECT });
     } catch (error) {
-      console.error("Error al obtener los equipos de red AP:", error);
+      console.error("Error al obtener los equipos de red AccessPoint:", error);
       return [];
     }
   }
@@ -287,13 +287,13 @@ export async function exportarEquiposActivos(req, res) {
         JOIN marca ma ON mm.id_marca = ma.id_marca
         JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
         JOIN periferico pe ON mp.id_periferico = pe.id_periferico
-        WHERE pe.nombre = 'AP'
+        WHERE pe.nombre = 'AccessPoint'
         ORDER BY e.id_equipo;
       `;
   
       return await db.query(query, { type: QueryTypes.SELECT });
     } catch (error) {
-      console.error("Error al obtener los equipos de red AP:", error);
+      console.error("Error al obtener los equipos de red AccessPoint:", error);
       return [];
     }
   }

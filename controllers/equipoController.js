@@ -53,6 +53,24 @@ async function obtenerOCrearMarca(nombreMarca, id_periferico) {
   return id_marca;
 }
 
+async function obtenerOCrearPeriferico(nombrePeriferico) {
+  if (!nombrePeriferico) return null;
+  if (nombrePeriferico.length > 20)
+    throw new Error("El nombre del periférico excede 20 caracteres.");
+  const perifericoExistente = await db.query(
+    `SELECT id_periferico FROM periferico WHERE nombre = :nombrePeriferico`,
+    { replacements: { nombrePeriferico }, type: QueryTypes.SELECT }
+  );
+  if (perifericoExistente.length) {
+    return perifericoExistente[0].id_periferico;
+  }
+  const [result] = await db.query(
+    `INSERT INTO periferico (nombre) VALUES (:nombrePeriferico)`,
+    { replacements: { nombrePeriferico }, type: QueryTypes.INSERT }
+  );
+  return result;
+}
+
 async function obtenerOCrearModelo(nombreModelo, id_marca) {
   if (!nombreModelo) return null;
   if (nombreModelo.length > 30)
@@ -3282,7 +3300,8 @@ export const pasarBodegaAActivo = async (req, res) => {
 };
 
 export async function insertarEquiposDesdeJSON(req, res) {
-  const equiposData = req.body;
+  const { equipos: equiposData, autor } = req.body;
+  const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
   const registrados = [];
   const noRegistrados = [];
   const componentesRegistrados = [];
@@ -3374,7 +3393,29 @@ export async function insertarEquiposDesdeJSON(req, res) {
             equipoJson,
             registrados,
             noRegistrados,
-            componentesRegistrados
+            componentesRegistrados,
+            autorValue
+          );
+        } else if (tipoLower === "switch") {
+          fueInsertado = await procesarSwitch(
+            equipoJson,
+            registrados,
+            noRegistrados,
+            autorValue
+          );
+        } else if (tipoLower === "accesspoint" || tipoLower === "access point") {
+          fueInsertado = await procesarAccessPoint(
+            equipoJson,
+            registrados,
+            noRegistrados,
+            autorValue
+          );
+        } else if (tipoLower === "proyector") {
+          fueInsertado = await procesarProyector(
+            equipoJson,
+            registrados,
+            noRegistrados,
+            autorValue
           );
         } else {
           fueInsertado = await procesarComponenteIndividual(
@@ -3600,7 +3641,8 @@ async function procesarComputadoraOLaptop(
   equipoJson,
   registrados,
   noRegistrados,
-  componentesRegistrados
+  componentesRegistrados,
+  autor
 ) {
   const perifericoId = equipoJson.tipo.toLowerCase() === "laptop" ? 2 : 1;
   if (equipoJson.nombreEquipo && String(equipoJson.nombreEquipo).length > 15) {
@@ -3683,7 +3725,7 @@ async function procesarComputadoraOLaptop(
     p_tipo: equipoJson.tipo_inventario || "activo",
     p_inventario: equipoJson.inventario,
     p_anio_compra:
-      equipoJson.anio_compra === "S/N" ? null : equipoJson.anio_compra,
+      equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
     p_id_periferico: perifericoId,
     p_id_serie: id_serie,
     p_nombre_equipo: equipoJson.nombreEquipo,
@@ -3698,6 +3740,7 @@ async function procesarComputadoraOLaptop(
     p_id_ubicacion: ubicacionId,
     p_id_usuario: usuarioId,
     p_observacion: equipoJson.observacion || null,
+    p_autor: autor || null,
   };
 
   const result = await db.query(
@@ -3718,7 +3761,8 @@ async function procesarComputadoraOLaptop(
             :p_dominio,
             :p_id_ubicacion,
             :p_id_usuario,
-            :p_observacion
+            :p_observacion,
+            :p_autor
         );`,
     { replacements: parametrosEquipo }
   );
@@ -3803,6 +3847,522 @@ async function procesarComponenteIndividual(
     }
   }
   return insertado;
+}
+
+async function procesarSwitch(
+  equipoJson,
+  registrados,
+  noRegistrados,
+  autor
+) {
+  try {
+    const ubicacionId = await obtenerOCrearUbicacion(
+      equipoJson.ubicacion,
+      equipoJson.edificio
+    );
+
+    if (!ubicacionId) {
+      noRegistrados.push({
+        inventario: equipoJson.inventario,
+        motivo: "No se pudo obtener o crear la ubicación",
+        datos: equipoJson,
+      });
+      return false;
+    }
+
+    const usuarioId = await obtenerOCrearUsuario("Red", "Red");
+
+    const perifericoId = await obtenerOCrearPeriferico("Switch");
+
+    const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
+    const modeloId = await obtenerOCrearModelo(equipoJson.modelo, id_marca);
+    const id_serie = await obtenerOCrearSerie(equipoJson.serie);
+
+    if (id_serie && modeloId) {
+      const existeRelacion = await db.query(
+        `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+        {
+          replacements: { modeloId, id_serie },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!existeRelacion.length) {
+        await db.query(
+          `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+          {
+            replacements: { modeloId, id_serie },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (id_marca && perifericoId) {
+      const relacionMarcaPeriferico = await db.query(
+        `SELECT 1 FROM marca_periferico WHERE id_marca = :id_marca AND id_periferico = :perifericoId`,
+        {
+          replacements: { id_marca, perifericoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!relacionMarcaPeriferico.length) {
+        await db.query(
+          `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :perifericoId)`,
+          {
+            replacements: { id_marca, perifericoId },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (!equipoJson.inventario || String(equipoJson.inventario).trim() === "") {
+      equipoJson.inventario = "S/N";
+    }
+
+    const insertRes = await db.query(
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor)`,
+      {
+        replacements: {
+          inventario: equipoJson.inventario,
+          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          id_serie,
+          perifericoId,
+          observacion: equipoJson.observacion || null,
+          autor: autor || null,
+        },
+        type: QueryTypes.INSERT,
+      }
+    );
+    const equipoId = insertRes[0];
+
+    const tipoInventario = equipoJson.tipo_inventario || "activo";
+    if (tipoInventario === "activo") {
+      await db.query(
+        `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) 
+         VALUES (:equipoId, :ubicacionId, :usuarioId)`,
+        {
+          replacements: { equipoId, ubicacionId, usuarioId },
+        }
+      );
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, 1)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "bodega") {
+      await db.query(
+        `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "baja") {
+      await db.query(
+        `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    }
+
+    await db.query(
+      `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp, nombre_equipo) 
+       VALUES (:equipoId, :mac, :puertos, :puerto_ftp, :nombre_equipo)`,
+      {
+        replacements: {
+          equipoId,
+          mac: equipoJson.mac || null,
+          puertos: equipoJson.puertos || null,
+          puerto_ftp: equipoJson.puerto_ftp || null,
+          nombre_equipo: equipoJson.nombre || null,
+        },
+      }
+    );
+
+    registrados.push({
+      inventario: equipoJson.inventario,
+      equipoId,
+      tipo: "Switch",
+      datos: equipoJson,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error procesando switch:", error);
+    noRegistrados.push({
+      inventario: equipoJson.inventario,
+      motivo: error.message,
+      datos: equipoJson,
+    });
+    return false;
+  }
+}
+
+async function procesarAccessPoint(
+  equipoJson,
+  registrados,
+  noRegistrados,
+  autor
+) {
+  try {
+    const ubicacionId = await obtenerOCrearUbicacion(
+      equipoJson.ubicacion,
+      equipoJson.edificio
+    );
+
+    if (!ubicacionId) {
+      noRegistrados.push({
+        inventario: equipoJson.inventario,
+        motivo: "No se pudo obtener o crear la ubicación",
+        datos: equipoJson,
+      });
+      return false;
+    }
+
+    const usuarioId = await obtenerOCrearUsuario("Red", "Red");
+
+    const perifericoId = await obtenerOCrearPeriferico("AccessPoint");
+
+    const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
+    const modeloId = await obtenerOCrearModelo(equipoJson.modelo, id_marca);
+    const id_serie = await obtenerOCrearSerie(equipoJson.serie);
+
+    if (id_serie && modeloId) {
+      const existeRelacion = await db.query(
+        `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+        {
+          replacements: { modeloId, id_serie },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!existeRelacion.length) {
+        await db.query(
+          `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+          {
+            replacements: { modeloId, id_serie },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (id_marca && perifericoId) {
+      const relacionMarcaPeriferico = await db.query(
+        `SELECT 1 FROM marca_periferico WHERE id_marca = :id_marca AND id_periferico = :perifericoId`,
+        {
+          replacements: { id_marca, perifericoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!relacionMarcaPeriferico.length) {
+        await db.query(
+          `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :perifericoId)`,
+          {
+            replacements: { id_marca, perifericoId },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (!equipoJson.inventario || String(equipoJson.inventario).trim() === "") {
+      equipoJson.inventario = "S/N";
+    }
+
+    const insertRes = await db.query(
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor)`,
+      {
+        replacements: {
+          inventario: equipoJson.inventario,
+          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          id_serie,
+          perifericoId,
+          observacion: equipoJson.observacion || null,
+          autor: autor || null,
+        },
+        type: QueryTypes.INSERT,
+      }
+    );
+    const equipoId = insertRes[0];
+
+    const tipoInventario = equipoJson.tipo_inventario || "activo";
+    if (tipoInventario === "activo") {
+      await db.query(
+        `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) 
+         VALUES (:equipoId, :ubicacionId, :usuarioId)`,
+        {
+          replacements: { equipoId, ubicacionId, usuarioId },
+        }
+      );
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, 1)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "bodega") {
+      await db.query(
+        `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "baja") {
+      await db.query(
+        `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    }
+
+    await db.query(
+      `INSERT INTO equipo_red (id_equipo_red, mac, puertos, puerto_ftp, nombre_equipo) 
+       VALUES (:equipoId, :mac, NULL, NULL, :nombre_equipo)`,
+      {
+        replacements: {
+          equipoId,
+          mac: equipoJson.mac || null,
+          nombre_equipo: equipoJson.nombre || null,
+        },
+      }
+    );
+
+    registrados.push({
+      inventario: equipoJson.inventario,
+      equipoId,
+      tipo: "AccessPoint",
+      datos: equipoJson,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error procesando access point:", error);
+    noRegistrados.push({
+      inventario: equipoJson.inventario,
+      motivo: error.message,
+      datos: equipoJson,
+    });
+    return false;
+  }
+}
+
+async function procesarProyector(
+  equipoJson,
+  registrados,
+  noRegistrados,
+  autor
+) {
+  try {
+    const ubicacionId = await obtenerOCrearUbicacion(
+      equipoJson.ubicacion,
+      equipoJson.edificio
+    );
+
+    if (!ubicacionId) {
+      noRegistrados.push({
+        inventario: equipoJson.inventario,
+        motivo: "No se pudo obtener o crear la ubicación",
+        datos: equipoJson,
+      });
+      return false;
+    }
+
+    const usuarioId = await obtenerOCrearUsuario("N/A", "N/A");
+
+    const perifericoId = await obtenerOCrearPeriferico("Proyector");
+
+    const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
+    const modeloId = await obtenerOCrearModelo(equipoJson.modelo, id_marca);
+    const id_serie = await obtenerOCrearSerie(equipoJson.serie);
+
+    if (id_serie && modeloId) {
+      const existeRelacion = await db.query(
+        `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+        {
+          replacements: { modeloId, id_serie },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!existeRelacion.length) {
+        await db.query(
+          `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+          {
+            replacements: { modeloId, id_serie },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (id_marca && perifericoId) {
+      const relacionMarcaPeriferico = await db.query(
+        `SELECT 1 FROM marca_periferico WHERE id_marca = :id_marca AND id_periferico = :perifericoId`,
+        {
+          replacements: { id_marca, perifericoId },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!relacionMarcaPeriferico.length) {
+        await db.query(
+          `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :perifericoId)`,
+          {
+            replacements: { id_marca, perifericoId },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (!equipoJson.inventario || String(equipoJson.inventario).trim() === "") {
+      equipoJson.inventario = "S/N";
+    }
+
+    let idLampara = null;
+    if (equipoJson.lampara && equipoJson.lampara !== "S/N") {
+      idLampara = await obtenerOCrearLampara(equipoJson.lampara, modeloId);
+    }
+
+    const insertRes = await db.query(
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor)`,
+      {
+        replacements: {
+          inventario: equipoJson.inventario,
+          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          id_serie,
+          perifericoId,
+          observacion: equipoJson.observacion || null,
+          autor: autor || null,
+        },
+        type: QueryTypes.INSERT,
+      }
+    );
+    const equipoId = insertRes[0];
+
+    const tipoInventario = equipoJson.tipo_inventario || "activo";
+    if (tipoInventario === "activo") {
+      await db.query(
+        `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) 
+         VALUES (:equipoId, :ubicacionId, :usuarioId)`,
+        {
+          replacements: { equipoId, ubicacionId, usuarioId },
+        }
+      );
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, 1)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "bodega") {
+      await db.query(
+        `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "baja") {
+      await db.query(
+        `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    }
+
+    if (idLampara) {
+      await db.query(
+        `INSERT INTO equipo_proyector (id_equipo_proyector, id_lampara) 
+         VALUES (:equipoId, :idLampara)`,
+        {
+          replacements: { equipoId, idLampara },
+        }
+      );
+    } else {
+      await db.query(
+        `INSERT INTO equipo_proyector (id_equipo_proyector) 
+         VALUES (:equipoId)`,
+        {
+          replacements: { equipoId },
+        }
+      );
+    }
+
+    registrados.push({
+      inventario: equipoJson.inventario,
+      equipoId,
+      tipo: "Proyector",
+      datos: equipoJson,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error procesando proyector:", error);
+    noRegistrados.push({
+      inventario: equipoJson.inventario,
+      motivo: error.message,
+      datos: equipoJson,
+    });
+    return false;
+  }
+}
+
+async function obtenerOCrearLampara(nombreLampara, modeloId) {
+  if (!nombreLampara || nombreLampara.trim().toUpperCase() === "S/N") {
+    return null;
+  }
+  if (nombreLampara.length > 30) {
+    throw new Error("El nombre de la lámpara excede 30 caracteres.");
+  }
+  try {
+    const nombre = nombreLampara.trim();
+    let lampara = await db.query(
+      `SELECT id_lampara FROM lampara WHERE nombre = :nombre`,
+      {
+        replacements: { nombre },
+        type: QueryTypes.SELECT,
+      }
+    );
+    
+    if (lampara.length) {
+      const idLampara = lampara[0].id_lampara;
+      
+      if (modeloId) {
+        const relacionExiste = await db.query(
+          `SELECT 1 FROM modelo_lampara WHERE id_modelo = :modeloId AND id_lampara = :idLampara`,
+          {
+            replacements: { modeloId, idLampara },
+            type: QueryTypes.SELECT,
+          }
+        );
+        
+        if (!relacionExiste.length) {
+          await db.query(
+            `INSERT INTO modelo_lampara (id_modelo, id_lampara) VALUES (:modeloId, :idLampara)`,
+            {
+              replacements: { modeloId, idLampara },
+              type: QueryTypes.INSERT,
+            }
+          );
+        }
+      }
+      
+      return idLampara;
+    }
+    
+    const [result] = await db.query(
+      `INSERT INTO lampara (nombre) VALUES (:nombre)`,
+      {
+        replacements: { nombre },
+        type: QueryTypes.INSERT,
+      }
+    );
+    const idLampara = result;
+    
+    if (modeloId) {
+      await db.query(
+        `INSERT INTO modelo_lampara (id_modelo, id_lampara) VALUES (:modeloId, :idLampara)`,
+        {
+          replacements: { modeloId, idLampara },
+          type: QueryTypes.INSERT,
+        }
+      );
+    }
+    
+    return idLampara;
+  } catch (error) {
+    throw new Error("Error al obtener/crear lámpara: " + error.message);
+  }
 }
 
 async function procesarComponente(
