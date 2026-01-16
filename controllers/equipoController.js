@@ -1456,6 +1456,15 @@ export async function agregarEquipoSimple(req, res) {
   try {
     const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
 
+    // Obtener o crear el usuario "Aula" para proyectores (si idLampara está presente, es un proyector)
+    let usuarioFinal = idUsuario;
+    if (tipo !== "bodega" && tipo !== "baja" && idLampara !== undefined && idLampara !== null) {
+      const usuarioAulaId = await obtenerOCrearUsuario("Aula", "Aula");
+      if (usuarioAulaId) {
+        usuarioFinal = usuarioAulaId;
+      }
+    }
+
     const id_serie = await obtenerOCrearSerie(serie);
     if (id_serie && modeloId) {
       const existeRelacion = await db.query(
@@ -1483,7 +1492,7 @@ export async function agregarEquipoSimple(req, res) {
       id_periferico: perifericoId,
       id_serie,
       idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
-      idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
+      idUsuario: tipo === "bodega" || tipo === "baja" ? null : usuarioFinal,
       imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
       observacion,
       idLampara,
@@ -1539,6 +1548,15 @@ export async function agregarEquipoRed(req, res) {
   try {
     const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
 
+    // Obtener o crear el usuario "Red" para equipos de red (Switch o AccessPoint)
+    let usuarioFinal = idUsuario;
+    if (tipo !== "bodega" && tipo !== "baja") {
+      const usuarioRedId = await obtenerOCrearUsuario("Red", "Red");
+      if (usuarioRedId) {
+        usuarioFinal = usuarioRedId;
+      }
+    }
+
     const id_serie = await obtenerOCrearSerie(serie);
 
     if (id_serie && modeloId) {
@@ -1567,7 +1585,7 @@ export async function agregarEquipoRed(req, res) {
       id_serie,
       id_periferico: perifericoId,
       idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
-      idUsuario: tipo === "bodega" || tipo === "baja" ? null : idUsuario,
+      idUsuario: tipo === "bodega" || tipo === "baja" ? null : usuarioFinal,
       imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
       observacion,
       mac,
@@ -2420,6 +2438,15 @@ export async function editarEquipoSimple(req, res) {
   try {
     const editorValue = typeof editor === 'string' ? editor.trim().slice(0, 30) : '';
 
+    // Obtener o crear el usuario "Aula" para proyectores (si id_lampara está presente, es un proyector)
+    let usuarioFinal = id_usuario;
+    if (tipo === "activo" && id_lampara !== undefined && id_lampara !== null) {
+      const usuarioAulaId = await obtenerOCrearUsuario("Aula", "Aula");
+      if (usuarioAulaId) {
+        usuarioFinal = usuarioAulaId;
+      }
+    }
+
     const equipo = await db.query(
       `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
       {
@@ -2538,7 +2565,7 @@ export async function editarEquipoSimple(req, res) {
         {
           replacements: {
             equipoId,
-            id_usuario,
+            id_usuario: usuarioFinal,
             id_ubicacion,
           },
           type: QueryTypes.UPDATE,
@@ -2681,6 +2708,15 @@ export async function editarEquipoRed(req, res) {
   try {
     const editorValue = typeof editor === 'string' ? editor.trim().slice(0, 30) : '';
 
+    // Obtener o crear el usuario "Red" para equipos de red (Switch o AccessPoint)
+    let usuarioFinal = id_usuario;
+    if (tipo === "activo") {
+      const usuarioRedId = await obtenerOCrearUsuario("Red", "Red");
+      if (usuarioRedId) {
+        usuarioFinal = usuarioRedId;
+      }
+    }
+
     const equipo = await db.query(
       `SELECT * FROM equipo WHERE id_equipo = :equipoId`,
       {
@@ -2799,7 +2835,7 @@ export async function editarEquipoRed(req, res) {
         {
           replacements: {
             equipoId,
-            id_usuario,
+            id_usuario: usuarioFinal,
             id_ubicacion,
           },
           type: QueryTypes.UPDATE,
@@ -4162,12 +4198,19 @@ async function procesarProyector(
       return false;
     }
 
-    const usuarioId = await obtenerOCrearUsuario("N/A", "N/A");
+    const usuarioId = await obtenerOCrearUsuario("Aula", "Aula");
 
     const perifericoId = await obtenerOCrearPeriferico("Proyector");
 
     const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
-    const modeloId = await obtenerOCrearModelo(equipoJson.modelo, id_marca);
+    
+    // Concatenar categoría con modelo si la categoría está presente
+    let nombreModelo = equipoJson.modelo;
+    if (equipoJson.categoria && equipoJson.categoria.trim() !== "" && equipoJson.categoria !== "S/N") {
+      nombreModelo = `${equipoJson.categoria}-${equipoJson.modelo}`;
+    }
+    
+    const modeloId = await obtenerOCrearModelo(nombreModelo, id_marca);
     const id_serie = await obtenerOCrearSerie(equipoJson.serie);
 
     if (id_serie && modeloId) {
