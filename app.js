@@ -111,7 +111,7 @@ app.get('/health', (req, res) => {
     memory: process.memoryUsage(),
     cas: {
       server: 'https://auth.espol.edu.ec',
-      callback: `${process.env.BACKEND_URL}/auth/cas/callback`,
+      callback: `${process.env.BACKEND_URL}:${process.env.PORT}/auth/cas/callback`,
       frontend: process.env.FRONTEND_URL
     }
   });
