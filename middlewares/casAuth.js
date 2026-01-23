@@ -5,6 +5,8 @@ import axios from 'axios';
 import { DOMParser } from 'xmldom';
 
 // 1) Configuración de sesión
+const isHTTPS = process.env.FORCE_HTTP ? false : process.env.NODE_ENV === 'production';
+
 export const sessionMiddleware = session({
   secret:
     process.env.SESSION_SECRET ||
@@ -13,8 +15,8 @@ export const sessionMiddleware = session({
   saveUninitialized: false,
   rolling: false,
   cookie: {
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: isHTTPS,
+    sameSite: isHTTPS ? "none" : "lax",
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 horas
   },
@@ -154,7 +156,7 @@ class EspolCasStrategy extends passport.Strategy {
 // 3) Configurar estrategia
 const CAS_CONFIG = {
   casURL: "https://auth.espol.edu.ec",
-  serviceURL: `${process.env.BACKEND_URL}/auth/cas/callback`,
+  serviceURL: `${process.env.BACKEND_URL}:${process.env.PORT}/auth/cas/callback`,
   version: "CAS2.0",
 };
 
