@@ -140,14 +140,11 @@ async function eliminarSerieSiNoUsada(id_serie) {
 }
 
 function validarTexto(input) {
-  if (!input) return null;
   if (typeof input !== "string") return null;
+  
   const trimmed = input.trim();
   if (trimmed.length === 0 || trimmed.length > 30) return null;
   
-  const regex = /^[a-zA-Z0-9 _\-\/]+$/;
-  
-  if (!regex.test(trimmed)) return null;
   return trimmed;
 }
 
