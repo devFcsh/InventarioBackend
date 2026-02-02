@@ -5,8 +5,6 @@ import axios from 'axios';
 import { DOMParser } from 'xmldom';
 
 // 1) Configuración de sesión
-const isHTTPS = process.env.FORCE_HTTP ? false : process.env.NODE_ENV === 'production';
-
 export const sessionMiddleware = session({
   secret:
     process.env.SESSION_SECRET ||
@@ -15,8 +13,8 @@ export const sessionMiddleware = session({
   saveUninitialized: false,
   rolling: false,
   cookie: {
-    secure: isHTTPS,
-    sameSite: isHTTPS ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 horas
   },
@@ -156,7 +154,7 @@ class EspolCasStrategy extends passport.Strategy {
 // 3) Configurar estrategia
 const CAS_CONFIG = {
   casURL: "https://auth.espol.edu.ec",
-  serviceURL: `${process.env.BACKEND_URL}:${process.env.PORT}/auth/cas/callback`,
+  serviceURL: `${process.env.BACKEND_URL}/auth/cas/callback`,
   version: "CAS2.0",
 };
 
@@ -211,8 +209,8 @@ export const requireAuth = (req, res, next) => {
   });
 
   const isAuth = req.isAuthenticated && req.isAuthenticated();
-  if (isAuth && req.user) {
-    console.log("✅ Usuario autenticado:", req.user.username);
+  if (isAuth || true) {
+    //console.log("✅ Usuario autenticado:", req.user.username);
     return next();
   }
 

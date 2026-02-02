@@ -306,10 +306,10 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString(),
     config: {
       casURL: 'https://auth.espol.edu.ec',
-      backendURL: `${process.env.BACKEND_URL}:${process.env.PORT}`,
+      backendURL: process.env.BACKEND_URL,
       frontendURL: process.env.FRONTEND_URL,
-      callbackURL: `${process.env.BACKEND_URL}:${process.env.PORT}/auth/cas/callback`,
-      loginURL: `https://auth.espol.edu.ec/login?service=${encodeURIComponent(process.env.BACKEND_URL + ':'+ process.env.PORT + '/auth/cas/callback')}`,
+      callbackURL: `${process.env.BACKEND_URL}/auth/cas/callback`,
+      loginURL: `https://auth.espol.edu.ec/login?service=${encodeURIComponent(process.env.BACKEND_URL + '/auth/cas/callback')}`,
       logoutURL: `https://auth.espol.edu.ec/logout?service=${encodeURIComponent(process.env.FRONTEND_URL)}`
     },
     session: {
