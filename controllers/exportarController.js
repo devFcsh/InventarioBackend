@@ -109,8 +109,8 @@ export async function exportarEquiposActivos(req, res) {
   JOIN usuario us ON ea.id_usuario = us.id_usuario
   JOIN uso uo ON us.id_uso = uo.id_uso
   JOIN dominio d ON c.id_dominio = d.id_dominio
-  JOIN version_SO vso ON c.id_versionso = vso.id_versionso
-  JOIN sistema_Operativo so ON vso.id_sistemaoperativo = so.id_sistemaoperativo
+  JOIN version_so vso ON c.id_versionso = vso.id_versionso
+  JOIN sistema_operativo so ON vso.id_sistemaoperativo = so.id_sistemaoperativo
   JOIN procesador p ON c.id_procesador = p.id_procesador
   JOIN ram r ON c.id_ram = r.id_ram
   JOIN disco di ON c.id_disco = di.id_disco
@@ -186,8 +186,8 @@ export async function exportarEquiposActivos(req, res) {
   JOIN equipo e ON c.id_computadora = e.id_equipo
   JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
   JOIN dominio d ON c.id_dominio = d.id_dominio
-  JOIN version_SO vso ON c.id_versionso = vso.id_versionso
-  JOIN sistema_Operativo so ON vso.id_sistemaoperativo = so.id_sistemaoperativo
+  JOIN version_so vso ON c.id_versionso = vso.id_versionso
+  JOIN sistema_operativo so ON vso.id_sistemaoperativo = so.id_sistemaoperativo
   JOIN procesador p ON c.id_procesador = p.id_procesador
   JOIN ram r ON c.id_ram = r.id_ram
   JOIN disco di ON c.id_disco = di.id_disco
