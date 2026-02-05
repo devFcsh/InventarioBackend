@@ -2,7 +2,7 @@ import { QueryTypes } from "sequelize";
 import db from "../models/index.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { existsSync, unlinkSync } from "fs";
+import { existsSync, unlinkSync, mkdirSync, writeFileSync } from "fs";
 import Ubicacion from "../models/ubicacion.js";
 import Usuario from "../models/usuario.js";
 import Dominio from "../models/dominio.js";
@@ -13,6 +13,40 @@ import VersionSo from "../models/version_so.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+function guardarLogImportacion(datos) {
+  try {
+    const logsDir = join(__dirname, '..', 'logs');
+    if (!existsSync(logsDir)) {
+      mkdirSync(logsDir, { recursive: true });
+    }
+
+    const ahora = new Date();
+    const año = ahora.getFullYear();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    const horas = String(ahora.getHours()).padStart(2, '0');
+    const minutos = String(ahora.getMinutes()).padStart(2, '0');
+    const segundos = String(ahora.getSeconds()).padStart(2, '0');
+    
+    const nombreArchivo = `importacion_${año}-${mes}-${dia}_${horas}-${minutos}-${segundos}.json`;
+    const rutaArchivo = join(logsDir, nombreArchivo);
+
+    const logData = {
+      fechaHora: ahora.toISOString(),
+      timestamp: ahora.getTime(),
+      ...datos
+    };
+
+    writeFileSync(rutaArchivo, JSON.stringify(logData, null, 2), 'utf-8');
+    console.log(`Log de importación guardado en: ${rutaArchivo}`);
+    
+    return rutaArchivo;
+  } catch (error) {
+    console.error('Error al guardar log de importación:', error);
+    return null;
+  }
+}
 
 async function obtenerOCrearMarca(nombreMarca, id_periferico) {
   if (!nombreMarca) return null;
@@ -3504,7 +3538,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
       }
     }
 
-    res.json({
+    const respuesta = {
       success: true,
       message: "Proceso completado",
       resumen: {
@@ -3516,14 +3550,23 @@ export async function insertarEquiposDesdeJSON(req, res) {
       },
       registrados,
       noRegistrados,
-    });
+    };
+
+    guardarLogImportacion(respuesta);
+
+    res.json(respuesta);
   } catch (error) {
     console.error("Error general al insertar equipos:", error);
-    res.status(500).json({
+    const errorRespuesta = {
       success: false,
       error: "Error al insertar equipos desde JSON",
       message: error.message,
-    });
+      stack: error.stack,
+    };
+
+    guardarLogImportacion(errorRespuesta);
+
+    res.status(500).json(errorRespuesta);
   }
 }
 
