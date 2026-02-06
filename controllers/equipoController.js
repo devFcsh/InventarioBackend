@@ -89,8 +89,8 @@ async function obtenerOCrearMarca(nombreMarca, id_periferico) {
 
 async function obtenerOCrearPeriferico(nombrePeriferico) {
   if (!nombrePeriferico) return null;
-  if (nombrePeriferico.length > 20)
-    throw new Error("El nombre del periférico excede 20 caracteres.");
+  if (nombrePeriferico.length > 100)
+    throw new Error("El nombre del periférico excede 100 caracteres.");
   const perifericoExistente = await db.query(
     `SELECT id_periferico FROM periferico WHERE nombre = :nombrePeriferico`,
     { replacements: { nombrePeriferico }, type: QueryTypes.SELECT }
@@ -107,8 +107,8 @@ async function obtenerOCrearPeriferico(nombrePeriferico) {
 
 async function obtenerOCrearModelo(nombreModelo, id_marca) {
   if (!nombreModelo) return null;
-  if (nombreModelo.length > 30)
-    throw new Error("El nombre del modelo excede 30 caracteres.");
+  if (nombreModelo.length > 100)
+    throw new Error("El nombre del modelo excede 100 caracteres.");
   const modeloExistente = await db.query(
     `SELECT id_modelo FROM modelo WHERE nombre = :nombreModelo`,
     { replacements: { nombreModelo }, type: QueryTypes.SELECT }
@@ -264,6 +264,7 @@ export async function obtenerEquiposActivos(req, res) {
         uso.nombre AS uso,
         ea.id_ubicacion,
         ed.nombre AS edificio,
+        e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
       JOIN serie s ON e.id_serie = s.id_serie
@@ -344,6 +345,7 @@ export async function obtenerEquiposRed(req, res) {
         uso.nombre AS uso,
         ea.id_ubicacion,
         ed.nombre AS edificio,
+        e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
       JOIN serie s ON e.id_serie = s.id_serie
@@ -444,6 +446,7 @@ export async function obtenerEquiposBodega(req, res) {
         m.nombre AS marca, 
         mo.nombre AS modelo, 
         s.nombre AS serie,
+        e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
       JOIN serie s ON e.id_serie = s.id_serie
@@ -510,6 +513,7 @@ export async function obtenerEquiposRedBodega(req, res) {
         m.nombre AS marca, 
         mo.nombre AS modelo, 
         s.nombre AS serie,
+        e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
       JOIN serie s ON e.id_serie = s.id_serie
@@ -609,6 +613,7 @@ export async function obtenerEquiposBaja(req, res) {
         m.nombre AS marca, 
         mo.nombre AS modelo, 
         s.nombre AS serie,
+        e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
       JOIN serie s ON e.id_serie = s.id_serie
@@ -675,6 +680,7 @@ export async function obtenerEquiposRedBaja(req, res) {
         m.nombre AS marca, 
         mo.nombre AS modelo, 
         s.nombre AS serie,
+        e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
       JOIN serie s ON e.id_serie = s.id_serie
@@ -728,7 +734,8 @@ export async function obtenerEquiposPorUsuario(req, res) {
         p.nombre AS periferico, 
         m.nombre AS marca, 
         mo.nombre AS modelo, 
-        s.nombre AS serie
+        s.nombre AS serie,
+        e.empresa
       FROM equipo e
       JOIN serie s ON e.id_serie = s.id_serie
       JOIN modelo_serie ms ON s.id_serie = ms.id_serie
@@ -1386,6 +1393,7 @@ export async function agregarEquipo(req, res) {
     imagenRuta,
     observacion,
     autor,
+    empresa,
   } = req.body;
 
   try {
@@ -1432,6 +1440,7 @@ export async function agregarEquipo(req, res) {
       imagenRuta: tipo === "bodega" ? null : imagenRuta,
       observacion,
       autor: autorValue,
+      empresa: empresa || null,
     };
 
     const result = await db.query(
@@ -1454,7 +1463,8 @@ export async function agregarEquipo(req, res) {
         :idUsuario,
         :imagenRuta,
         :observacion,
-        :autor
+        :autor,
+        :empresa
       );`,
       { replacements: parametros }
     );
@@ -1482,6 +1492,7 @@ export async function agregarEquipoSimple(req, res) {
     observacion,
     idLampara,
     autor,
+    empresa,
   } = req.body;
 
   try {
@@ -1528,6 +1539,7 @@ export async function agregarEquipoSimple(req, res) {
       observacion,
       idLampara,
       autor: autorValue,
+      empresa: empresa || null,
     };
 
     const result = await db.query(
@@ -1542,7 +1554,8 @@ export async function agregarEquipoSimple(req, res) {
         :imagenRuta,
         :observacion,
         :idLampara,
-        :autor
+        :autor,
+        :empresa
       );`,
       { replacements: parametros }
     );
@@ -1574,6 +1587,7 @@ export async function agregarEquipoRed(req, res) {
     idLampara,
     nombreEquipo,
     autor,
+    empresa,
   } = req.body;
 
   try {
@@ -1625,6 +1639,7 @@ export async function agregarEquipoRed(req, res) {
       idLampara,
       nombreEquipo,
       autor: autorValue,
+      empresa: empresa || null,
     };
 
     const result = await db.query(
@@ -1639,7 +1654,8 @@ export async function agregarEquipoRed(req, res) {
         :imagenRuta,
         :observacion,
         :idLampara,
-        :autor
+        :autor,
+        :empresa
       );`,
       { replacements: parametros }
     );
@@ -1685,6 +1701,7 @@ export const obtenerActivoSimple = async (req, res) => {
          a.id_edificio,
          i.ruta AS imagenRuta,
          e.observacion,
+         e.empresa,
          ep.id_lampara 
        FROM equipo e
        JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
@@ -1719,7 +1736,8 @@ export const obtenerActivoSimple = async (req, res) => {
               p.nombre AS periferico, 
               m.nombre AS marca, 
               mo.nombre AS modelo, 
-              s.nombre AS serie 
+              s.nombre AS serie,
+              e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
        JOIN serie s ON e.id_serie = s.id_serie
@@ -1784,6 +1802,7 @@ export const obtenerActivoRed = async (req, res) => {
          a.id_edificio,
          i.ruta AS imagenRuta,
          e.observacion,
+         e.empresa,
          er.mac,
          er.puertos,
          er.puerto_ftp,
@@ -1848,7 +1867,8 @@ export const obtenerComputadora = async (req, res) => {
          a.id_edificio,
          i.ruta AS imagenRuta,
          vso.id_sistemaoperativo,
-         e.observacion
+         e.observacion,
+         e.empresa
        FROM equipo e
        JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
        LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
@@ -1881,7 +1901,8 @@ export const obtenerComputadora = async (req, res) => {
               p.nombre AS periferico, 
               m.nombre AS marca, 
               mo.nombre AS modelo, 
-              s.nombre AS serie 
+              s.nombre AS serie,
+              e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
        JOIN serie s ON e.id_serie = s.id_serie
@@ -1928,7 +1949,8 @@ export const obtenerComputadoraBodega = async (req, res) => {
          m.id_marca,
          mm.id_modelo,
          vso.id_sistemaoperativo,
-         e.observacion
+         e.observacion,
+         e.empresa
        FROM equipo e
        LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
        LEFT JOIN serie s ON e.id_serie = s.id_serie
@@ -1955,7 +1977,8 @@ export const obtenerComputadoraBodega = async (req, res) => {
           p.nombre AS periferico, 
           m.nombre AS marca, 
           mo.nombre AS modelo, 
-          s.nombre AS serie 
+          s.nombre AS serie,
+          e.empresa 
    FROM componente c
    JOIN equipo e ON c.id_componente = e.id_equipo
    JOIN serie s ON e.id_serie = s.id_serie
@@ -1995,6 +2018,7 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
          m.id_marca,
          mm.id_modelo,
          e.observacion,
+         e.empresa,
          ep.id_lampara
        FROM equipo e
        LEFT JOIN serie s ON e.id_serie = s.id_serie
@@ -2021,7 +2045,8 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
               p.nombre AS periferico, 
               m.nombre AS marca, 
               mo.nombre AS modelo, 
-              s.nombre AS serie 
+              s.nombre AS serie,
+              e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
        JOIN periferico p ON e.id_serie = p.id_periferico
@@ -2059,6 +2084,7 @@ export const obtenerBodegaBajaRed = async (req, res) => {
          m.id_marca,
          mm.id_modelo,
          e.observacion,
+         e.empresa,
          er.mac,
          er.puertos,
          er.puerto_ftp,
@@ -2088,7 +2114,8 @@ export const obtenerBodegaBajaRed = async (req, res) => {
               p.nombre AS periferico, 
               m.nombre AS marca, 
               mo.nombre AS modelo, 
-              s.nombre AS serie 
+              s.nombre AS serie,
+              e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
        JOIN periferico p ON e.id_serie = p.id_periferico
@@ -2239,6 +2266,7 @@ export async function editarEquipo(req, res) {
     imagenRuta,
     observacion,
     editor,
+    empresa,
   } = req.body;
 
   try {
@@ -2354,7 +2382,7 @@ export async function editarEquipo(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2364,6 +2392,7 @@ export async function editarEquipo(req, res) {
           perifericoId,
           observacion,
           editor: editorValue,
+          empresa: empresa || null,
         },
         type: QueryTypes.UPDATE,
       }
@@ -2464,6 +2493,7 @@ export async function editarEquipoSimple(req, res) {
     id_lampara,
     id_computadora,
     editor,
+    empresa,
   } = req.body;
 
   try {
@@ -2572,7 +2602,7 @@ export async function editarEquipoSimple(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2582,6 +2612,7 @@ export async function editarEquipoSimple(req, res) {
           perifericoId,
           observacion,
           editor: editorValue,
+          empresa: empresa || null,
         },
         type: QueryTypes.UPDATE,
       }
@@ -2734,6 +2765,7 @@ export async function editarEquipoRed(req, res) {
     puerto_ftp,
     nombre_equipo,
     editor,
+    empresa,
   } = req.body;
 
   try {
@@ -2842,7 +2874,7 @@ export async function editarEquipoRed(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2852,6 +2884,7 @@ export async function editarEquipoRed(req, res) {
           perifericoId,
           observacion,
           editor: editorValue,
+          empresa: empresa || null,
         },
         type: QueryTypes.UPDATE,
       }
@@ -3721,8 +3754,8 @@ async function procesarComputadoraOLaptop(
   autor
 ) {
   const perifericoId = equipoJson.tipo.toLowerCase() === "laptop" ? 2 : 1;
-  if (equipoJson.nombreEquipo && String(equipoJson.nombreEquipo).length > 15) {
-    throw new Error("El nombre del equipo excede 15 caracteres.");
+  if (equipoJson.nombreEquipo && String(equipoJson.nombreEquipo).length > 30) {
+    throw new Error("El nombre del equipo excede 30 caracteres.");
   }
 
   const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
@@ -3817,6 +3850,7 @@ async function procesarComputadoraOLaptop(
     p_id_usuario: usuarioId,
     p_observacion: equipoJson.observacion || null,
     p_autor: autor || null,
+    p_empresa: equipoJson.empresa || null,
   };
 
   const result = await db.query(
@@ -3838,7 +3872,8 @@ async function procesarComputadoraOLaptop(
             :p_id_ubicacion,
             :p_id_usuario,
             :p_observacion,
-            :p_autor
+            :p_autor,
+            :p_empresa
         );`,
     { replacements: parametrosEquipo }
   );
@@ -3997,8 +4032,8 @@ async function procesarSwitch(
     }
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor) 
-       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor)`,
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor, empresa) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor, :empresa)`,
       {
         replacements: {
           inventario: equipoJson.inventario,
@@ -4007,6 +4042,7 @@ async function procesarSwitch(
           perifericoId,
           observacion: equipoJson.observacion || null,
           autor: autor || null,
+          empresa: equipoJson.empresa || null,
         },
         type: QueryTypes.INSERT,
       }
@@ -4144,8 +4180,8 @@ async function procesarAccessPoint(
     }
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor) 
-       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor)`,
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor, empresa) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor, :empresa)`,
       {
         replacements: {
           inventario: equipoJson.inventario,
@@ -4154,6 +4190,7 @@ async function procesarAccessPoint(
           perifericoId,
           observacion: equipoJson.observacion || null,
           autor: autor || null,
+          empresa: equipoJson.empresa || null,
         },
         type: QueryTypes.INSERT,
       }
@@ -4301,8 +4338,8 @@ async function procesarProyector(
     }
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor) 
-       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor)`,
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor, empresa) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor, :empresa)`,
       {
         replacements: {
           inventario: equipoJson.inventario,
@@ -4311,6 +4348,7 @@ async function procesarProyector(
           perifericoId,
           observacion: equipoJson.observacion || null,
           autor: autor || null,
+          empresa: equipoJson.empresa || null,
         },
         type: QueryTypes.INSERT,
       }
@@ -4719,7 +4757,7 @@ async function obtenerIdPeriferico(nombrePeriferico) {
 }
 
 async function obtenerOCrearEdificio(nombreEdificio) {
-  if (!nombreEdificio || nombreEdificio === "S/N") return null;
+  if (!nombreEdificio) return null;
   if (nombreEdificio.length > 50)
     throw new Error("El nombre del edificio excede 50 caracteres.");
   try {
@@ -4759,10 +4797,10 @@ async function obtenerOCrearUso(nombreUso) {
 }
 
 async function obtenerOCrearUbicacion(nombreUbicacion, nombreEdificio) {
-  if (!nombreUbicacion || nombreUbicacion === "S/N" || !nombreEdificio)
+  if (!nombreUbicacion || !nombreEdificio)
     return null;
-  if (nombreUbicacion.length > 20)
-    throw new Error("El nombre de la ubicación excede 20 caracteres.");
+  if (nombreUbicacion.length > 100)
+    throw new Error("El nombre de la ubicación excede 100 caracteres.");
   try {
     const id_edificio = await obtenerOCrearEdificio(nombreEdificio);
     let ubicacion = await Ubicacion.findOne({
