@@ -9,7 +9,7 @@ const Periferico = db.define('periferico', {
       primaryKey: true
     },
     nombre: {
-      type: DataTypes.STRING(20),
+      type: DataTypes.STRING(100),
       allowNull: true
     }
   }, {

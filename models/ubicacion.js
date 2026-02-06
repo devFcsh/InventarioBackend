@@ -17,7 +17,7 @@ const Ubicacion = db.define('ubicacion', {
       }
     },
     nombre: {
-      type: DataTypes.STRING(20),
+      type: DataTypes.STRING(100),
       allowNull: false
     }
   }, {
