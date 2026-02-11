@@ -3727,7 +3727,7 @@ async function agregarComponentesAEquipoPrincipal(
         );
       } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
         await db.query(
-          `INSERT INTO equipo_baja (id_equipo) VALUES (:idComponente);`,
+          `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
           {
             replacements: {
               idComponente,
@@ -3967,21 +3967,28 @@ async function procesarSwitch(
   autor
 ) {
   try {
-    const ubicacionId = await obtenerOCrearUbicacion(
-      equipoJson.ubicacion,
-      equipoJson.edificio
-    );
+    const tipoInventario = equipoJson.tipo_inventario || "activo";
+    let ubicacionId = null;
+    let usuarioId = null;
 
-    if (!ubicacionId) {
-      noRegistrados.push({
-        inventario: equipoJson.inventario,
-        motivo: "No se pudo obtener o crear la ubicación",
-        datos: equipoJson,
-      });
-      return false;
+    // Solo obtener ubicación y usuario si es equipo activo
+    if (tipoInventario === "activo") {
+      ubicacionId = await obtenerOCrearUbicacion(
+        equipoJson.ubicacion,
+        equipoJson.edificio
+      );
+
+      if (!ubicacionId) {
+        noRegistrados.push({
+          inventario: equipoJson.inventario,
+          motivo: "No se pudo obtener o crear la ubicación",
+          datos: equipoJson,
+        });
+        return false;
+      }
+
+      usuarioId = await obtenerOCrearUsuario("Red", "Red");
     }
-
-    const usuarioId = await obtenerOCrearUsuario("Red", "Red");
 
     const perifericoId = await obtenerOCrearPeriferico("Switch");
 
@@ -4049,7 +4056,6 @@ async function procesarSwitch(
     );
     const equipoId = insertRes[0];
 
-    const tipoInventario = equipoJson.tipo_inventario || "activo";
     if (tipoInventario === "activo") {
       await db.query(
         `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) 
@@ -4115,21 +4121,28 @@ async function procesarAccessPoint(
   autor
 ) {
   try {
-    const ubicacionId = await obtenerOCrearUbicacion(
-      equipoJson.ubicacion,
-      equipoJson.edificio
-    );
+    const tipoInventario = equipoJson.tipo_inventario || "activo";
+    let ubicacionId = null;
+    let usuarioId = null;
 
-    if (!ubicacionId) {
-      noRegistrados.push({
-        inventario: equipoJson.inventario,
-        motivo: "No se pudo obtener o crear la ubicación",
-        datos: equipoJson,
-      });
-      return false;
+    // Solo obtener ubicación y usuario si es equipo activo
+    if (tipoInventario === "activo") {
+      ubicacionId = await obtenerOCrearUbicacion(
+        equipoJson.ubicacion,
+        equipoJson.edificio
+      );
+
+      if (!ubicacionId) {
+        noRegistrados.push({
+          inventario: equipoJson.inventario,
+          motivo: "No se pudo obtener o crear la ubicación",
+          datos: equipoJson,
+        });
+        return false;
+      }
+
+      usuarioId = await obtenerOCrearUsuario("Red", "Red");
     }
-
-    const usuarioId = await obtenerOCrearUsuario("Red", "Red");
 
     const perifericoId = await obtenerOCrearPeriferico("AccessPoint");
 
@@ -4197,7 +4210,6 @@ async function procesarAccessPoint(
     );
     const equipoId = insertRes[0];
 
-    const tipoInventario = equipoJson.tipo_inventario || "activo";
     if (tipoInventario === "activo") {
       await db.query(
         `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) 
@@ -4261,21 +4273,28 @@ async function procesarProyector(
   autor
 ) {
   try {
-    const ubicacionId = await obtenerOCrearUbicacion(
-      equipoJson.ubicacion,
-      equipoJson.edificio
-    );
+    const tipoInventario = equipoJson.tipo_inventario || "activo";
+    let ubicacionId = null;
+    let usuarioId = null;
 
-    if (!ubicacionId) {
-      noRegistrados.push({
-        inventario: equipoJson.inventario,
-        motivo: "No se pudo obtener o crear la ubicación",
-        datos: equipoJson,
-      });
-      return false;
+    // Solo obtener ubicación y usuario si es equipo activo
+    if (tipoInventario === "activo") {
+      ubicacionId = await obtenerOCrearUbicacion(
+        equipoJson.ubicacion,
+        equipoJson.edificio
+      );
+
+      if (!ubicacionId) {
+        noRegistrados.push({
+          inventario: equipoJson.inventario,
+          motivo: "No se pudo obtener o crear la ubicación",
+          datos: equipoJson,
+        });
+        return false;
+      }
+
+      usuarioId = await obtenerOCrearUsuario("Aula", "Aula");
     }
-
-    const usuarioId = await obtenerOCrearUsuario("Aula", "Aula");
 
     const perifericoId = await obtenerOCrearPeriferico("Proyector");
 
@@ -4355,7 +4374,6 @@ async function procesarProyector(
     );
     const equipoId = insertRes[0];
 
-    const tipoInventario = equipoJson.tipo_inventario || "activo";
     if (tipoInventario === "activo") {
       await db.query(
         `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) 
