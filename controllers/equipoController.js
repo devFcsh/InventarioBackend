@@ -3625,7 +3625,7 @@ async function agregarComponentesAEquipoPrincipal(
 
     try {
       const perifericoIdComponente =
-        (await obtenerIdPeriferico(componente.tipo)) || componente.perifericoId;
+        (await obtenerOCrearPeriferico(componente.tipo)) || componente.perifericoId;
 
       const id_marca = await obtenerOCrearMarca(
         componente.marca,
@@ -3753,21 +3753,52 @@ async function procesarComputadoraOLaptop(
   componentesRegistrados,
   autor
 ) {
-  const perifericoId = equipoJson.tipo.toLowerCase() === "laptop" ? 2 : 1;
   if (equipoJson.nombreEquipo && String(equipoJson.nombreEquipo).length > 30) {
     throw new Error("El nombre del equipo excede 30 caracteres.");
   }
 
+  const tipoInventario = equipoJson.tipo_inventario || "activo";
+  let ubicacionId = null;
+  let usuarioId = null;
+
+  if (tipoInventario === "activo") {
+    ubicacionId = await obtenerOCrearUbicacion(
+      equipoJson.ubicacion,
+      equipoJson.edificio
+    );
+    usuarioId = await obtenerOCrearUsuario(
+      equipoJson.usuario,
+      equipoJson.uso
+    );
+
+    if (!ubicacionId || !usuarioId) {
+      noRegistrados.push({
+        inventario: equipoJson.inventario,
+        motivo: "No se encontró ubicación o usuario",
+        datos: equipoJson,
+      });
+      return false;
+    }
+  }
+
+  // Usar ID fijo: 1 para Computadora, 2 para Laptop
+  const perifericoId = equipoJson.tipo.toLowerCase() === "laptop" ? 2 : 1;
+  
+  const nombrePeriferico = perifericoId === 2 ? "Laptop" : "Computadora";
+  const perifericoExiste = await db.query(
+    `SELECT id_periferico FROM periferico WHERE id_periferico = :perifericoId`,
+    { replacements: { perifericoId }, type: QueryTypes.SELECT }
+  );
+  
+  if (!perifericoExiste.length) {
+    await db.query(
+      `INSERT INTO periferico (id_periferico, nombre) VALUES (:perifericoId, :nombrePeriferico)`,
+      { replacements: { perifericoId, nombrePeriferico }, type: QueryTypes.INSERT }
+    );
+  }
+
   const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
   const modeloId = await obtenerOCrearModelo(equipoJson.modelo, id_marca);
-  const ubicacionId = await obtenerOCrearUbicacion(
-    equipoJson.ubicacion,
-    equipoJson.edificio
-  );
-  const usuarioId = await obtenerOCrearUsuario(
-    equipoJson.usuario,
-    equipoJson.uso
-  );
   const dominioId = await obtenerOCrearDominio(equipoJson.dominio);
   const sistemaOperativoId = await obtenerIdSistemaOperativo(
     equipoJson.versionso
@@ -3776,15 +3807,6 @@ async function procesarComputadoraOLaptop(
   const ramId = await obtenerOCrearRam(equipoJson.ram, equipoJson.tipo_ram);
   const versionOfficeId = 2;
   const discoId = await obtenerOCrearDisco(equipoJson.disco);
-
-  if (!ubicacionId || !usuarioId) {
-    noRegistrados.push({
-      inventario: equipoJson.inventario,
-      motivo: "No se encontró ubicación o usuario",
-      datos: equipoJson,
-    });
-    return false;
-  }
 
   const id_serie = await obtenerOCrearSerie(equipoJson.serie);
 
@@ -3831,7 +3853,7 @@ async function procesarComputadoraOLaptop(
   }
 
   const parametrosEquipo = {
-    p_tipo: equipoJson.tipo_inventario || "activo",
+    p_tipo: tipoInventario,
     p_inventario: equipoJson.inventario,
     p_anio_compra:
       equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
@@ -3931,14 +3953,20 @@ async function procesarComponenteIndividual(
             }
           }
 
-          const ubicacionId = await obtenerOCrearUbicacion(
-            equipoJson.ubicacion,
-            equipoJson.edificio
-          );
-          const usuarioId = await obtenerOCrearUsuario(
-            equipoJson.usuario,
-            equipoJson.uso
-          );
+          const tipoInventario = componente.tipo_inventario || equipoJson.tipo_inventario || "activo";
+          let ubicacionId = null;
+          let usuarioId = null;
+
+          if (tipoInventario === "activo") {
+            ubicacionId = await obtenerOCrearUbicacion(
+              equipoJson.ubicacion,
+              equipoJson.edificio
+            );
+            usuarioId = await obtenerOCrearUsuario(
+              equipoJson.usuario,
+              equipoJson.uso
+            );
+          }
 
           await procesarComponente(
             componente,
@@ -4009,25 +4037,6 @@ async function procesarSwitch(
           `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
           {
             replacements: { modeloId, id_serie },
-            type: QueryTypes.INSERT,
-          }
-        );
-      }
-    }
-
-    if (id_marca && perifericoId) {
-      const relacionMarcaPeriferico = await db.query(
-        `SELECT 1 FROM marca_periferico WHERE id_marca = :id_marca AND id_periferico = :perifericoId`,
-        {
-          replacements: { id_marca, perifericoId },
-          type: QueryTypes.SELECT,
-        }
-      );
-      if (!relacionMarcaPeriferico.length) {
-        await db.query(
-          `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :perifericoId)`,
-          {
-            replacements: { id_marca, perifericoId },
             type: QueryTypes.INSERT,
           }
         );
@@ -4169,25 +4178,6 @@ async function procesarAccessPoint(
       }
     }
 
-    if (id_marca && perifericoId) {
-      const relacionMarcaPeriferico = await db.query(
-        `SELECT 1 FROM marca_periferico WHERE id_marca = :id_marca AND id_periferico = :perifericoId`,
-        {
-          replacements: { id_marca, perifericoId },
-          type: QueryTypes.SELECT,
-        }
-      );
-      if (!relacionMarcaPeriferico.length) {
-        await db.query(
-          `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :perifericoId)`,
-          {
-            replacements: { id_marca, perifericoId },
-            type: QueryTypes.INSERT,
-          }
-        );
-      }
-    }
-
     if (!equipoJson.inventario || String(equipoJson.inventario).trim() === "") {
       equipoJson.inventario = "S/N";
     }
@@ -4322,25 +4312,6 @@ async function procesarProyector(
           `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
           {
             replacements: { modeloId, id_serie },
-            type: QueryTypes.INSERT,
-          }
-        );
-      }
-    }
-
-    if (id_marca && perifericoId) {
-      const relacionMarcaPeriferico = await db.query(
-        `SELECT 1 FROM marca_periferico WHERE id_marca = :id_marca AND id_periferico = :perifericoId`,
-        {
-          replacements: { id_marca, perifericoId },
-          type: QueryTypes.SELECT,
-        }
-      );
-      if (!relacionMarcaPeriferico.length) {
-        await db.query(
-          `INSERT INTO marca_periferico (id_marca, id_periferico) VALUES (:id_marca, :perifericoId)`,
-          {
-            replacements: { id_marca, perifericoId },
             type: QueryTypes.INSERT,
           }
         );
@@ -4512,7 +4483,7 @@ async function procesarComponente(
   componentesRegistrados
 ) {
   const perifericoIdComponente =
-    (await obtenerIdPeriferico(componente.tipo)) || componente.perifericoId;
+    (await obtenerOCrearPeriferico(componente.tipo)) || componente.perifericoId;
 
   const id_marca = await obtenerOCrearMarca(
     componente.marca,
@@ -4660,7 +4631,7 @@ async function procesarMonitorStandalone(
       monitorJson.inventario = "S/N";
     }
 
-    const perifericoId = (await obtenerIdPeriferico(monitorJson.tipo)) || monitorJson.perifericoId;
+    const perifericoId = (await obtenerOCrearPeriferico(monitorJson.tipo)) || monitorJson.perifericoId;
     const id_marca = await obtenerOCrearMarca(monitorJson.marca, perifericoId);
     const modeloId = await obtenerOCrearModelo(monitorJson.modelo, id_marca);
     const id_serie = await obtenerOCrearSerie(monitorJson.serie);
