@@ -58,33 +58,29 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
     e.id_equipo AS id,
-    CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+    e.empresa AS empresa,
     ed.nombre AS edificio,
     ub.nombre AS ubicacion,
     uo.nombre AS uso,
     us.nombre AS usuario,
   
     -- Mouse
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN ma.nombre END) AS mouse_marca,
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN mo.nombre END) AS mouse_modelo,
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN se.nombre END) AS mouse_serie,
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN eqc.inventario END) AS mouse_inventario,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN ma_com.nombre END) AS mouse_marca,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN mo_com.nombre END) AS mouse_modelo,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN se_com.nombre END) AS mouse_serie,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN eqc.inventario END) AS mouse_inventario,
   
     -- Teclado
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN ma.nombre END) AS teclado_marca,
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN mo.nombre END) AS teclado_modelo,
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN se.nombre END) AS teclado_serie,
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN eqc.inventario END) AS teclado_inventario,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN ma_com.nombre END) AS teclado_marca,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN mo_com.nombre END) AS teclado_modelo,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN se_com.nombre END) AS teclado_serie,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN eqc.inventario END) AS teclado_inventario,
   
     -- Monitor
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN ma.nombre END) AS monitor_marca,
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN mo.nombre END) AS monitor_modelo,
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN se.nombre END) AS monitor_serie,
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN eqc.inventario END) AS monitor_inventario,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN ma_com.nombre END) AS monitor_marca,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN mo_com.nombre END) AS monitor_modelo,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN se_com.nombre END) AS monitor_serie,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN eqc.inventario END) AS monitor_inventario,
   
     c.direccion_ip,
     c.nombre_equipo,
@@ -99,6 +95,7 @@ export async function exportarEquiposActivos(req, res) {
     m.nombre AS modelo,
     se.nombre AS serie,
     e.inventario,
+    e.anio_compra,
     ea.fecha_ultima_modificacion AS fecha_ultimo_cambio,
     e.observacion
   FROM computadora c
@@ -121,14 +118,13 @@ export async function exportarEquiposActivos(req, res) {
   JOIN marca mar ON mm.id_marca = mar.id_marca
   LEFT JOIN componente comp ON c.id_computadora = comp.id_computadora
   LEFT JOIN equipo eqc ON comp.id_componente = eqc.id_equipo
+  LEFT JOIN periferico pe_com ON eqc.id_periferico = pe_com.id_periferico
   LEFT JOIN serie se_com ON eqc.id_serie = se_com.id_serie
   LEFT JOIN modelo_serie ms_com ON se_com.id_serie = ms_com.id_serie
-  LEFT JOIN modelo mo ON ms_com.id_modelo = mo.id_modelo
-  LEFT JOIN marca_modelo mm_com ON mo.id_modelo = mm_com.id_modelo
-  LEFT JOIN marca ma ON mm_com.id_marca = ma.id_marca
-  LEFT JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-  LEFT JOIN periferico pe ON mp.id_periferico = pe.id_periferico
-  GROUP BY e.id_equipo, ed.nombre, ub.nombre, uo.nombre, us.nombre, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, vso.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, ea.fecha_ultima_modificacion, e.observacion
+  LEFT JOIN modelo mo_com ON ms_com.id_modelo = mo_com.id_modelo
+  LEFT JOIN marca_modelo mm_com ON mo_com.id_modelo = mm_com.id_modelo
+  LEFT JOIN marca ma_com ON mm_com.id_marca = ma_com.id_marca
+  GROUP BY e.id_equipo, e.empresa, e.anio_compra, ed.nombre, ub.nombre, uo.nombre, us.nombre, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, vso.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, ea.fecha_ultima_modificacion, e.observacion
   ORDER BY e.id_equipo;
       `;
   
@@ -144,28 +140,24 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
     e.id_equipo AS id,
-    CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+    e.empresa AS empresa,
     -- Mouse
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN ma.nombre END) AS mouse_marca,
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN mo.nombre END) AS mouse_modelo,
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN se.nombre END) AS mouse_serie,
-    MAX(CASE WHEN pe.nombre = 'Mouse' THEN eqc.inventario END) AS mouse_inventario,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN ma_com.nombre END) AS mouse_marca,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN mo_com.nombre END) AS mouse_modelo,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN se_com.nombre END) AS mouse_serie,
+    MAX(CASE WHEN pe_com.nombre = 'Mouse' THEN eqc.inventario END) AS mouse_inventario,
   
     -- Teclado
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN ma.nombre END) AS teclado_marca,
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN mo.nombre END) AS teclado_modelo,
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN se.nombre END) AS teclado_serie,
-    MAX(CASE WHEN pe.nombre = 'Teclado' THEN eqc.inventario END) AS teclado_inventario,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN ma_com.nombre END) AS teclado_marca,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN mo_com.nombre END) AS teclado_modelo,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN se_com.nombre END) AS teclado_serie,
+    MAX(CASE WHEN pe_com.nombre = 'Teclado' THEN eqc.inventario END) AS teclado_inventario,
   
     -- Monitor
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN ma.nombre END) AS monitor_marca,
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN mo.nombre END) AS monitor_modelo,
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN se.nombre END) AS monitor_serie,
-    MAX(CASE WHEN pe.nombre = 'Monitor' THEN eqc.inventario END) AS monitor_inventario,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN ma_com.nombre END) AS monitor_marca,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN mo_com.nombre END) AS monitor_modelo,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN se_com.nombre END) AS monitor_serie,
+    MAX(CASE WHEN pe_com.nombre = 'Monitor' THEN eqc.inventario END) AS monitor_inventario,
   
     c.direccion_ip,
     c.nombre_equipo,
@@ -180,6 +172,7 @@ export async function exportarEquiposActivos(req, res) {
     m.nombre AS modelo,
     se.nombre AS serie,
     e.inventario,
+    e.anio_compra,
     eb.fecha_ultima_modificacion AS fecha_ultimo_cambio,
     e.observacion
   FROM computadora c
@@ -198,14 +191,13 @@ export async function exportarEquiposActivos(req, res) {
   JOIN marca mar ON mm.id_marca = mar.id_marca
   LEFT JOIN componente comp ON c.id_computadora = comp.id_computadora
   LEFT JOIN equipo eqc ON comp.id_componente = eqc.id_equipo
+  LEFT JOIN periferico pe_com ON eqc.id_periferico = pe_com.id_periferico
   LEFT JOIN serie se_com ON eqc.id_serie = se_com.id_serie
   LEFT JOIN modelo_serie ms_com ON se_com.id_serie = ms_com.id_serie
-  LEFT JOIN modelo mo ON ms_com.id_modelo = mo.id_modelo
-  LEFT JOIN marca_modelo mm_com ON mo.id_modelo = mm_com.id_modelo
-  LEFT JOIN marca ma ON mm_com.id_marca = ma.id_marca
-  LEFT JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-  LEFT JOIN periferico pe ON mp.id_periferico = pe.id_periferico
-  GROUP BY e.id_equipo, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, vso.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, eb.fecha_ultima_modificacion, e.observacion
+  LEFT JOIN modelo mo_com ON ms_com.id_modelo = mo_com.id_modelo
+  LEFT JOIN marca_modelo mm_com ON mo_com.id_modelo = mm_com.id_modelo
+  LEFT JOIN marca ma_com ON mm_com.id_marca = ma_com.id_marca
+  GROUP BY e.id_equipo, e.empresa, e.anio_compra, c.direccion_ip, c.nombre_equipo, d.nombre, so.nombre, vso.nombre, p.nombre, r.tipo, r.capacidad, di.capacidad, mar.nombre, m.nombre, se.nombre, e.inventario, eb.fecha_ultima_modificacion, e.observacion
   ORDER BY e.id_equipo;
       `;
   
@@ -219,14 +211,10 @@ export async function exportarEquiposActivos(req, res) {
   export async function exportarEquiposRedAPActivos(req, res) {
     try {
       const query = `
-        SELECT 
+        SELECT DISTINCT
           e.id_equipo AS id,
           er.nombre_equipo,
-          CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+          e.empresa AS empresa,
           e.inventario,
           ed.nombre AS edificio,
           ub.nombre AS ubicacion,
@@ -234,11 +222,13 @@ export async function exportarEquiposActivos(req, res) {
           mo.nombre AS modelo,
           se.nombre AS serie,
           er.mac,
+          e.anio_compra,
           ea.fecha_ultima_modificacion AS fecha_ultimo_cambio,
           e.observacion
         FROM equipo_red er
         JOIN equipo e ON er.id_equipo_red = e.id_equipo
         JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
+        JOIN periferico pe ON e.id_periferico = pe.id_periferico
         JOIN ubicacion ub ON ea.id_ubicacion = ub.id_ubicacion
         JOIN edificio ed ON ub.id_edificio = ed.id_edificio
         JOIN serie se ON e.id_serie = se.id_serie
@@ -246,8 +236,6 @@ export async function exportarEquiposActivos(req, res) {
         JOIN modelo mo ON ms.id_modelo = mo.id_modelo
         JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
         JOIN marca ma ON mm.id_marca = ma.id_marca
-        JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-        JOIN periferico pe ON mp.id_periferico = pe.id_periferico
         WHERE pe.nombre = 'AccessPoint'
         ORDER BY e.id_equipo;
       `;
@@ -262,31 +250,27 @@ export async function exportarEquiposActivos(req, res) {
   export async function exportarEquiposRedAPBodega(req, res) {
     try {
       const query = `
-        SELECT 
+        SELECT DISTINCT
           e.id_equipo AS id,
           er.nombre_equipo,
-          CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+          e.empresa AS empresa,
           e.inventario,
           ma.nombre AS marca,
           mo.nombre AS modelo,
           se.nombre AS serie,
           er.mac,
+          e.anio_compra,
           eb.fecha_ultima_modificacion AS fecha_ultimo_cambio,
           e.observacion
         FROM equipo_red er
         JOIN equipo e ON er.id_equipo_red = e.id_equipo
         JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
+        JOIN periferico pe ON e.id_periferico = pe.id_periferico
         JOIN serie se ON e.id_serie = se.id_serie
         JOIN modelo_serie ms ON se.id_serie = ms.id_serie
         JOIN modelo mo ON ms.id_modelo = mo.id_modelo
         JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
         JOIN marca ma ON mm.id_marca = ma.id_marca
-        JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-        JOIN periferico pe ON mp.id_periferico = pe.id_periferico
         WHERE pe.nombre = 'AccessPoint'
         ORDER BY e.id_equipo;
       `;
@@ -301,14 +285,10 @@ export async function exportarEquiposActivos(req, res) {
   export async function exportarEquiposRedSwitchActivos(req, res) {
     try {
       const query = `
-        SELECT 
+        SELECT DISTINCT
           e.id_equipo AS id,
           er.nombre_equipo,
-          CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+          e.empresa AS empresa,
           e.inventario,
           ed.nombre AS edificio,
           ub.nombre AS ubicacion,
@@ -318,11 +298,13 @@ export async function exportarEquiposActivos(req, res) {
           er.mac,
           er.puertos,
           er.puerto_ftp,
+          e.anio_compra,
           ea.fecha_ultima_modificacion AS fecha_ultimo_cambio,
           e.observacion
         FROM equipo_red er
         JOIN equipo e ON er.id_equipo_red = e.id_equipo
         JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
+        JOIN periferico pe ON e.id_periferico = pe.id_periferico
         JOIN ubicacion ub ON ea.id_ubicacion = ub.id_ubicacion
         JOIN edificio ed ON ub.id_edificio = ed.id_edificio
         JOIN serie se ON e.id_serie = se.id_serie
@@ -330,8 +312,6 @@ export async function exportarEquiposActivos(req, res) {
         JOIN modelo mo ON ms.id_modelo = mo.id_modelo
         JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
         JOIN marca ma ON mm.id_marca = ma.id_marca
-        JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-        JOIN periferico pe ON mp.id_periferico = pe.id_periferico
         WHERE pe.nombre = 'Switch'
         ORDER BY e.id_equipo;
       `;
@@ -346,14 +326,10 @@ export async function exportarEquiposActivos(req, res) {
   export async function exportarEquiposRedSwitchBodega(req, res) {
     try {
       const query = `
-        SELECT 
+        SELECT DISTINCT
           e.id_equipo AS id,
           er.nombre_equipo,
-          CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+          e.empresa AS empresa,
           e.inventario,
           ma.nombre AS marca,
           mo.nombre AS modelo,
@@ -361,18 +337,18 @@ export async function exportarEquiposActivos(req, res) {
           er.mac,
           er.puertos,
           er.puerto_ftp,
+          e.anio_compra,
           eb.fecha_ultima_modificacion AS fecha_ultimo_cambio,
           e.observacion
         FROM equipo_red er
         JOIN equipo e ON er.id_equipo_red = e.id_equipo
         JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
+        JOIN periferico pe ON e.id_periferico = pe.id_periferico
         JOIN serie se ON e.id_serie = se.id_serie
         JOIN modelo_serie ms ON se.id_serie = ms.id_serie
         JOIN modelo mo ON ms.id_modelo = mo.id_modelo
         JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
         JOIN marca ma ON mm.id_marca = ma.id_marca
-        JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-        JOIN periferico pe ON mp.id_periferico = pe.id_periferico
         WHERE pe.nombre = 'Switch'
         ORDER BY e.id_equipo;
       `;
@@ -389,11 +365,7 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
       SELECT
       e.id_equipo AS id,
-      CASE
-          WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-          WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-          ELSE 'DESCONOCIDO'
-      END AS empresa,
+      e.empresa AS empresa,
       e.inventario,
       ed.nombre AS edificio,
       ub.nombre AS ubicacion,
@@ -401,10 +373,12 @@ export async function exportarEquiposActivos(req, res) {
       mo.nombre AS modelo,
       se.nombre AS serie,
       l.nombre as lampara,
+      e.anio_compra,
       ea.fecha_ultima_modificacion AS fecha_ultimo_cambio,
       e.observacion
   FROM equipo e
   JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
+  JOIN periferico p ON e.id_periferico = p.id_periferico
   JOIN ubicacion ub ON ea.id_ubicacion = ub.id_ubicacion
   JOIN edificio ed ON ub.id_edificio = ed.id_edificio
   JOIN serie se ON e.id_serie = se.id_serie
@@ -414,8 +388,6 @@ export async function exportarEquiposActivos(req, res) {
   JOIN marca ma ON mm.id_marca = ma.id_marca
   JOIN modelo_lampara ml ON mo.id_modelo = ml.id_modelo
   JOIN lampara l ON ml.id_lampara = l.id_lampara 
-  JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-  JOIN periferico p ON mp.id_periferico = p.id_periferico
   WHERE p.nombre = 'Proyector'
   ORDER BY e.id_equipo;
       `;
@@ -432,20 +404,18 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
       e.id_equipo AS id,
-      CASE 
-          WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-          WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-          ELSE 'DESCONOCIDO'
-      END AS empresa,
+      e.empresa AS empresa,
       e.inventario,
       ma.nombre AS marca,
       mo.nombre AS modelo,
       se.nombre AS serie,
       l.nombre as lampara,
+      e.anio_compra,
       eb.fecha_ultima_modificacion AS fecha_ultimo_cambio,
       e.observacion
   FROM equipo e
   JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
+  JOIN periferico p ON e.id_periferico = p.id_periferico
   JOIN serie se ON e.id_serie = se.id_serie
   JOIN modelo_serie ms ON se.id_serie = ms.id_serie
   JOIN modelo mo ON ms.id_modelo = mo.id_modelo
@@ -453,8 +423,6 @@ export async function exportarEquiposActivos(req, res) {
   JOIN marca ma ON mm.id_marca = ma.id_marca
   JOIN modelo_lampara ml ON mo.id_modelo = ml.id_modelo
   JOIN lampara l ON ml.id_lampara = l.id_lampara 
-  JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-  JOIN periferico p ON mp.id_periferico = p.id_periferico
   WHERE p.nombre = 'Proyector'
   ORDER BY e.id_equipo;
       `;
@@ -471,11 +439,7 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
       e.id_equipo AS id,
-      CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+      e.empresa AS empresa,
       ed.nombre AS edificio,
       ub.nombre AS ubicacion,
       u.nombre AS uso,
@@ -485,6 +449,7 @@ export async function exportarEquiposActivos(req, res) {
       mo.nombre AS modelo,
       se.nombre AS serie,
       e.inventario,
+      e.anio_compra,
       ea.fecha_ultima_modificacion AS fecha_ultimo_cambio,
       e.observacion
   FROM equipo e
@@ -523,16 +488,13 @@ export async function exportarEquiposActivos(req, res) {
       const query = `
         SELECT 
       e.id_equipo AS id,
-      CASE 
-            WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-            WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-            ELSE 'DESCONOCIDO'
-          END AS empresa,
+      e.empresa AS empresa,
       pe.nombre AS periferico,
       ma.nombre AS marca,
       mo.nombre AS modelo,
       se.nombre AS serie,
       e.inventario,
+      e.anio_compra,
       eb.fecha_ultima_modificacion AS fecha_ultimo_cambio,
       e.observacion
   FROM equipo e
@@ -566,27 +528,23 @@ export async function exportarEquiposActivos(req, res) {
           const query = `
               SELECT 
                   e.id_equipo AS id,
-                  CASE 
-                      WHEN LENGTH(e.inventario) = 6 THEN 'ESPOL'
-                      WHEN LENGTH(e.inventario) > 6 THEN 'ESPOLTECH'
-                      ELSE 'DESCONOCIDO'
-                  END AS empresa,
+                  e.empresa AS empresa,
                   pe.nombre AS periferico,
                   ma.nombre AS marca,
                   mo.nombre AS modelo,
                   se.nombre AS serie,
                   e.inventario,
+                  e.anio_compra,
                   eb.fecha_ultima_modificacion AS fecha_ultimo_cambio,
                   e.observacion AS estado
               FROM equipo e
               JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
+              JOIN periferico pe ON e.id_periferico = pe.id_periferico
               JOIN serie se ON e.id_serie = se.id_serie
               JOIN modelo_serie ms ON se.id_serie = ms.id_serie
               JOIN modelo mo ON ms.id_modelo = mo.id_modelo
               JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
               JOIN marca ma ON mm.id_marca = ma.id_marca
-              JOIN marca_periferico mp ON ma.id_marca = mp.id_marca
-              JOIN periferico pe ON mp.id_periferico = pe.id_periferico
               ORDER BY e.id_equipo;
           `;
   

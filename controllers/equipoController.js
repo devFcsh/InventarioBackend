@@ -3462,6 +3462,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
           if (hasMonitorComponent) {
             const inserted = await procesarComponenteIndividual(
               equipoJson,
+              registrados,
               componentesRegistrados,
               noRegistrados
             );
@@ -3520,6 +3521,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
         } else {
           fueInsertado = await procesarComponenteIndividual(
             equipoJson,
+            registrados,
             componentesRegistrados,
             noRegistrados
           );
@@ -3923,6 +3925,7 @@ async function procesarComputadoraOLaptop(
 
 async function procesarComponenteIndividual(
   equipoJson,
+  registrados,
   componentesRegistrados,
   noRegistrados
 ) {
@@ -3935,6 +3938,13 @@ async function procesarComponenteIndividual(
           const inventarioEsSN =
             !inventarioComp ||
             inventarioComp.replace(/\s/g, "").toUpperCase() === "S/N";
+          
+          const serieComp = (componente.serie || "").trim().toUpperCase();
+          const serieEsSN =
+            !serieComp ||
+            serieComp.replace(/\s/g, "").toUpperCase() === "S/N";
+          
+          // Validar inventario si no es S/N
           if (!inventarioEsSN) {
             const equipoExistente = await db.query(
               `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
@@ -3946,7 +3956,30 @@ async function procesarComponenteIndividual(
             if (equipoExistente.length > 0) {
               noRegistrados.push({
                 inventario: equipoJson.inventario,
-                motivo: "Ya existe en la base de datos",
+                serie: componente.serie,
+                motivo: "Ya existe un equipo con el mismo inventario",
+                datos: equipoJson,
+              });
+              continue;
+            }
+          }
+          
+          // Validar serie si no es S/N
+          if (!serieEsSN && serieComp) {
+            const serieExistente = await db.query(
+              `SELECT e.id_equipo FROM equipo e 
+               JOIN serie s ON e.id_serie = s.id_serie 
+               WHERE UPPER(s.nombre) = :serie`,
+              {
+                replacements: { serie: serieComp },
+                type: QueryTypes.SELECT,
+              }
+            );
+            if (serieExistente.length > 0) {
+              noRegistrados.push({
+                inventario: equipoJson.inventario,
+                serie: componente.serie,
+                motivo: "Ya existe un equipo con la misma serie",
                 datos: equipoJson,
               });
               continue;
@@ -3968,13 +4001,23 @@ async function procesarComponenteIndividual(
             );
           }
 
-          await procesarComponente(
+          const equipoIdInsertado = await procesarComponente(
             componente,
             equipoJson,
             ubicacionId,
             usuarioId,
             componentesRegistrados
           );
+          
+          // Registrar el equipo insertado
+          registrados.push({
+            inventario: componente.inventario,
+            equipoId: equipoIdInsertado,
+            tipo: componente.tipo,
+            serie: componente.serie,
+            datos: componente,
+          });
+          
           insertado = true;
         } catch (componenteError) {
           console.error(
@@ -4618,6 +4661,7 @@ async function procesarComponente(
   }
 
   componentesRegistrados.push(componente);
+  return idComponente;
 }
 
 async function procesarMonitorStandalone(
