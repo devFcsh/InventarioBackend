@@ -267,13 +267,11 @@ export async function obtenerEquiposActivos(req, res) {
         e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
-      JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN marca m ON e.id_marca = m.id_marca
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
       JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
@@ -285,7 +283,6 @@ export async function obtenerEquiposActivos(req, res) {
       AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
       AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
       AND (:usuarioId IS NULL OR ea.id_usuario = :usuarioId)
-      AND (e.id_periferico = p.id_periferico)
       ${orderClause}
       ${limitOffsetClause};
     `;
@@ -348,13 +345,11 @@ export async function obtenerEquiposRed(req, res) {
         e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
-      JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN marca m ON e.id_marca = m.id_marca
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
       JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion 
       JOIN edificio ed ON a.id_edificio = ed.id_edificio 
@@ -366,7 +361,6 @@ export async function obtenerEquiposRed(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-        AND (e.id_periferico = p.id_periferico)
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -449,20 +443,17 @@ export async function obtenerEquiposBodega(req, res) {
         e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
-      JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN marca m ON e.id_marca = m.id_marca
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
       JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
         AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-        AND (e.id_periferico = p.id_periferico)
       ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
@@ -516,13 +507,11 @@ export async function obtenerEquiposRedBodega(req, res) {
         e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
-      JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN marca m ON e.id_marca = m.id_marca
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
       JOIN equipo_bodega eb ON e.id_equipo = eb.id_equipo
       JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
@@ -530,7 +519,6 @@ export async function obtenerEquiposRedBodega(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-        AND (e.id_periferico = p.id_periferico)
         LIMIT :limit OFFSET :offset;
     `;
 
@@ -616,20 +604,17 @@ export async function obtenerEquiposBaja(req, res) {
         e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
-      JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN marca m ON e.id_marca = m.id_marca
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
       JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
         AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-        AND (e.id_periferico = p.id_periferico)
       ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
@@ -683,13 +668,11 @@ export async function obtenerEquiposRedBaja(req, res) {
         e.empresa,
         COUNT(*) OVER() AS total
       FROM equipo e
-      JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN marca m ON e.id_marca = m.id_marca
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
       JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
       JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
@@ -697,7 +680,6 @@ export async function obtenerEquiposRedBaja(req, res) {
         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
-        AND (e.id_periferico = p.id_periferico)
         LIMIT :limit OFFSET :offset;
     `;
 
@@ -737,17 +719,14 @@ export async function obtenerEquiposPorUsuario(req, res) {
         s.nombre AS serie,
         e.empresa
       FROM equipo e
-      JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
+      JOIN periferico p ON e.id_periferico = p.id_periferico
+      LEFT JOIN marca m ON e.id_marca = m.id_marca
+      LEFT JOIN serie s ON e.id_serie = s.id_serie
+      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
       JOIN equipo_activo ea ON e.id_equipo = ea.id_equipo
       JOIN usuario u ON ea.id_usuario = u.id_usuario
       WHERE u.id_usuario = :id_usuario
-      AND (e.id_periferico = p.id_periferico)
     `;
 
     const equipos = await db.query(query, {
@@ -909,11 +888,6 @@ export async function eliminarEquipo(req, res) {
 
     if (imagen.length) {
       await db.query(`DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`, {
-        replacements: { idImagen: imagen[0].id_imagen },
-        type: QueryTypes.DELETE,
-      });
-
-      await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
         replacements: { idImagen: imagen[0].id_imagen },
         type: QueryTypes.DELETE,
       });
@@ -1377,6 +1351,7 @@ export async function agregarEquipo(req, res) {
     inventario,
     anio_compra,
     perifericoId,
+    marcaId,
     serie,
     modeloId,
     nombreEquipo,
@@ -1425,6 +1400,7 @@ export async function agregarEquipo(req, res) {
       inventario,
       anio_compra,
       id_periferico: perifericoId,
+      id_marca: marcaId || null,
       id_serie,
       nombreEquipo,
       direccionIp,
@@ -1449,6 +1425,7 @@ export async function agregarEquipo(req, res) {
         :inventario,
         :anio_compra,
         :id_periferico,
+        :id_marca,
         :id_serie,
         :nombreEquipo,
         :direccionIp,
@@ -1484,6 +1461,7 @@ export async function agregarEquipoSimple(req, res) {
     inventario,
     anio_compra,
     perifericoId,
+    marcaId,
     serie,
     modeloId,
     idUbicacion,
@@ -1532,6 +1510,7 @@ export async function agregarEquipoSimple(req, res) {
       inventario,
       anio_compra,
       id_periferico: perifericoId,
+      id_marca: marcaId || null,
       id_serie,
       idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
       idUsuario: tipo === "bodega" || tipo === "baja" ? null : usuarioFinal,
@@ -1548,6 +1527,7 @@ export async function agregarEquipoSimple(req, res) {
         :inventario,
         :anio_compra,
         :id_periferico,
+        :id_marca,
         :id_serie,
         :idUbicacion,
         :idUsuario,
@@ -1575,6 +1555,7 @@ export async function agregarEquipoRed(req, res) {
     inventario,
     anio_compra,
     perifericoId,
+    marcaId,
     serie,
     modeloId,
     idUbicacion,
@@ -1629,6 +1610,7 @@ export async function agregarEquipoRed(req, res) {
       anio_compra,
       id_serie,
       id_periferico: perifericoId,
+      id_marca: marcaId || null,
       idUbicacion: tipo === "bodega" || tipo === "baja" ? null : idUbicacion,
       idUsuario: tipo === "bodega" || tipo === "baja" ? null : usuarioFinal,
       imagenRuta: tipo === "bodega" || tipo === "baja" ? null : imagenRuta,
@@ -1648,6 +1630,7 @@ export async function agregarEquipoRed(req, res) {
         :inventario,
         :anio_compra,
         :id_periferico,
+        :id_marca,
         :id_serie,
         :idUbicacion,
         :idUsuario,
@@ -1694,9 +1677,9 @@ export const obtenerActivoSimple = async (req, res) => {
          e.id_serie,
          ea.id_usuario,
          u.id_uso,
-         p.id_periferico,
+         e.id_periferico AS p_id_periferico,
          m.id_marca,
-         mm.id_modelo,
+         (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1) AS id_modelo,
          a.id_ubicacion,
          a.id_edificio,
          i.ruta AS imagenRuta,
@@ -1708,16 +1691,12 @@ export const obtenerActivoSimple = async (req, res) => {
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
        LEFT JOIN uso us ON u.id_uso = us.id_uso
        LEFT JOIN serie s ON e.id_serie = s.id_serie
-       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       LEFT JOIN marca m ON mm.id_marca = m.id_marca
-       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
-       WHERE e.id_equipo = :id
-       AND (e.id_periferico = p.id_periferico)`,
+       WHERE e.id_equipo = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1740,13 +1719,11 @@ export const obtenerActivoSimple = async (req, res) => {
               e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN serie s ON e.id_serie = s.id_serie
-       JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-       JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-       JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-       JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+       LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
+       LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
        WHERE c.id_computadora = :id`,
       {
         replacements: { id },
@@ -1795,9 +1772,9 @@ export const obtenerActivoRed = async (req, res) => {
          e.id_serie,
          ea.id_usuario,
          u.id_uso,
-         p.id_periferico,
+         e.id_periferico AS p_id_periferico,
          m.id_marca,
-         mm.id_modelo,
+         (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1) AS id_modelo,
          a.id_ubicacion,
          a.id_edificio,
          i.ruta AS imagenRuta,
@@ -1812,16 +1789,12 @@ export const obtenerActivoRed = async (req, res) => {
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
        LEFT JOIN uso us ON u.id_uso = us.id_uso
        LEFT JOIN serie s ON e.id_serie = s.id_serie
-       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       LEFT JOIN marca m ON mm.id_marca = m.id_marca
-       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
-       WHERE e.id_equipo = :id
-       AND (e.id_periferico = p.id_periferico)`,
+       WHERE e.id_equipo = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1860,9 +1833,9 @@ export const obtenerComputadora = async (req, res) => {
          c.id_procesador,
          c.id_antivirus,
          c.id_dominio,
-         p.id_periferico,
+         e.id_periferico AS p_id_periferico,
          m.id_marca,
-         mm.id_modelo,
+         (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1) AS id_modelo,
          a.id_ubicacion,
          a.id_edificio,
          i.ruta AS imagenRuta,
@@ -1875,16 +1848,12 @@ export const obtenerComputadora = async (req, res) => {
        LEFT JOIN usuario u ON ea.id_usuario = u.id_usuario
        LEFT JOIN uso us ON u.id_uso = us.id_uso
        LEFT JOIN serie s ON e.id_serie = s.id_serie
-       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       LEFT JOIN marca m ON mm.id_marca = m.id_marca
-       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
        JOIN version_so vso ON vso.id_versionso = c.id_versionso
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
        JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
        JOIN imagen i ON i.id_imagen = ei.id_imagen
-       WHERE e.id_equipo = :id
-       AND (e.id_periferico = p.id_periferico)`,
+       WHERE e.id_equipo = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1905,14 +1874,12 @@ export const obtenerComputadora = async (req, res) => {
               e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN serie s ON e.id_serie = s.id_serie
-      JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-      JOIN marca m ON mm.id_marca = m.id_marca
-      JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-      JOIN periferico p ON mp.id_periferico = p.id_periferico
-       WHERE c.id_computadora = :id AND e.id_periferico = p.id_periferico`,
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+       LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
+       LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
+       WHERE c.id_computadora = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1945,22 +1912,18 @@ export const obtenerComputadoraBodega = async (req, res) => {
          c.id_procesador,
          c.id_antivirus,
          c.id_dominio,
-         p.id_periferico,
+         e.id_periferico AS p_id_periferico,
          m.id_marca,
-         mm.id_modelo,
+         (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1) AS id_modelo,
          vso.id_sistemaoperativo,
          e.observacion,
          e.empresa
        FROM equipo e
        LEFT JOIN computadora c ON e.id_equipo = c.id_computadora
        LEFT JOIN serie s ON e.id_serie = s.id_serie
-       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       LEFT JOIN marca m ON mm.id_marca = m.id_marca
-       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
        LEFT JOIN version_so vso ON vso.id_versionso = c.id_versionso
-       WHERE e.id_equipo = :id
-       AND (e.id_periferico = p.id_periferico)`,
+       WHERE e.id_equipo = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -1981,14 +1944,12 @@ export const obtenerComputadoraBodega = async (req, res) => {
           e.empresa 
    FROM componente c
    JOIN equipo e ON c.id_componente = e.id_equipo
-   JOIN serie s ON e.id_serie = s.id_serie
-   JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-   JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-   JOIN marca_modelo mm ON mo.id_modelo = mm.id_modelo
-   JOIN marca m ON mm.id_marca = m.id_marca
-   JOIN marca_periferico mp ON m.id_marca = mp.id_marca
-   JOIN periferico p ON mp.id_periferico = p.id_periferico
-   WHERE c.id_computadora = :id AND e.id_periferico = p.id_periferico`,
+   LEFT JOIN serie s ON e.id_serie = s.id_serie
+   LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+   LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+   LEFT JOIN marca m ON e.id_marca = m.id_marca
+   LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
+   WHERE c.id_computadora = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -2014,21 +1975,17 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
          e.inventario,
          e.anio_compra,
          e.id_serie,
-         p.id_periferico,
+         e.id_periferico AS p_id_periferico,
          m.id_marca,
-         mm.id_modelo,
+         (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1) AS id_modelo,
          e.observacion,
          e.empresa,
          ep.id_lampara
        FROM equipo e
        LEFT JOIN serie s ON e.id_serie = s.id_serie
-       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       LEFT JOIN marca m ON mm.id_marca = m.id_marca
-       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
        LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
-       WHERE e.id_equipo = :id
-       AND (e.id_periferico = p.id_periferico)`,
+       WHERE e.id_equipo = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -2049,11 +2006,11 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
               e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN periferico p ON e.id_serie = p.id_periferico
-       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
-       JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+       LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
        WHERE c.id_computadora = :id`,
       {
         replacements: { id },
@@ -2080,9 +2037,9 @@ export const obtenerBodegaBajaRed = async (req, res) => {
          e.inventario,
          e.anio_compra,
          e.id_serie,
-         p.id_periferico,
+         e.id_periferico AS p_id_periferico,
          m.id_marca,
-         mm.id_modelo,
+         (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1) AS id_modelo,
          e.observacion,
          e.empresa,
          er.mac,
@@ -2091,13 +2048,9 @@ export const obtenerBodegaBajaRed = async (req, res) => {
          er.nombre_equipo
        FROM equipo e
        LEFT JOIN serie s ON e.id_serie = s.id_serie
-       LEFT JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       LEFT JOIN marca m ON mm.id_marca = m.id_marca
-       LEFT JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-       LEFT JOIN periferico p ON mp.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
        LEFT JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
-       WHERE e.id_equipo = :id
-       AND (e.id_periferico = p.id_periferico)`,
+       WHERE e.id_equipo = :id`,
       {
         replacements: { id },
         type: QueryTypes.SELECT,
@@ -2118,11 +2071,11 @@ export const obtenerBodegaBajaRed = async (req, res) => {
               e.empresa 
        FROM componente c
        JOIN equipo e ON c.id_componente = e.id_equipo
-       JOIN periferico p ON e.id_serie = p.id_periferico
-       JOIN marca_modelo mm ON mm.id_modelo = (SELECT id_modelo FROM modelo_serie WHERE id_serie = e.id_serie LIMIT 1)
-       JOIN marca m ON mm.id_marca = m.id_marca
-       JOIN modelo mo ON mm.id_modelo = mo.id_modelo
-       JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
+       LEFT JOIN marca m ON e.id_marca = m.id_marca
+       LEFT JOIN serie s ON e.id_serie = s.id_serie
+       LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+       LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
        WHERE c.id_computadora = :id`,
       {
         replacements: { id },
@@ -2168,12 +2121,13 @@ export async function agregarComponentes(req, res) {
       }
 
       const result = await db.query(
-        `INSERT INTO equipo (inventario, id_serie, id_periferico, autor) VALUES (:inventario, :serieId, :perifericoId, :autor);`,
+        `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca, autor) VALUES (:inventario, :serieId, :perifericoId, :marcaId, :autor);`,
         {
           replacements: {
             perifericoId: componente.perifericoId,
             inventario: componente.inventario,
             serieId: id_serie,
+            marcaId: componente.marcaId,
             autor: autorValue,
           },
         }
@@ -2255,6 +2209,7 @@ export async function editarEquipo(req, res) {
     id_antivirus,
     id_dominio,
     perifericoId,
+    marcaId,
     serie,
     modeloId,
     inventario,
@@ -2382,7 +2337,7 @@ export async function editarEquipo(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, id_marca = :marcaId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2390,6 +2345,7 @@ export async function editarEquipo(req, res) {
           anio_compra,
           id_serie,
           perifericoId,
+          marcaId: marcaId || null,
           observacion,
           editor: editorValue,
           empresa: empresa || null,
@@ -2482,6 +2438,7 @@ export async function editarEquipoSimple(req, res) {
   const {
     tipo,
     perifericoId,
+    marcaId,
     serie,
     modeloId,
     inventario,
@@ -2602,7 +2559,7 @@ export async function editarEquipoSimple(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, id_marca = :marcaId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2610,6 +2567,7 @@ export async function editarEquipoSimple(req, res) {
           anio_compra,
           id_serie,
           perifericoId,
+          marcaId: marcaId || null,
           observacion,
           editor: editorValue,
           empresa: empresa || null,
@@ -2752,6 +2710,7 @@ export async function editarEquipoRed(req, res) {
   const {
     tipo,
     perifericoId,
+    marcaId,
     serie,
     modeloId,
     inventario,
@@ -2874,7 +2833,7 @@ export async function editarEquipoRed(req, res) {
     }
 
     await db.query(
-      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
+      `UPDATE equipo SET inventario = :inventario, anio_compra = :anio_compra, id_serie = :id_serie, id_periferico = :perifericoId, id_marca = :marcaId, observacion = :observacion, editor = :editor, empresa = :empresa WHERE id_equipo = :equipoId`,
       {
         replacements: {
           equipoId,
@@ -2882,6 +2841,7 @@ export async function editarEquipoRed(req, res) {
           anio_compra,
           id_serie,
           perifericoId,
+          marcaId: marcaId || null,
           observacion,
           editor: editorValue,
           empresa: empresa || null,
@@ -3038,12 +2998,13 @@ export async function gestionarComponentesEditados(req, res) {
         }
 
         const resultComp = await db.query(
-          `INSERT INTO equipo (inventario, id_serie, id_periferico, autor) VALUES (:inventario, :serieId, :perifericoId, :editor);`,
+          `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca, autor) VALUES (:inventario, :serieId, :perifericoId, :marcaId, :editor);`,
           {
             replacements: {
               inventario: componente.inventario,
               serieId: id_serie_componente,
               perifericoId: perifericoIdComponente,
+              marcaId: componente.marcaId,
               editor: editorValue,
             },
           }
@@ -3404,6 +3365,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
   const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
   const registrados = [];
   const noRegistrados = [];
+  const procesados = [];
   const componentesRegistrados = [];
   const monitorsToProcess = [];
   let equiposAgregados = 0;
@@ -3421,6 +3383,14 @@ export async function insertarEquiposDesdeJSON(req, res) {
 
     for (const equipoJson of equiposData) {
       try {
+        procesados.push({
+          inventario: equipoJson.inventario,
+          tipo: equipoJson.tipo,
+          serie: equipoJson.serie,
+          modelo: equipoJson.modelo,
+          marca: equipoJson.marca
+        });
+        
         const inventarioEquipo = (equipoJson.inventario || "").trim();
         const serieEquipo = (equipoJson.serie || "").trim().toUpperCase();
 
@@ -3458,7 +3428,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
             return meaningful(inv) || meaningful(mod) || meaningful(ser) || meaningful(mar);
           });
 
-        if (tipoLower.includes("monitor")) {
+        if (tipoLower.includes("monitor" || "pantalla interactiva" || "televisor")) {
           if (hasMonitorComponent) {
             const inserted = await procesarComponenteIndividual(
               equipoJson,
@@ -3519,11 +3489,12 @@ export async function insertarEquiposDesdeJSON(req, res) {
             autorValue
           );
         } else {
-          fueInsertado = await procesarComponenteIndividual(
+          // Equipos simples (Mouse, Teclado, Monitor, Pantalla, Cámara, TV, etc.)
+          fueInsertado = await procesarEquipoSimple(
             equipoJson,
             registrados,
-            componentesRegistrados,
-            noRegistrados
+            noRegistrados,
+            autorValue
           );
         }
 
@@ -3553,6 +3524,15 @@ export async function insertarEquiposDesdeJSON(req, res) {
 
     for (const monitorJson of monitorsToProcess) {
       try {
+        procesados.push({
+          inventario: monitorJson.inventario,
+          tipo: monitorJson.tipo,
+          serie: monitorJson.serie,
+          modelo: monitorJson.modelo,
+          marca: monitorJson.marca,
+          origen: 'monitorsToProcess'
+        });
+        
         const procesado = await procesarMonitorStandalone(
           monitorJson,
           registrados,
@@ -3580,9 +3560,9 @@ export async function insertarEquiposDesdeJSON(req, res) {
         totalProcesados: equiposData.length,
         registrados: registrados.length,
         noRegistrados: noRegistrados.length,
-        equiposAgregados,
         seInsertaronNuevos,
       },
+      procesados,
       registrados,
       noRegistrados,
     };
@@ -3611,7 +3591,8 @@ async function agregarComponentesAEquipoPrincipal(
   equipoJson,
   ubicacionId,
   usuarioId,
-  componentesRegistrados
+  componentesRegistrados,
+  noRegistrados
 ) {
   if (!Array.isArray(componentes)) return;
 
@@ -3686,12 +3667,13 @@ async function agregarComponentesAEquipoPrincipal(
       }
 
       const resultComp = await db.query(
-        `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
+        `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca) VALUES (:inventario, :serieId, :perifericoId, :id_marca);`,
         {
           replacements: {
             inventario: componente.inventario,
             serieId: id_serie_componente,
             perifericoId: perifericoIdComponente,
+            id_marca: id_marca || null,
           },
         }
       );
@@ -3744,6 +3726,15 @@ async function agregarComponentesAEquipoPrincipal(
         `Error al insertar componente ${componente.serie}:`,
         componenteError
       );
+      noRegistrados.push({
+        inventario: equipoJson.inventario,
+        serie: componente.serie,
+        tipo: 'componente',
+        equipoPrincipal: equipoJson.inventario,
+        componenteTipo: componente.tipo,
+        motivo: `Error al insertar componente ${componente.tipo}: ${componenteError.message}`,
+        datos: componente,
+      });
     }
   }
 }
@@ -3860,6 +3851,7 @@ async function procesarComputadoraOLaptop(
     p_anio_compra:
       equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
     p_id_periferico: perifericoId,
+    p_id_marca: id_marca || null,
     p_id_serie: id_serie,
     p_nombre_equipo: equipoJson.nombreEquipo,
     p_direccion_ip: equipoJson.direccionIp || null,
@@ -3883,6 +3875,7 @@ async function procesarComputadoraOLaptop(
             :p_inventario,
             :p_anio_compra,
             :p_id_periferico,
+            :p_id_marca,
             :p_id_serie,
             :p_nombre_equipo,
             :p_direccion_ip,
@@ -3910,7 +3903,8 @@ async function procesarComputadoraOLaptop(
     equipoJson,
     ubicacionId,
     usuarioId,
-    componentesRegistrados
+    componentesRegistrados,
+    noRegistrados
   );
 
   registrados.push({
@@ -4024,10 +4018,40 @@ async function procesarComponenteIndividual(
             `Error al insertar componente ${componente.serie}:`,
             componenteError
           );
+          noRegistrados.push({
+            inventario: equipoJson.inventario,
+            serie: componente.serie,
+            tipo: 'componente_individual',
+            componenteTipo: componente.tipo,
+            motivo: `Error al insertar componente ${componente.tipo}: ${componenteError.message}`,
+            datos: componente,
+          });
         }
       }
     }
   }
+  
+  // Si no se insertó ningún equipo, registrar en noRegistrados
+  if (!insertado) {
+    const tipoEquipo = equipoJson.tipo || 'desconocido';
+    const tieneComponentes = equipoJson.componentes && Array.isArray(equipoJson.componentes) && equipoJson.componentes.length > 0;
+    
+    let motivo = '';
+    if (!tieneComponentes) {
+      motivo = `Tipo "${tipoEquipo}" no tiene componentes para procesar. Este tipo de equipo no está soportado actualmente.`;
+    } else {
+      motivo = `Tipo "${tipoEquipo}" no tiene un handler específico o no se encontró un componente coincidente para procesar.`;
+    }
+    
+    noRegistrados.push({
+      inventario: equipoJson.inventario,
+      serie: equipoJson.serie,
+      tipo: tipoEquipo,
+      motivo: motivo,
+      datos: equipoJson,
+    });
+  }
+  
   return insertado;
 }
 
@@ -4091,14 +4115,15 @@ async function procesarSwitch(
     }
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor, empresa) 
-       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor, :empresa)`,
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, id_marca, observacion, autor, empresa) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :id_marca, :observacion, :autor, :empresa)`,
       {
         replacements: {
           inventario: equipoJson.inventario,
           anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
           id_serie,
           perifericoId,
+          id_marca: id_marca || null,
           observacion: equipoJson.observacion || null,
           autor: autor || null,
           empresa: equipoJson.empresa || null,
@@ -4226,14 +4251,15 @@ async function procesarAccessPoint(
     }
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor, empresa) 
-       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor, :empresa)`,
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, id_marca, observacion, autor, empresa) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :id_marca, :observacion, :autor, :empresa)`,
       {
         replacements: {
           inventario: equipoJson.inventario,
           anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
           id_serie,
           perifericoId,
+          id_marca: id_marca || null,
           observacion: equipoJson.observacion || null,
           autor: autor || null,
           empresa: equipoJson.empresa || null,
@@ -4371,14 +4397,15 @@ async function procesarProyector(
     }
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, observacion, autor, empresa) 
-       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :observacion, :autor, :empresa)`,
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, id_marca, observacion, autor, empresa) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :id_marca, :observacion, :autor, :empresa)`,
       {
         replacements: {
           inventario: equipoJson.inventario,
           anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
           id_serie,
           perifericoId,
+          id_marca: id_marca || null,
           observacion: equipoJson.observacion || null,
           autor: autor || null,
           empresa: equipoJson.empresa || null,
@@ -4441,6 +4468,185 @@ async function procesarProyector(
     return true;
   } catch (error) {
     console.error("Error procesando proyector:", error);
+    noRegistrados.push({
+      inventario: equipoJson.inventario,
+      motivo: error.message,
+      datos: equipoJson,
+    });
+    return false;
+  }
+}
+
+async function procesarEquipoSimple(
+  equipoJson,
+  registrados,
+  noRegistrados,
+  autor
+) {
+  try {
+    const tipoInventario = equipoJson.tipo_inventario || "activo";
+    let ubicacionId = null;
+    let usuarioId = null;
+
+    // Solo obtener ubicación y usuario si es equipo activo
+    if (tipoInventario === "activo") {
+      ubicacionId = await obtenerOCrearUbicacion(
+        equipoJson.ubicacion,
+        equipoJson.edificio
+      );
+      usuarioId = await obtenerOCrearUsuario(
+        equipoJson.usuario,
+        equipoJson.uso
+      );
+
+      if (!ubicacionId || !usuarioId) {
+        noRegistrados.push({
+          inventario: equipoJson.inventario,
+          motivo: "No se pudo obtener o crear la ubicación o usuario",
+          datos: equipoJson,
+        });
+        return false;
+      }
+    }
+
+    const perifericoId = await obtenerOCrearPeriferico(equipoJson.tipo);
+    const id_marca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
+    const modeloId = await obtenerOCrearModelo(equipoJson.modelo, id_marca);
+    const id_serie = await obtenerOCrearSerie(equipoJson.serie);
+
+    if (id_serie && modeloId) {
+      const existeRelacion = await db.query(
+        `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :id_serie`,
+        {
+          replacements: { modeloId, id_serie },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!existeRelacion.length) {
+        await db.query(
+          `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :id_serie)`,
+          {
+            replacements: { modeloId, id_serie },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (id_marca && modeloId) {
+      const existeMarcaModelo = await db.query(
+        `SELECT 1 FROM marca_modelo WHERE id_marca = :id_marca AND id_modelo = :id_modelo`,
+        {
+          replacements: { id_marca, id_modelo: modeloId },
+          type: QueryTypes.SELECT,
+        }
+      );
+      if (!existeMarcaModelo.length) {
+        await db.query(
+          `INSERT INTO marca_modelo (id_marca, id_modelo) VALUES (:id_marca, :id_modelo)`,
+          {
+            replacements: { id_marca, id_modelo: modeloId },
+            type: QueryTypes.INSERT,
+          }
+        );
+      }
+    }
+
+    if (!equipoJson.inventario || String(equipoJson.inventario).trim() === "") {
+      equipoJson.inventario = "S/N";
+    }
+
+    const insertRes = await db.query(
+      `INSERT INTO equipo (inventario, anio_compra, id_serie, id_periferico, id_marca, observacion, autor, empresa) 
+       VALUES (:inventario, :anio_compra, :id_serie, :perifericoId, :id_marca, :observacion, :autor, :empresa)`,
+      {
+        replacements: {
+          inventario: equipoJson.inventario,
+          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          id_serie,
+          perifericoId,
+          id_marca: id_marca || null,
+          observacion: equipoJson.observacion || null,
+          autor: autor || null,
+          empresa: equipoJson.empresa || null,
+        },
+        type: QueryTypes.INSERT,
+      }
+    );
+    const equipoId = insertRes[0];
+
+    // Insertar en equipo_activo, equipo_bodega o equipo_baja
+    if (tipoInventario === "activo") {
+      await db.query(
+        `INSERT INTO equipo_activo (id_equipo, id_ubicacion, id_usuario) 
+         VALUES (:equipoId, :ubicacionId, :usuarioId)`,
+        {
+          replacements: { equipoId, ubicacionId, usuarioId },
+        }
+      );
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, 1)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "bodega") {
+      await db.query(
+        `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    } else if (tipoInventario === "baja") {
+      await db.query(
+        `INSERT INTO equipo_baja (id_equipo) VALUES (:equipoId)`,
+        { replacements: { equipoId } }
+      );
+    }
+
+    // Verificar si debe asociarse como componente de un equipo principal
+    const serieEquipoPrincipal = equipoJson.serie_equipo_principal || equipoJson.serieEquipoPrincipal;
+    if (serieEquipoPrincipal && 
+        String(serieEquipoPrincipal).trim().toUpperCase() !== "S/N" && 
+        String(serieEquipoPrincipal).trim() !== "") {
+      
+      // Buscar el equipo principal por serie
+      const equipoPrincipalResult = await db.query(
+        `SELECT e.id_equipo, p.nombre as tipo_periferico
+         FROM equipo e
+         JOIN serie s ON e.id_serie = s.id_serie
+         LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
+         WHERE s.nombre = :serie
+         LIMIT 1`,
+        {
+          replacements: { serie: String(serieEquipoPrincipal).trim() },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      if (equipoPrincipalResult.length > 0) {
+        const idEquipoPrincipal = equipoPrincipalResult[0].id_equipo;
+        const tipoEquipoPrincipal = equipoPrincipalResult[0].tipo_periferico;
+
+        // Solo asociar si el equipo principal es Computadora o Laptop
+        if (tipoEquipoPrincipal === "Computadora" || tipoEquipoPrincipal === "Laptop") {
+          await db.query(
+            `INSERT INTO componente (id_componente, id_computadora) VALUES (:equipoId, :idEquipoPrincipal)`,
+            {
+              replacements: { equipoId, idEquipoPrincipal },
+            }
+          );
+        }
+      }
+    }
+
+    registrados.push({
+      inventario: equipoJson.inventario,
+      equipoId,
+      tipo: equipoJson.tipo,
+      datos: equipoJson,
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error procesando equipo simple ${equipoJson.tipo}:`, error);
     noRegistrados.push({
       inventario: equipoJson.inventario,
       motivo: error.message,
@@ -4589,12 +4795,13 @@ async function procesarComponente(
   }
 
   const resultComp = await db.query(
-    `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId);`,
+    `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca) VALUES (:inventario, :serieId, :perifericoId, :id_marca);`,
     {
       replacements: {
         inventario: componente.inventario,
         serieId: id_serie_componente,
         perifericoId: perifericoIdComponente,
+        id_marca: id_marca || null,
       },
     }
   );
@@ -4703,12 +4910,13 @@ async function procesarMonitorStandalone(
     const usuarioId = await obtenerOCrearUsuario(monitorJson.usuario, monitorJson.uso);
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, id_serie, id_periferico) VALUES (:inventario, :serieId, :perifericoId)`,
+      `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca) VALUES (:inventario, :serieId, :perifericoId, :id_marca)`,
       {
         replacements: {
           inventario: monitorJson.inventario,
           serieId: id_serie,
           perifericoId: perifericoId,
+          id_marca: id_marca || null,
         },
       }
     );
