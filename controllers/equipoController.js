@@ -2192,7 +2192,7 @@ export async function uploadImage(req, res) {
     return res.status(400).send("No image uploaded.");
   }
 
-  const imagePath = join("/uploads", req.file.filename);
+  const imagePath = join("uploads", req.file.filename);
 
   res.json({ imagePath });
 }
