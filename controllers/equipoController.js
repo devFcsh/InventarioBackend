@@ -2273,6 +2273,7 @@ export async function editarEquipo(req, res) {
     }
 
     if (imagenRuta && tipo === "activo") {
+      
       const imagenActual = await db.query(
         `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = 
           (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
@@ -2284,7 +2285,7 @@ export async function editarEquipo(req, res) {
 
       if (imagenActual.length) {
         const idImagenAntigua = imagenActual[0].id_imagen;
-
+        const rutaImagenAntigua = imagenActual[0].ruta;
         const equiposRelacionados = await db.query(
           `SELECT id_equipo FROM equipo_imagen WHERE id_imagen = :idImagenAntigua`,
           {
@@ -2294,25 +2295,12 @@ export async function editarEquipo(req, res) {
         );
 
         await db.query(
-          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagenAntigua`,
+          `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId AND id_imagen = :idImagenAntigua`,
           {
-            replacements: { idImagenAntigua },
+            replacements: { equipoId, idImagenAntigua },
             type: QueryTypes.DELETE,
           }
         );
-
-        await db.query(
-          `DELETE FROM imagen WHERE id_imagen = :idImagenAntigua`,
-          {
-            replacements: { idImagenAntigua },
-            type: QueryTypes.DELETE,
-          }
-        );
-
-        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
-        if (existsSync(imagePath)) {
-          unlinkSync(imagePath);
-        }
 
         const [result] = await db.query(
           `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
@@ -2323,15 +2311,27 @@ export async function editarEquipo(req, res) {
         );
 
         const nuevaImagenId = result;
+        await db.query(
+          `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :nuevaImagenId)`,
+          {
+            replacements: { equipoId, nuevaImagenId },
+            type: QueryTypes.INSERT,
+          }
+        );
 
-        for (const equipo of equiposRelacionados) {
+        if (equiposRelacionados.length === 1) {
           await db.query(
-            `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :nuevaImagenId)`,
+            `DELETE FROM imagen WHERE id_imagen = :idImagenAntigua`,
             {
-              replacements: { equipoId: equipo.id_equipo, nuevaImagenId },
-              type: QueryTypes.INSERT,
+              replacements: { idImagenAntigua },
+              type: QueryTypes.DELETE,
             }
           );
+
+          const imagePath = join(__dirname, "..", rutaImagenAntigua);
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+          }
         }
       }
     }
@@ -2456,7 +2456,6 @@ export async function editarEquipoSimple(req, res) {
   try {
     const editorValue = typeof editor === 'string' ? editor.trim().slice(0, 30) : '';
 
-    // Obtener o crear el usuario "Aula" para proyectores (si id_lampara está presente, es un proyector)
     let usuarioFinal = id_usuario;
     if (tipo === "activo" && id_lampara !== undefined && id_lampara !== null) {
       const usuarioAulaId = await obtenerOCrearUsuario("Aula", "Aula");
@@ -2520,22 +2519,37 @@ export async function editarEquipoSimple(req, res) {
       );
 
       if (imagenActual.length) {
-        await db.query(
-          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+        const idImagenAntigua = imagenActual[0].id_imagen;
+        const rutaImagenAntigua = imagenActual[0].ruta;
+        const equiposRelacionados = await db.query(
+          `SELECT id_equipo FROM equipo_imagen WHERE id_imagen = :idImagenAntigua`,
           {
-            replacements: { idImagen: imagenActual[0].id_imagen },
+            replacements: { idImagenAntigua },
+            type: QueryTypes.SELECT,
+          }
+        );
+
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId AND id_imagen = :idImagenAntigua`,
+          {
+            replacements: { equipoId, idImagenAntigua },
             type: QueryTypes.DELETE,
           }
         );
 
-        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
-          replacements: { idImagen: imagenActual[0].id_imagen },
-          type: QueryTypes.DELETE,
-        });
+        if (equiposRelacionados.length === 1) {
+          await db.query(
+            `DELETE FROM imagen WHERE id_imagen = :idImagenAntigua`,
+            {
+              replacements: { idImagenAntigua },
+              type: QueryTypes.DELETE,
+            }
+          );
 
-        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
-        if (existsSync(imagePath)) {
-          unlinkSync(imagePath);
+          const imagePath = join(__dirname, "..", rutaImagenAntigua);
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+          }
         }
       }
 
@@ -2794,22 +2808,37 @@ export async function editarEquipoRed(req, res) {
       );
 
       if (imagenActual.length) {
-        await db.query(
-          `DELETE FROM equipo_imagen WHERE id_imagen = :idImagen`,
+        const idImagenAntigua = imagenActual[0].id_imagen;
+        const rutaImagenAntigua = imagenActual[0].ruta;
+        const equiposRelacionados = await db.query(
+          `SELECT id_equipo FROM equipo_imagen WHERE id_imagen = :idImagenAntigua`,
           {
-            replacements: { idImagen: imagenActual[0].id_imagen },
+            replacements: { idImagenAntigua },
+            type: QueryTypes.SELECT,
+          }
+        );
+
+        await db.query(
+          `DELETE FROM equipo_imagen WHERE id_equipo = :equipoId AND id_imagen = :idImagenAntigua`,
+          {
+            replacements: { equipoId, idImagenAntigua },
             type: QueryTypes.DELETE,
           }
         );
 
-        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
-          replacements: { idImagen: imagenActual[0].id_imagen },
-          type: QueryTypes.DELETE,
-        });
+        if (equiposRelacionados.length === 1) {
+          await db.query(
+            `DELETE FROM imagen WHERE id_imagen = :idImagenAntigua`,
+            {
+              replacements: { idImagenAntigua },
+              type: QueryTypes.DELETE,
+            }
+          );
 
-        const imagePath = join(__dirname, "..", imagenActual[0].ruta);
-        if (existsSync(imagePath)) {
-          unlinkSync(imagePath);
+          const imagePath = join(__dirname, "..", rutaImagenAntigua);
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+          }
         }
       }
 
