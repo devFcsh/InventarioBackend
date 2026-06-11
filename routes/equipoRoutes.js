@@ -2,7 +2,7 @@ import { Router } from 'express';
 const router = Router();
 import { insertarEquiposDesdeJSON, obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo, sacarEquipoDeBaja, obtenerComputadorasPorPeriferico } from '../controllers/equipoController.js'; 
 import { exportarEquiposActivos, exportarEquiposBaja, exportarEquiposBodega } from '../controllers/exportarController.js';
-import upload from '../middlewares/uploadImageMiddleware.js';
+import uploadImageMiddleware from '../middlewares/uploadImageMiddleware.js';
 
 router.get('/', obtenerEquiposActivos);
 router.get('/bodega', obtenerEquiposBodega);
@@ -37,7 +37,7 @@ router.post("/agregarEquipoSimple", agregarEquipoSimple);
 router.post("/agregarEquipoRed", agregarEquipoRed);
 router.post("/agregarComponentes", agregarComponentes);
 router.post("/gestionarComponentes", gestionarComponentesEditados);
-router.post("/upload", upload.single("image"), uploadImage);
+router.post("/upload", uploadImageMiddleware, uploadImage);
 router.get('/computadorasPorPeriferico/:id', obtenerComputadorasPorPeriferico);
 
 export default router;

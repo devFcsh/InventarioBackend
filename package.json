@@ -24,6 +24,7 @@
     "passport": "^0.7.0",
     "passport-cas2": "^0.0.12",
     "sequelize": "^6.37.3",
+    "sharp": "^0.35.1",
     "xmldom": "^0.6.0"
   }
 }

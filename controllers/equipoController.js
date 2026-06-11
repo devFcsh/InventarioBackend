@@ -1,8 +1,10 @@
 import { QueryTypes } from "sequelize";
+import { randomUUID } from "crypto";
 import db from "../models/index.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { existsSync, unlinkSync, mkdirSync, writeFileSync } from "fs";
+import sharp from "sharp";
 import Ubicacion from "../models/ubicacion.js";
 import Usuario from "../models/usuario.js";
 import Dominio from "../models/dominio.js";
@@ -2189,12 +2191,54 @@ export async function agregarComponentes(req, res) {
 
 export async function uploadImage(req, res) {
   if (!req.file) {
-    return res.status(400).send("No image uploaded.");
+    return res.status(400).json({
+      error: "No se recibio ninguna imagen en el campo 'image'.",
+    });
   }
 
-  const imagePath = join("uploads", req.file.filename);
+  try {
+    const uploadsDir = join(__dirname, "..", "uploads");
+    const fileName = `${Date.now()}-${randomUUID()}.jpg`;
+    const outputPath = join(uploadsDir, fileName);
 
-  res.json({ imagePath });
+    if (!existsSync(uploadsDir)) {
+      mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Solo se guarda la version final optimizada; el archivo original nunca toca disco.
+    await sharp(req.file.buffer)
+      .resize(300, 300, {
+        fit: sharp.fit.cover,
+        position: sharp.gravity.center,
+      })
+      .jpeg({
+        quality: 80,
+      })
+      .toFile(outputPath);
+
+    return res.status(201).json({
+      imagePath: join("uploads", fileName).replaceAll("\\", "/"),
+    });
+  } catch (error) {
+    console.error("Error al procesar la imagen:", error);
+
+    const sharpMessage = error.message?.toLowerCase?.() || "";
+    const esImagenInvalida =
+      sharpMessage.includes("unsupported image format") ||
+      sharpMessage.includes("corrupt") ||
+      sharpMessage.includes("bad seek") ||
+      sharpMessage.includes("input buffer");
+
+    if (esImagenInvalida) {
+      return res.status(400).json({
+        error: "El archivo enviado no es una imagen valida o esta corrupto.",
+      });
+    }
+
+    return res.status(500).json({
+      error: "No se pudo procesar la imagen.",
+    });
+  }
 }
 
 export async function editarEquipo(req, res) {
