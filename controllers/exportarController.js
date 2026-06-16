@@ -128,7 +128,42 @@ export async function exportarEquiposActivos(req, res) {
   ORDER BY e.id_equipo;
       `;
   
-      return await db.query(query, { type: QueryTypes.SELECT });
+      const computadoras = await db.query(query, { type: QueryTypes.SELECT });
+
+      return computadoras.map(comp => {
+        // Tomamos el valor sin importar si la BD lo devuelve en minúscula o mayúscula
+        const rawDisco = comp.capacidad_disco || comp.CAPACIDAD_DISCO;
+        
+        // Removemos las llaves antiguas del objeto final
+        const { capacidad_disco, CAPACIDAD_DISCO, ...resto } = comp;
+
+        let capacidadHDD = "S/N";
+        let tipoDisco = "S/N";
+
+        if (rawDisco && String(rawDisco).trim().toUpperCase() !== "S/N") {
+            const strDisco = String(rawDisco).trim();
+            // Normalizar espacios (por si hay múltiples espacios seguidos)
+            const parts = strDisco.replace(/\s+/g, ' ').split(" ");
+            
+            if (parts.length > 1) {
+                capacidadHDD = parts[0];
+                tipoDisco = parts.slice(1).join(" ");
+            } else {
+                // Si viene una sola palabra (ej. "512GB" o "SSD")
+                if (/\d/.test(strDisco)) {
+                    capacidadHDD = strDisco; // Si tiene números, asumimos capacidad
+                } else {
+                    tipoDisco = strDisco; // Si son solo letras, asumimos tipo
+                }
+            }
+        }
+
+        return {
+            ...resto,
+            "Capacidad HDD": capacidadHDD,
+            "Tipo disco": tipoDisco,
+        };
+      });
     } catch (error) {
       console.error("Error al obtener todos los equipos con componentes:", error);
       return [];
@@ -201,7 +236,42 @@ export async function exportarEquiposActivos(req, res) {
   ORDER BY e.id_equipo;
       `;
   
-      return await db.query(query, { type: QueryTypes.SELECT });
+      const computadoras = await db.query(query, { type: QueryTypes.SELECT });
+
+      return computadoras.map(comp => {
+        // Tomamos el valor sin importar si la BD lo devuelve en minúscula o mayúscula
+        const rawDisco = comp.capacidad_disco || comp.CAPACIDAD_DISCO;
+        
+        // Removemos las llaves antiguas del objeto final
+        const { capacidad_disco, CAPACIDAD_DISCO, ...resto } = comp;
+
+        let capacidadHDD = "S/N";
+        let tipoDisco = "S/N";
+
+        if (rawDisco && String(rawDisco).trim().toUpperCase() !== "S/N") {
+            const strDisco = String(rawDisco).trim();
+            // Normalizar espacios (por si hay múltiples espacios seguidos)
+            const parts = strDisco.replace(/\s+/g, ' ').split(" ");
+            
+            if (parts.length > 1) {
+                capacidadHDD = parts[0];
+                tipoDisco = parts.slice(1).join(" ");
+            } else {
+                // Si viene una sola palabra (ej. "512GB" o "SSD")
+                if (/\d/.test(strDisco)) {
+                    capacidadHDD = strDisco; // Si tiene números, asumimos capacidad
+                } else {
+                    tipoDisco = strDisco; // Si son solo letras, asumimos tipo
+                }
+            }
+        }
+
+        return {
+            ...resto,
+            "Capacidad HDD": capacidadHDD,
+            "Tipo disco": tipoDisco,
+        };
+      });
     } catch (error) {
       console.error("Error al obtener todos los equipos con componentes:", error);
       return [];
