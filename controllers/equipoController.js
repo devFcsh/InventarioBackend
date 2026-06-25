@@ -1696,8 +1696,8 @@ export const obtenerActivoSimple = async (req, res) => {
        LEFT JOIN serie s ON e.id_serie = s.id_serie
        LEFT JOIN marca m ON e.id_marca = m.id_marca
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
-       JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
-       JOIN imagen i ON i.id_imagen = ei.id_imagen
+       LEFT JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
+       LEFT JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_proyector ep ON ep.id_equipo_proyector = e.id_equipo
        WHERE e.id_equipo = :id`,
       {
@@ -1794,8 +1794,8 @@ export const obtenerActivoRed = async (req, res) => {
        LEFT JOIN serie s ON e.id_serie = s.id_serie
        LEFT JOIN marca m ON e.id_marca = m.id_marca
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
-       JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
-       JOIN imagen i ON i.id_imagen = ei.id_imagen
+       LEFT JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
+       LEFT JOIN imagen i ON i.id_imagen = ei.id_imagen
        LEFT JOIN equipo_red er ON e.id_equipo = er.id_equipo_red
        WHERE e.id_equipo = :id`,
       {
@@ -1854,8 +1854,8 @@ export const obtenerComputadora = async (req, res) => {
        LEFT JOIN marca m ON e.id_marca = m.id_marca
        JOIN version_so vso ON vso.id_versionso = c.id_versionso
        JOIN ubicacion a ON ea.id_ubicacion = a.id_ubicacion
-       JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
-       JOIN imagen i ON i.id_imagen = ei.id_imagen
+       LEFT JOIN equipo_imagen ei ON ei.id_equipo = e.id_equipo
+       LEFT JOIN imagen i ON i.id_imagen = ei.id_imagen
        WHERE e.id_equipo = :id`,
       {
         replacements: { id },
