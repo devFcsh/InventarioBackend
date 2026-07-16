@@ -51,8 +51,12 @@ function guardarLogImportacion(datos) {
   }
 }
 
-async function obtenerOCrearMarca(nombreMarca, id_periferico) {
-  if (!nombreMarca) return null;
+async function obtenerOCrearMarca(marca, id_periferico) {
+  const nombreMarca =
+    marca != null && String(marca).trim() !== ""
+      ? String(marca).trim()
+      : "S/N";
+
   if (nombreMarca.length > 30)
     throw new Error("El nombre de la marca excede 30 caracteres.");
   const marcaExistente = await db.query(
