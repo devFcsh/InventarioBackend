@@ -3926,8 +3926,9 @@ async function procesarComputadoraOLaptop(
   const parametrosEquipo = {
     p_tipo: tipoInventario,
     p_inventario: equipoJson.inventario,
-    p_anio_compra:
-      equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+    p_anio_compra: isNaN(parseInt(equipoJson.anio_compra, 10))
+      ? null
+      : parseInt(equipoJson.anio_compra, 10),
     p_id_periferico: perifericoId,
     p_id_marca: id_marca || null,
     p_id_serie: id_serie,
@@ -4307,7 +4308,9 @@ async function procesarSwitch(
       {
         replacements: {
           inventario: equipoJson.inventario,
-          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          anio_compra: isNaN(parseInt(equipoJson.anio_compra, 10))
+            ? null
+            : parseInt(equipoJson.anio_compra, 10),
           id_serie,
           perifericoId,
           id_marca: id_marca || null,
@@ -4444,7 +4447,9 @@ async function procesarAccessPoint(
       {
         replacements: {
           inventario: equipoJson.inventario,
-          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          anio_compra: isNaN(parseInt(equipoJson.anio_compra, 10))
+            ? null
+            : parseInt(equipoJson.anio_compra, 10),
           id_serie,
           perifericoId,
           id_marca: id_marca || null,
@@ -4591,7 +4596,9 @@ async function procesarProyector(
       {
         replacements: {
           inventario: equipoJson.inventario,
-          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          anio_compra: isNaN(parseInt(equipoJson.anio_compra, 10))
+            ? null
+            : parseInt(equipoJson.anio_compra, 10),
           id_serie,
           perifericoId,
           id_marca: id_marca || null,
@@ -4752,7 +4759,9 @@ async function procesarEquipoSimple(
       {
         replacements: {
           inventario: equipoJson.inventario,
-          anio_compra: equipoJson.anio_compra === "S/N" || !equipoJson.anio_compra ? 2026 : equipoJson.anio_compra,
+          anio_compra: isNaN(parseInt(equipoJson.anio_compra, 10))
+            ? null
+            : parseInt(equipoJson.anio_compra, 10),
           id_serie,
           perifericoId,
           id_marca: id_marca || null,
