@@ -31,7 +31,6 @@ router.put('/editarEquipoSimple/:equipoId', editarEquipoSimple);
 router.put('/editarEquipoRed/:equipoId', editarEquipoRed);
 router.put('/activoabodega/:equipoId', pasarActivoABodega);
 router.put('/bodegaactivo/:equipoId', pasarBodegaAActivo);
-router.put('/activoabodega/:equipoId', pasarBodegaAActivo);
 router.post("/agregarEquipoComputadora", agregarEquipo);
 router.post("/agregarEquipoSimple", agregarEquipoSimple);
 router.post("/agregarEquipoRed", agregarEquipoRed);

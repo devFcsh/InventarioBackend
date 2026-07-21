@@ -2,7 +2,7 @@ import db from "../models/index.js";
 import { DataTypes } from "sequelize";
 
 const EquipoProyector = db.define('equipo_proyector', {
-    id_proyector: {
+    id_equipo_proyector: {
         type: DataTypes.INTEGER,
         allowNull: false,
         primaryKey: true,
@@ -13,7 +13,7 @@ const EquipoProyector = db.define('equipo_proyector', {
       },
     id_lampara: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'lampara',
         key: 'id_lampara'
@@ -28,7 +28,7 @@ const EquipoProyector = db.define('equipo_proyector', {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "id_proyector" },
+          { name: "id_equipo_proyector" },
         ]
       },
       {

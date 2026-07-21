@@ -13,6 +13,12 @@ import Ram from "../models/ram.js";
 import Disco from "../models/disco.js";
 import VersionSo from "../models/version_so.js";
 import SistemaOperativo from "../models/sistema_operativo.js";
+import {
+  normalizarImagenEnRespuesta,
+  normalizarRutaImagen,
+  seleccionarImagenImportada,
+} from "../services/importacionImagen.js";
+import { normalizarSerieImportacion } from "../services/importacionSerie.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -146,19 +152,26 @@ async function obtenerOCrearModelo(nombreModelo, id_marca) {
 }
 
 async function obtenerOCrearSerie(nombreSerie) {
-  if (!nombreSerie) return null;
-  if (nombreSerie.length > 30)
+  const nombreSerieFinal = normalizarSerieImportacion(nombreSerie);
+
+  if (nombreSerieFinal.length > 30)
     throw new Error("El nombre de la serie excede 30 caracteres.");
   const serieExistente = await db.query(
     `SELECT id_serie FROM serie WHERE nombre = :nombreSerie`,
-    { replacements: { nombreSerie }, type: QueryTypes.SELECT }
+    {
+      replacements: { nombreSerie: nombreSerieFinal },
+      type: QueryTypes.SELECT,
+    }
   );
   if (serieExistente.length) {
     return serieExistente[0].id_serie;
   }
   const [result] = await db.query(
     `INSERT INTO serie (nombre) VALUES (:nombreSerie)`,
-    { replacements: { nombreSerie }, type: QueryTypes.INSERT }
+    {
+      replacements: { nombreSerie: nombreSerieFinal },
+      type: QueryTypes.INSERT,
+    }
   );
   return result;
 }
@@ -941,6 +954,20 @@ export async function eliminarEquipoSimple(req, res) {
 
     const id_serie = equipo[0].id_serie;
 
+    const componente = await db.query(
+      `SELECT id_componente FROM componente WHERE id_componente = :equipoId`,
+      {
+        replacements: { equipoId },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (componente.length) {
+      return res.status(400).json({
+        error: "Debe desligar el componente antes de eliminarlo.",
+      });
+    }
+
     await db.query(`DELETE FROM equipo WHERE id_equipo = :equipoId`, {
       replacements: { equipoId },
       type: QueryTypes.DELETE,
@@ -1714,7 +1741,7 @@ export const obtenerActivoSimple = async (req, res) => {
       return res.status(404).json({ error: "Equipo no encontrado" });
     }
 
-    const equipo = equipoRows[0];
+    const equipo = normalizarImagenEnRespuesta(equipoRows[0]);
 
     const componentes = await db.query(
       `SELECT c.id_componente, 
@@ -1812,7 +1839,7 @@ export const obtenerActivoRed = async (req, res) => {
       return res.status(404).json({ error: "Equipo no encontrado" });
     }
 
-    res.json({ equipo: equipo[0] });
+    res.json({ equipo: normalizarImagenEnRespuesta(equipo[0]) });
   } catch (error) {
     console.error("Error al obtener el equipo de red:", error);
     res.status(500).json({ error: "Error al obtener el equipo de red" });
@@ -1893,7 +1920,7 @@ export const obtenerComputadora = async (req, res) => {
       }
     );
 
-    res.json({ equipo: equipo[0], componentes });
+    res.json({ equipo: normalizarImagenEnRespuesta(equipo[0]), componentes });
   } catch (error) {
     console.error("Error al obtener la computadora:", error);
     res.status(500).json({ error: "Error al obtener la computadora" });
@@ -3111,16 +3138,7 @@ export async function gestionarComponentesEditados(req, res) {
             }
           );
 
-          const imagenId = await obtenerImagenImportacionId();
-          await db.query(
-            `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, :imagenId);`,
-            {
-              replacements: {
-                idComponente,
-                imagenId,
-              },
-            }
-          );
+          await asociarImagenImportada(idComponente, imagenRuta);
         } else if (tipo === "bodega") {
           await db.query(
             `INSERT INTO equipo_bodega (id_equipo) VALUES (:idComponente);`,
@@ -3179,14 +3197,6 @@ export const pasarActivoABodega = async (req, res) => {
         .json({ error: "El equipo no se encuentra como activo." });
     }
 
-    const imagen = await db.query(
-      `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
-      {
-        replacements: { equipoId },
-        type: QueryTypes.SELECT,
-      }
-    );
-
     const computadora = await db.query(
       `SELECT * FROM computadora WHERE id_computadora = :equipoId`,
       {
@@ -3195,31 +3205,39 @@ export const pasarActivoABodega = async (req, res) => {
       }
     );
 
+    const componentes = computadora.length
+      ? await db.query(
+          `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
+          {
+            replacements: { equipoId },
+            type: QueryTypes.SELECT,
+          }
+        )
+      : [];
+
+    const equiposIds = [
+      equipoId,
+      ...componentes.map((componente) => componente.id_componente),
+    ];
+    const imagenes = await db.query(
+      `SELECT DISTINCT i.id_imagen, i.ruta
+         FROM equipo_imagen ei
+         JOIN imagen i ON i.id_imagen = ei.id_imagen
+        WHERE ei.id_equipo IN (:equiposIds)`,
+      {
+        replacements: { equiposIds },
+        type: QueryTypes.SELECT,
+      }
+    );
+
     if (computadora.length) {
-      const componentes = await db.query(
-        `SELECT id_componente FROM componente WHERE id_computadora = :equipoId`,
+      await db.query(
+        `DELETE FROM equipo_imagen WHERE id_equipo IN (:equiposIds)`,
         {
-          replacements: { equipoId },
-          type: QueryTypes.SELECT,
+          replacements: { equiposIds },
+          type: QueryTypes.DELETE,
         }
       );
-
-      await db.query(`DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`, {
-        replacements: { equipoId },
-        type: QueryTypes.DELETE,
-      });
-
-      if (componentes.length) {
-        for (const componente of componentes) {
-          await db.query(
-            `DELETE FROM equipo_imagen WHERE id_equipo = :idComponente`,
-            {
-              replacements: { idComponente: componente.id_componente },
-              type: QueryTypes.DELETE,
-            }
-          );
-        }
-      }
 
       await db.query(`DELETE FROM equipo_activo WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
@@ -3253,10 +3271,13 @@ export const pasarActivoABodega = async (req, res) => {
         }
       }
     } else {
-      await db.query(`DELETE FROM equipo_imagen WHERE id_equipo = :equipoId`, {
-        replacements: { equipoId },
-        type: QueryTypes.DELETE,
-      });
+      await db.query(
+        `DELETE FROM equipo_imagen WHERE id_equipo IN (:equiposIds)`,
+        {
+          replacements: { equiposIds },
+          type: QueryTypes.DELETE,
+        }
+      );
 
       await db.query(`DELETE FROM equipo_activo WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
@@ -3272,9 +3293,29 @@ export const pasarActivoABodega = async (req, res) => {
       );
     }
 
-    const imagePath = join(__dirname, "..", imagen[0].ruta);
-    if (existsSync(imagePath)) {
-      unlinkSync(imagePath);
+    for (const imagen of imagenes) {
+      const imagenesRestantes = await db.query(
+        `SELECT 1 FROM equipo_imagen WHERE id_imagen = :idImagen LIMIT 1`,
+        {
+          replacements: { idImagen: imagen.id_imagen },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      if (!imagenesRestantes.length) {
+        await db.query(`DELETE FROM imagen WHERE id_imagen = :idImagen`, {
+          replacements: { idImagen: imagen.id_imagen },
+          type: QueryTypes.DELETE,
+        });
+
+        const rutaNormalizada = normalizarRutaImagen(imagen.ruta);
+        if (rutaNormalizada) {
+          const imagePath = join(__dirname, "..", rutaNormalizada);
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+          }
+        }
+      }
     }
 
     res.json({
@@ -3328,14 +3369,32 @@ export const pasarBodegaAActivo = async (req, res) => {
       }
     );
 
-    const imagenInsert = await db.query(
-      `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
-      {
-        replacements: { imagenRuta },
-        type: QueryTypes.INSERT,
-      }
-    );
-    const imagenId = imagenInsert[0];
+    const rutaImagenNormalizada = normalizarRutaImagen(imagenRuta);
+    let imagenId = null;
+
+    if (rutaImagenNormalizada) {
+      const imagenInsert = await db.query(
+        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+        {
+          replacements: { imagenRuta: rutaImagenNormalizada },
+          type: QueryTypes.INSERT,
+        }
+      );
+      imagenId = imagenInsert[0];
+    }
+
+    const asociarImagenTraslado = async (idEquipo) => {
+      if (!imagenId) return;
+
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen)
+         VALUES (:idEquipo, :imagenId)`,
+        {
+          replacements: { idEquipo, imagenId },
+          type: QueryTypes.INSERT,
+        }
+      );
+    };
 
     if (computadora.length) {
       const componentes = await db.query(
@@ -3354,13 +3413,7 @@ export const pasarBodegaAActivo = async (req, res) => {
         }
       );
 
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
-        {
-          replacements: { equipoId, imagenId },
-          type: QueryTypes.INSERT,
-        }
-      );
+      await asociarImagenTraslado(equipoId);
 
       if (componentes.length) {
         for (const componente of componentes) {
@@ -3376,16 +3429,7 @@ export const pasarBodegaAActivo = async (req, res) => {
             }
           );
 
-          await db.query(
-            `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, :imagenId)`,
-            {
-              replacements: {
-                idComponente: componente.id_componente,
-                imagenId,
-              },
-              type: QueryTypes.INSERT,
-            }
-          );
+          await asociarImagenTraslado(componente.id_componente);
         }
       }
 
@@ -3414,13 +3458,7 @@ export const pasarBodegaAActivo = async (req, res) => {
         }
       );
 
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
-        {
-          replacements: { equipoId, imagenId },
-          type: QueryTypes.INSERT,
-        }
-      );
+      await asociarImagenTraslado(equipoId);
 
       await db.query(`DELETE FROM equipo_bodega WHERE id_equipo = :equipoId`, {
         replacements: { equipoId },
@@ -3430,7 +3468,9 @@ export const pasarBodegaAActivo = async (req, res) => {
 
     res.json({
       message:
-        "El equipo ha sido transferido a activo correctamente, y la imagen asociada.",
+        rutaImagenNormalizada
+          ? "El equipo ha sido transferido a activo correctamente, y la imagen asociada."
+          : "El equipo ha sido transferido a activo correctamente, sin imagen.",
     });
   } catch (error) {
     console.error("Error al transferir el equipo:", error);
@@ -3781,15 +3821,9 @@ async function agregarComponentesAEquipoPrincipal(
           }
         );
 
-        const imagenId = await obtenerImagenImportacionId();
-        await db.query(
-          `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, :imagenId);`,
-          {
-            replacements: {
-              idComponente,
-              imagenId,
-            },
-          }
+        await asociarImagenImportada(
+          idComponente,
+          componente.imagenRuta || equipoJson.imagenRuta
         );
       } else if ((equipoJson.tipo_inventario || "activo") === "bodega") {
         await db.query(
@@ -3950,6 +3984,7 @@ async function procesarComputadoraOLaptop(
     p_observacion: equipoJson.observacion || null,
     p_autor: autor || null,
     p_empresa: equipoJson.empresa || null,
+    p_imagenRuta: equipoJson.imagenRuta,
   };
 
   const equipoId = await insertarComputadoraImportada(parametrosEquipo);
@@ -3974,29 +4009,47 @@ async function procesarComputadoraOLaptop(
   return true;
 }
 
-async function obtenerImagenImportacionId(transaction) {
-  const imagenExistente = await db.query(
-    `SELECT id_imagen FROM imagen ORDER BY id_imagen ASC LIMIT 1`,
+async function obtenerImagenImportacionId(imagenRuta, transaction) {
+  const rutaNormalizada = normalizarRutaImagen(imagenRuta);
+  console.info("[importacion-imagen] ruta recibida:", imagenRuta, "normalizada:", rutaNormalizada);
+
+  if (!rutaNormalizada) return null;
+
+  const imagenes = await db.query(
+    `SELECT id_imagen, ruta
+       FROM imagen
+      WHERE ruta = :ruta OR REPLACE(ruta, CHAR(92), '/') = :ruta`,
     {
+      replacements: { ruta: rutaNormalizada },
       type: QueryTypes.SELECT,
       transaction,
     }
   );
 
-  if (imagenExistente.length) {
-    return imagenExistente[0].id_imagen;
+  const imagenId = seleccionarImagenImportada(imagenRuta, imagenes);
+  console.info("[importacion-imagen] id seleccionado:", imagenId);
+  return imagenId;
+}
+
+async function asociarImagenImportada(equipoId, imagenRuta, transaction) {
+  const imagenId = await obtenerImagenImportacionId(imagenRuta, transaction);
+  if (!imagenId) {
+    console.info(
+      `[importacion-imagen] equipo ${equipoId} queda sin imagen (ruta vacía o inexistente)`
+    );
+    return false;
   }
 
-  const [imagenId] = await db.query(
-    `INSERT INTO imagen (ruta) VALUES (:ruta)`,
+  await db.query(
+    `INSERT INTO equipo_imagen (id_equipo, id_imagen)
+     VALUES (:equipoId, :imagenId)`,
     {
-      replacements: { ruta: "uploads/import-placeholder.jpg" },
+      replacements: { equipoId, imagenId },
       type: QueryTypes.INSERT,
       transaction,
     }
   );
-
-  return imagenId;
+  return true;
 }
 
 async function insertarComputadoraImportada(parametrosEquipo) {
@@ -4078,15 +4131,10 @@ async function insertarComputadoraImportada(parametrosEquipo) {
         }
       );
 
-      const imagenId = await obtenerImagenImportacionId(transaction);
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen)
-         VALUES (:equipoId, :imagenId)`,
-        {
-          replacements: { equipoId, imagenId },
-          type: QueryTypes.INSERT,
-          transaction,
-        }
+      await asociarImagenImportada(
+        equipoId,
+        parametrosEquipo.p_imagenRuta,
+        transaction
       );
     } else if (parametrosEquipo.p_tipo === "bodega") {
       await db.query(
@@ -4336,11 +4384,7 @@ async function procesarSwitch(
         }
       );
 
-      const imagenId = await obtenerImagenImportacionId();
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
-        { replacements: { equipoId, imagenId } }
-      );
+      await asociarImagenImportada(equipoId, equipoJson.imagenRuta);
     } else if (tipoInventario === "bodega") {
       await db.query(
         `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
@@ -4475,11 +4519,7 @@ async function procesarAccessPoint(
         }
       );
 
-      const imagenId = await obtenerImagenImportacionId();
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
-        { replacements: { equipoId, imagenId } }
-      );
+      await asociarImagenImportada(equipoId, equipoJson.imagenRuta);
     } else if (tipoInventario === "bodega") {
       await db.query(
         `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
@@ -4624,11 +4664,7 @@ async function procesarProyector(
         }
       );
 
-      const imagenId = await obtenerImagenImportacionId();
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
-        { replacements: { equipoId, imagenId } }
-      );
+      await asociarImagenImportada(equipoId, equipoJson.imagenRuta);
     } else if (tipoInventario === "bodega") {
       await db.query(
         `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
@@ -4788,11 +4824,7 @@ async function procesarEquipoSimple(
         }
       );
 
-      const imagenId = await obtenerImagenImportacionId();
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :imagenId)`,
-        { replacements: { equipoId, imagenId } }
-      );
+      await asociarImagenImportada(equipoId, equipoJson.imagenRuta);
     } else if (tipoInventario === "bodega") {
       await db.query(
         `INSERT INTO equipo_bodega (id_equipo) VALUES (:equipoId)`,
@@ -5023,15 +5055,9 @@ async function procesarComponente(
       }
     );
 
-    const imagenId = await obtenerImagenImportacionId();
-    await db.query(
-      `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:idComponente, :imagenId);`,
-      {
-        replacements: {
-          idComponente,
-          imagenId,
-        },
-      }
+    await asociarImagenImportada(
+      idComponente,
+      componente.imagenRuta || equipoJson.imagenRuta
     );
   } else if (tipoInventario === "bodega") {
     await db.query(
@@ -5136,11 +5162,7 @@ async function procesarMonitorStandalone(
           replacements: { monitorId, ubicacionId, usuarioId },
         }
       );
-      const imagenId = await obtenerImagenImportacionId();
-      await db.query(
-        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:monitorId, :imagenId)`,
-        { replacements: { monitorId, imagenId } }
-      );
+      await asociarImagenImportada(monitorId, monitorJson.imagenRuta);
     } else if (tipoInventario === "bodega") {
       await db.query(`INSERT INTO equipo_bodega (id_equipo) VALUES (:monitorId)`, {
         replacements: { monitorId },
