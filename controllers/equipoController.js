@@ -3485,6 +3485,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
   const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
   const registrados = [];
   const noRegistrados = [];
+  const advertencias = [];
   const procesados = [];
   const componentesRegistrados = [];
   const monitorsToProcess = [];
@@ -3614,7 +3615,8 @@ export async function insertarEquiposDesdeJSON(req, res) {
             equipoJson,
             registrados,
             noRegistrados,
-            autorValue
+            autorValue,
+            advertencias
           );
         }
 
@@ -3685,6 +3687,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
       procesados,
       registrados,
       noRegistrados,
+      advertencias,
     };
 
     guardarLogImportacion(respuesta);
@@ -4718,7 +4721,8 @@ async function procesarEquipoSimple(
   equipoJson,
   registrados,
   noRegistrados,
-  autor
+  autor,
+  advertencias = []
 ) {
   try {
     const tipoInventario = equipoJson.tipo_inventario || "activo";
@@ -4837,40 +4841,17 @@ async function procesarEquipoSimple(
       );
     }
 
-    // Verificar si debe asociarse como componente de un equipo principal
-    const serieEquipoPrincipal = equipoJson.serie_equipo_principal || equipoJson.serieEquipoPrincipal;
-    if (serieEquipoPrincipal && 
-        String(serieEquipoPrincipal).trim().toUpperCase() !== "S/N" && 
-        String(serieEquipoPrincipal).trim() !== "") {
-      
-      // Buscar el equipo principal por serie
-      const equipoPrincipalResult = await db.query(
-        `SELECT e.id_equipo, p.nombre as tipo_periferico
-         FROM equipo e
-         JOIN serie s ON e.id_serie = s.id_serie
-         LEFT JOIN periferico p ON e.id_periferico = p.id_periferico
-         WHERE s.nombre = :serie
-         LIMIT 1`,
-        {
-          replacements: { serie: String(serieEquipoPrincipal).trim() },
-          type: QueryTypes.SELECT,
-        }
-      );
-
-      if (equipoPrincipalResult.length > 0) {
-        const idEquipoPrincipal = equipoPrincipalResult[0].id_equipo;
-        const tipoEquipoPrincipal = equipoPrincipalResult[0].tipo_periferico;
-
-        // Solo asociar si el equipo principal es Computadora o Laptop
-        if (tipoEquipoPrincipal === "Computadora" || tipoEquipoPrincipal === "Laptop") {
-          await db.query(
-            `INSERT INTO componente (id_componente, id_computadora) VALUES (:equipoId, :idEquipoPrincipal)`,
-            {
-              replacements: { equipoId, idEquipoPrincipal },
-            }
-          );
-        }
-      }
+    const advertenciaAsociacion = await asociarEquipoPrincipalImportado(
+      equipoId,
+      equipoJson,
+      tipoInventario
+    );
+    if (advertenciaAsociacion) {
+      advertencias.push({
+        inventario: equipoJson.inventario,
+        motivo: advertenciaAsociacion,
+        datos: equipoJson,
+      });
     }
 
     registrados.push({
@@ -4890,6 +4871,78 @@ async function procesarEquipoSimple(
     });
     return false;
   }
+}
+
+async function asociarEquipoPrincipalImportado(equipoId, equipoJson, tipoInventario) {
+  const seriePrincipal = normalizarTexto(
+    equipoJson.serie_equipo_principal || equipoJson.serieEquipoPrincipal
+  );
+  const inventarioPrincipal = normalizarTexto(
+    equipoJson.inventario_equipo_principal || equipoJson.inventarioEquipoPrincipal
+  );
+  const serieValida = seriePrincipal && !esSN(seriePrincipal);
+  const inventarioValido = inventarioPrincipal && !esSN(inventarioPrincipal);
+
+  if (!serieValida && !inventarioValido) {
+    return null;
+  }
+
+  const joinInventario = tipoInventario === "bodega"
+    ? "JOIN equipo_bodega eb ON eb.id_equipo = e.id_equipo"
+    : "JOIN equipo_activo ea ON ea.id_equipo = e.id_equipo";
+  const baseQuery = `
+    SELECT e.id_equipo
+    FROM equipo e
+    JOIN computadora c ON c.id_computadora = e.id_equipo
+    JOIN serie s ON s.id_serie = e.id_serie
+    ${joinInventario}
+    WHERE e.inventario = :inventario AND s.nombre = :serie
+    LIMIT 1`;
+
+  const buscar = async (query, replacements) =>
+    db.query(query, { replacements, type: QueryTypes.SELECT });
+
+  let equipoPrincipalResult = [];
+  if (serieValida && inventarioValido) {
+    equipoPrincipalResult = await buscar(baseQuery, {
+      inventario: inventarioPrincipal,
+      serie: seriePrincipal,
+    });
+  }
+
+  if (!equipoPrincipalResult.length && inventarioValido && !serieValida) {
+    equipoPrincipalResult = await buscar(
+      baseQuery.replace("e.inventario = :inventario AND s.nombre = :serie", "e.inventario = :inventario"),
+      { inventario: inventarioPrincipal, serie: seriePrincipal }
+    );
+  }
+
+  if (!equipoPrincipalResult.length && serieValida && !inventarioValido) {
+    equipoPrincipalResult = await buscar(
+      baseQuery.replace("e.inventario = :inventario AND s.nombre = :serie", "s.nombre = :serie"),
+      { inventario: inventarioPrincipal, serie: seriePrincipal }
+    );
+  }
+
+  if (!equipoPrincipalResult.length) {
+    const referencia = [
+      inventarioValido ? `inventario ${inventarioPrincipal}` : "",
+      serieValida ? `serie ${seriePrincipal}` : "",
+    ].filter(Boolean).join(" y ");
+    return `No se encontró la computadora principal indicada por ${referencia}; la cámara se registró sin asociación.`;
+  }
+
+  await db.query(
+    `INSERT INTO componente (id_componente, id_computadora)
+     VALUES (:equipoId, :idEquipoPrincipal)`,
+    {
+      replacements: {
+        equipoId,
+        idEquipoPrincipal: equipoPrincipalResult[0].id_equipo,
+      },
+    }
+  );
+  return null;
 }
 
 async function obtenerOCrearLampara(nombreLampara, modeloId) {
