@@ -2052,7 +2052,26 @@ export const obtenerBodegaBajaSimple = async (req, res) => {
       }
     );
 
-    res.json({ equipo: equipo[0], componentes });
+    const compRel = await db.query(
+      `SELECT id_computadora FROM componente WHERE id_componente = :id LIMIT 1`,
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    const response = { equipo: equipo[0], componentes };
+    if (compRel.length) {
+      const padreInfo = await db.query(
+        `SELECT id_serie, id_periferico FROM equipo WHERE id_equipo = :idPadre LIMIT 1`,
+        { replacements: { idPadre: compRel[0].id_computadora }, type: QueryTypes.SELECT }
+      );
+      response.isComponente = true;
+      response.id_computadora = compRel[0].id_computadora;
+      response.id_serie_computadora = padreInfo.length ? padreInfo[0].id_serie : null;
+      response.id_periferico_computadora = padreInfo.length ? padreInfo[0].id_periferico : null;
+    } else {
+      response.isComponente = false;
+    }
+
+    res.json(response);
   } catch (error) {
     console.error("Error al obtener la computadora de bodega:", error);
     res
