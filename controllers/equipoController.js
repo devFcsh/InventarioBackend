@@ -202,6 +202,139 @@ function validarTexto(input) {
   return trimmed;
 }
 
+function validarIdCatalogo(input) {
+  if (input === undefined || input === null) return null;
+
+  const value = String(input).trim();
+  return /^\d+$/.test(value) ? value : null;
+}
+
+export async function obtenerOpcionesFiltros(req, res) {
+  const perifericoId = validarIdCatalogo(req.query.perifericoId);
+  const marcaId = validarIdCatalogo(req.query.marcaId);
+  const modeloId = validarIdCatalogo(req.query.modeloId);
+  const serieId = validarIdCatalogo(req.query.serieId);
+  const usuarioId = validarIdCatalogo(req.query.usuarioId);
+  const estado = req.query.estado === "baja" ? "baja" : req.query.estado === "activo" ? "activo" : null;
+  const usuarioEstadoTable = estado === "baja" ? "equipo_baja_info" : "equipo_activo";
+
+  const replacements = {
+    perifericoId,
+    marcaId,
+    modeloId,
+    serieId,
+    usuarioId,
+  };
+
+  const usuarioEquipoCondition = (currentColumn, currentExpression) => {
+    if (!usuarioId || !estado) return "";
+
+    const equipmentColumnExpressions = {
+      id_periferico: "eu.id_periferico",
+      id_marca: "eu.id_marca",
+      id_modelo: "mseu.id_modelo",
+      id_serie: "eu.id_serie",
+    };
+
+    const selectedConditions = [
+      ["id_periferico", "perifericoId"],
+      ["id_marca", "marcaId"],
+      ["id_modelo", "modeloId"],
+      ["id_serie", "serieId"],
+    ]
+      .filter(([column, parameter]) => column !== currentColumn && replacements[parameter])
+      .map(([column, parameter]) => `AND ${equipmentColumnExpressions[column]} = :${parameter}`)
+      .join("\n           ");
+
+    return `AND EXISTS (
+           SELECT 1
+           FROM equipo eu
+           JOIN ${usuarioEstadoTable} eu_estado ON eu_estado.id_equipo = eu.id_equipo
+           LEFT JOIN modelo_serie mseu ON mseu.id_serie = eu.id_serie
+           WHERE eu_estado.id_usuario = :usuarioId
+             AND ${equipmentColumnExpressions[currentColumn]} = ${currentExpression}
+             ${selectedConditions}
+         )`;
+  };
+
+  try {
+    const [perifericos, marcas, modelos, series, usuarios] = await Promise.all([
+      db.query(
+        `SELECT DISTINCT p.id_periferico, p.nombre
+         FROM periferico p
+         JOIN marca_periferico mp ON mp.id_periferico = p.id_periferico
+         JOIN marca_modelo mm ON mm.id_marca = mp.id_marca
+         JOIN modelo_serie ms ON ms.id_modelo = mm.id_modelo
+         WHERE (:marcaId IS NULL OR mp.id_marca = :marcaId)
+           AND (:modeloId IS NULL OR mm.id_modelo = :modeloId)
+           AND (:serieId IS NULL OR ms.id_serie = :serieId)
+           ${usuarioEquipoCondition("id_periferico", "p.id_periferico")}
+         ORDER BY p.nombre ASC`,
+        { replacements, type: QueryTypes.SELECT },
+      ),
+      db.query(
+        `SELECT DISTINCT m.id_marca, m.nombre
+         FROM marca m
+         JOIN marca_periferico mp ON mp.id_marca = m.id_marca
+         JOIN marca_modelo mm ON mm.id_marca = m.id_marca
+         JOIN modelo_serie ms ON ms.id_modelo = mm.id_modelo
+         WHERE (:perifericoId IS NULL OR mp.id_periferico = :perifericoId)
+           AND (:modeloId IS NULL OR mm.id_modelo = :modeloId)
+           AND (:serieId IS NULL OR ms.id_serie = :serieId)
+           ${usuarioEquipoCondition("id_marca", "m.id_marca")}
+         ORDER BY m.nombre ASC`,
+        { replacements, type: QueryTypes.SELECT },
+      ),
+      db.query(
+        `SELECT DISTINCT mo.id_modelo, mo.nombre
+         FROM modelo mo
+         JOIN marca_modelo mm ON mm.id_modelo = mo.id_modelo
+         JOIN marca_periferico mp ON mp.id_marca = mm.id_marca
+         JOIN modelo_serie ms ON ms.id_modelo = mo.id_modelo
+         WHERE (:perifericoId IS NULL OR mp.id_periferico = :perifericoId)
+           AND (:marcaId IS NULL OR mm.id_marca = :marcaId)
+           AND (:serieId IS NULL OR ms.id_serie = :serieId)
+           ${usuarioEquipoCondition("id_modelo", "mo.id_modelo")}
+         ORDER BY mo.nombre ASC`,
+        { replacements, type: QueryTypes.SELECT },
+      ),
+      db.query(
+        `SELECT DISTINCT s.id_serie, s.nombre
+         FROM serie s
+         JOIN modelo_serie ms ON ms.id_serie = s.id_serie
+         JOIN marca_modelo mm ON mm.id_modelo = ms.id_modelo
+         JOIN marca_periferico mp ON mp.id_marca = mm.id_marca
+         WHERE (:perifericoId IS NULL OR mp.id_periferico = :perifericoId)
+           AND (:marcaId IS NULL OR mm.id_marca = :marcaId)
+           AND (:modeloId IS NULL OR ms.id_modelo = :modeloId)
+           ${usuarioEquipoCondition("id_serie", "s.id_serie")}
+         ORDER BY s.nombre ASC`,
+        { replacements, type: QueryTypes.SELECT },
+       ),
+       estado
+         ? db.query(
+             `SELECT DISTINCT u.id_usuario, u.nombre
+              FROM usuario u
+              JOIN ${usuarioEstadoTable} eu_estado ON eu_estado.id_usuario = u.id_usuario
+              JOIN equipo eu ON eu.id_equipo = eu_estado.id_equipo
+              LEFT JOIN modelo_serie mseu ON mseu.id_serie = eu.id_serie
+              WHERE (:perifericoId IS NULL OR eu.id_periferico = :perifericoId)
+                AND (:marcaId IS NULL OR eu.id_marca = :marcaId)
+                AND (:modeloId IS NULL OR mseu.id_modelo = :modeloId)
+                AND (:serieId IS NULL OR eu.id_serie = :serieId)
+              ORDER BY u.nombre ASC`,
+             { replacements, type: QueryTypes.SELECT },
+           )
+         : Promise.resolve([]),
+    ]);
+
+    return res.json({ perifericos, marcas, modelos, series, usuarios });
+  } catch (error) {
+    console.error("Error al obtener opciones de filtros:", error);
+    return res.status(500).json({ error: "Error al obtener opciones de filtros" });
+  }
+}
+
 export async function obtenerEquiposActivos(req, res) {
   let {
     perifericoId,
@@ -565,7 +698,7 @@ export async function obtenerEquiposRedBodega(req, res) {
 }
 
 export async function obtenerEquiposBaja(req, res) {
-  let { perifericoId, marcaId, modeloId, serieId, inventario, limit, offset, sortBy, sortDir } =
+  let { perifericoId, marcaId, modeloId, serieId, inventario, usuarioId, limit, offset, sortBy, sortDir } =
     req.query;
 
   perifericoId = validarTexto(perifericoId);
@@ -573,6 +706,7 @@ export async function obtenerEquiposBaja(req, res) {
   modeloId = validarTexto(modeloId);
   serieId = validarTexto(serieId);
   inventario = validarTexto(inventario);
+  usuarioId = validarIdCatalogo(usuarioId);
 
   limit = parseInt(limit, 10);
   offset = parseInt(offset, 10);
@@ -627,14 +761,17 @@ export async function obtenerEquiposBaja(req, res) {
       JOIN periferico p ON e.id_periferico = p.id_periferico
       LEFT JOIN marca m ON e.id_marca = m.id_marca
       LEFT JOIN serie s ON e.id_serie = s.id_serie
-      LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
-      LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
-      JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
-      WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
-        AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
-        AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
-        AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
-        AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+       LEFT JOIN modelo_serie ms ON s.id_serie = ms.id_serie
+       LEFT JOIN modelo mo ON ms.id_modelo = mo.id_modelo
+       JOIN equipo_baja eb ON e.id_equipo = eb.id_equipo
+       LEFT JOIN equipo_baja_info ebi ON e.id_equipo = ebi.id_equipo
+       LEFT JOIN usuario u ON ebi.id_usuario = u.id_usuario
+       WHERE (:perifericoId IS NULL OR LOWER(p.nombre) LIKE CONCAT('%', LOWER(:perifericoId), '%'))
+         AND (:marcaId IS NULL OR LOWER(m.nombre) LIKE CONCAT('%', LOWER(:marcaId), '%'))
+         AND (:modeloId IS NULL OR LOWER(mo.nombre) LIKE CONCAT('%', LOWER(:modeloId), '%'))
+         AND (:serieId IS NULL OR LOWER(s.nombre) LIKE CONCAT('%', LOWER(:serieId), '%'))
+         AND (:inventario IS NULL OR LOWER(e.inventario) LIKE CONCAT('%', LOWER(:inventario), '%'))
+         AND (:usuarioId IS NULL OR ebi.id_usuario = :usuarioId)
       ${orderClause}
       LIMIT :limit OFFSET :offset;
     `;
@@ -644,8 +781,9 @@ export async function obtenerEquiposBaja(req, res) {
       perifericoId: perifericoId || null,
       marcaId: marcaId || null,
       modeloId: modeloId || null,
-      serieId: serieId || null,
-      inventario: inventario || null,
+       serieId: serieId || null,
+       inventario: inventario || null,
+       usuarioId: usuarioId || null,
         limit: parseInt(limit, 10) || 10,
         offset: parseInt(offset, 10) || 0,
       },

@@ -1,12 +1,13 @@
 import { Router } from 'express';
 const router = Router();
-import { insertarEquiposDesdeJSON, obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo, sacarEquipoDeBaja, obtenerComputadorasPorPeriferico } from '../controllers/equipoController.js'; 
+import { insertarEquiposDesdeJSON, obtenerOpcionesFiltros, obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo, sacarEquipoDeBaja, obtenerComputadorasPorPeriferico } from '../controllers/equipoController.js'; 
 import { exportarEquiposActivos, exportarEquiposBaja, exportarEquiposBodega } from '../controllers/exportarController.js';
 import uploadImageMiddleware from '../middlewares/uploadImageMiddleware.js';
 
 router.get('/', obtenerEquiposActivos);
 router.get('/bodega', obtenerEquiposBodega);
 router.get('/baja', obtenerEquiposBaja);
+router.get('/opcionesFiltros', obtenerOpcionesFiltros);
 router.get('/red', obtenerEquiposRed);
 router.get('/exportarEquiposActivos', exportarEquiposActivos);
 router.get('/exportarEquiposBodega', exportarEquiposBodega);
