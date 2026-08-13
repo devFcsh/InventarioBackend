@@ -15,7 +15,10 @@ app.use(cors({
   origin: 'http://localhost:5173',
 }));
 
-app.use(json());
+// La importación de equipos recibe un arreglo JSON grande. El límite
+// predeterminado de body-parser es 100 KB y provoca un 413 con archivos
+// medianos/grandes, aunque el Excel original sea pequeño.
+app.use(json({ limit: '10mb' }));
 
 app.use('/api', routes);
 

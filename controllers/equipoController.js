@@ -3637,10 +3637,289 @@ export const pasarBodegaAActivo = async (req, res) => {
   }
 };
 
+function normalizarModoImportacion(modo) {
+  const modosValidos = new Set([
+    "solo_nuevos",
+    "solo_actualizar",
+    "nuevos_y_actualizar",
+  ]);
+  return modosValidos.has(modo) ? modo : "solo_nuevos";
+}
+
+async function obtenerCoincidenciasImportacion(equiposData) {
+  const existentes = await db.query(
+    `SELECT e.id_equipo, e.inventario, e.id_periferico, s.nombre AS serie
+     FROM equipo e LEFT JOIN serie s ON e.id_serie = s.id_serie`,
+    { type: QueryTypes.SELECT }
+  );
+  const inventarios = new Map(
+    existentes
+      .filter((e) => e.inventario)
+      .map((e) => [String(e.inventario).trim(), e])
+  );
+  const series = new Map(
+    existentes
+      .filter((e) => e.serie)
+      .map((e) => [String(e.serie).trim().toUpperCase(), e])
+  );
+
+  return equiposData.map((equipoJson) => {
+    const inventario = normalizarTexto(equipoJson.inventario);
+    const serie = normalizarTexto(equipoJson.serie).toUpperCase();
+    const inventarioValido = inventario && !esSN(inventario);
+    const serieValida = serie && !esSN(serie);
+    const coincidencias = [];
+
+    if (inventarioValido && inventarios.has(inventario)) {
+      coincidencias.push(inventarios.get(inventario));
+    }
+    if (serieValida && series.has(serie)) {
+      coincidencias.push(series.get(serie));
+    }
+
+    const ids = [...new Set(coincidencias.map((equipo) => equipo.id_equipo))];
+    return { equipoJson, coincidencias, ids };
+  });
+}
+
+export async function previsualizarImportacion(req, res) {
+  const equiposData = Array.isArray(req.body?.equipos) ? req.body.equipos : [];
+
+  try {
+    const coincidencias = await obtenerCoincidenciasImportacion(equiposData);
+    const actualizables = [];
+    const nuevos = [];
+    const conflictos = [];
+
+    for (const { equipoJson, coincidencias: encontrados, ids } of coincidencias) {
+      if (ids.length > 1) {
+        conflictos.push({
+          inventario: equipoJson.inventario,
+          serie: equipoJson.serie,
+          motivo: "El inventario y la serie pertenecen a equipos distintos",
+          datos: equipoJson,
+        });
+      } else if (ids.length === 1) {
+        actualizables.push({
+          inventario: equipoJson.inventario,
+          serie: equipoJson.serie,
+          equipoId: ids[0],
+          motivo: "Coincidencia por inventario o serie",
+          datos: equipoJson,
+        });
+      } else {
+        nuevos.push(equipoJson);
+      }
+    }
+
+    res.json({ actualizables, nuevos, conflictos });
+  } catch (error) {
+    console.error("Error al previsualizar importación:", error);
+    res.status(500).json({ error: "Error al previsualizar la importación" });
+  }
+}
+
+async function actualizarEquipoDesdeImportacion(equipoJson, equipoExistente, autor) {
+  const equipoId = equipoExistente.id_equipo;
+  const tipoInventario = equipoJson.tipo_inventario || "activo";
+  const tipoLower = normalizarTexto(equipoJson.tipo).toLowerCase();
+
+  const tipoActualResult = await db.query(
+    `SELECT
+       CASE
+         WHEN EXISTS (SELECT 1 FROM equipo_activo WHERE id_equipo = :equipoId) THEN 'activo'
+         WHEN EXISTS (SELECT 1 FROM equipo_bodega WHERE id_equipo = :equipoId) THEN 'bodega'
+         WHEN EXISTS (SELECT 1 FROM equipo_baja WHERE id_equipo = :equipoId) THEN 'baja'
+         ELSE NULL
+       END AS tipo_inventario`,
+    { replacements: { equipoId }, type: QueryTypes.SELECT }
+  );
+  const tipoActual = tipoActualResult[0]?.tipo_inventario;
+  if (tipoActual && tipoActual !== tipoInventario) {
+    throw new Error(
+      `El equipo pertenece a '${tipoActual}' y no puede actualizarse desde '${tipoInventario}'`
+    );
+  }
+
+  let ubicacionId = null;
+  let usuarioId = null;
+  if (tipoInventario === "activo") {
+    ubicacionId = await obtenerOCrearUbicacion(
+      equipoJson.ubicacion,
+      equipoJson.edificio
+    );
+    usuarioId = await obtenerOCrearUsuario(
+      equipoJson.usuario,
+      equipoJson.uso
+    );
+    if (!ubicacionId || !usuarioId) {
+      throw new Error("No se pudo obtener o crear la ubicación o usuario");
+    }
+  }
+
+  let perifericoId;
+  let idMarca;
+  let modeloId;
+  let idSerie;
+
+  if (["computadora", "laptop", "desktop", "imac", "all-in-one"].includes(tipoLower)) {
+    perifericoId = tipoLower === "laptop" ? 2 : 1;
+  } else {
+    perifericoId = await obtenerOCrearPeriferico(equipoJson.tipo);
+  }
+
+  idMarca = await obtenerOCrearMarca(equipoJson.marca, perifericoId);
+  let nombreModelo = equipoJson.modelo;
+  if (tipoLower === "proyector" && equipoJson.categoria && !esSN(equipoJson.categoria)) {
+    nombreModelo = `${equipoJson.categoria}-${equipoJson.modelo}`;
+  }
+  modeloId = await obtenerOCrearModelo(nombreModelo, idMarca);
+  idSerie = await obtenerOCrearSerie(equipoJson.serie);
+
+  if (
+    equipoExistente.id_periferico !== null &&
+    equipoExistente.id_periferico !== undefined &&
+    Number(equipoExistente.id_periferico) !== Number(perifericoId)
+  ) {
+    throw new Error("El equipo coincidente pertenece a un tipo de equipo diferente");
+  }
+
+  if (idSerie && modeloId) {
+    const relacion = await db.query(
+      `SELECT 1 FROM modelo_serie WHERE id_modelo = :modeloId AND id_serie = :idSerie`,
+      { replacements: { modeloId, idSerie }, type: QueryTypes.SELECT }
+    );
+    if (!relacion.length) {
+      await db.query(
+        `INSERT INTO modelo_serie (id_modelo, id_serie) VALUES (:modeloId, :idSerie)`,
+        { replacements: { modeloId, idSerie }, type: QueryTypes.INSERT }
+      );
+    }
+  }
+
+  const inventario = equipoJson.inventario || "S/N";
+  const anioCompra = isNaN(parseInt(equipoJson.anio_compra, 10))
+    ? null
+    : parseInt(equipoJson.anio_compra, 10);
+  let sistemaOperativoId = null;
+  let procesadorId = null;
+  let ramId = null;
+  let discoId = null;
+  let dominioId = null;
+  let idLampara = null;
+
+  if (["computadora", "laptop", "desktop", "imac", "all-in-one"].includes(tipoLower)) {
+    sistemaOperativoId = await obtenerOCrearVersionSistemaOperativo(equipoJson);
+    procesadorId = await obtenerOCrearProcesador(equipoJson.procesador);
+    ramId = await obtenerOCrearRam(equipoJson.ram, equipoJson.tipo_ram);
+    discoId = await obtenerOCrearDisco(equipoJson.disco);
+    dominioId = await obtenerOCrearDominio(equipoJson.dominio);
+  } else if (tipoLower === "proyector" && equipoJson.lampara && !esSN(equipoJson.lampara)) {
+    idLampara = await obtenerOCrearLampara(equipoJson.lampara, modeloId);
+  }
+
+  const conflictoInventario = await db.query(
+    `SELECT id_equipo FROM equipo WHERE inventario = :inventario AND id_equipo <> :equipoId LIMIT 1`,
+    { replacements: { inventario, equipoId }, type: QueryTypes.SELECT }
+  );
+  if (conflictoInventario.length && !esSN(inventario)) {
+    throw new Error("El nuevo inventario ya pertenece a otro equipo");
+  }
+
+  await db.query(
+    `UPDATE equipo SET
+       inventario = :inventario,
+       anio_compra = :anioCompra,
+       id_serie = :idSerie,
+       id_periferico = :perifericoId,
+       id_marca = :idMarca,
+       observacion = :observacion,
+       editor = :editor,
+       empresa = :empresa
+     WHERE id_equipo = :equipoId`,
+    {
+      replacements: {
+        equipoId,
+        inventario,
+        anioCompra,
+        idSerie,
+        perifericoId,
+        idMarca: idMarca || null,
+        observacion: equipoJson.observacion || null,
+        editor: autor || "",
+        empresa: equipoJson.empresa || null,
+      },
+      type: QueryTypes.UPDATE,
+    }
+  );
+
+  if (["computadora", "laptop", "desktop", "imac", "all-in-one"].includes(tipoLower)) {
+    await db.query(
+      `UPDATE computadora SET
+         nombre_equipo = :nombreEquipo,
+         direccion_ip = :direccionIp,
+         id_versionso = :sistemaOperativoId,
+         id_versionoffice = 2,
+         id_ram = :ramId,
+         id_disco = :discoId,
+         id_procesador = :procesadorId,
+         id_antivirus = 1,
+         id_dominio = :dominioId
+       WHERE id_computadora = :equipoId`,
+      {
+        replacements: {
+          equipoId,
+          nombreEquipo: equipoJson.nombreEquipo || "S/N",
+          direccionIp: equipoJson.direccionIp || "",
+          sistemaOperativoId: sistemaOperativoId || null,
+          ramId: ramId || null,
+          discoId: discoId || null,
+          procesadorId: procesadorId || null,
+          dominioId: dominioId || null,
+        },
+        type: QueryTypes.UPDATE,
+      }
+    );
+  } else if (tipoLower === "switch" || tipoLower === "accesspoint" || tipoLower === "access point") {
+    await db.query(
+      `UPDATE equipo_red SET
+         mac = :mac,
+         puertos = :puertos,
+         puerto_ftp = :puertoFtp,
+         nombre_equipo = :nombreEquipo
+       WHERE id_equipo_red = :equipoId`,
+      {
+        replacements: {
+          equipoId,
+          mac: equipoJson.mac || null,
+          puertos: equipoJson.puertos || null,
+          puertoFtp: equipoJson.puerto_ftp || null,
+          nombreEquipo: equipoJson.nombre || equipoJson.nombreEquipo || null,
+        },
+        type: QueryTypes.UPDATE,
+      }
+    );
+  } else if (tipoLower === "proyector") {
+    await db.query(
+      `UPDATE equipo_proyector SET id_lampara = :idLampara WHERE id_equipo_proyector = :equipoId`,
+      { replacements: { equipoId, idLampara }, type: QueryTypes.UPDATE }
+    );
+  }
+
+  if (tipoInventario === "activo") {
+    await db.query(
+      `UPDATE equipo_activo SET id_ubicacion = :ubicacionId, id_usuario = :usuarioId WHERE id_equipo = :equipoId`,
+      { replacements: { equipoId, ubicacionId, usuarioId }, type: QueryTypes.UPDATE }
+    );
+  }
+}
+
 export async function insertarEquiposDesdeJSON(req, res) {
   const { equipos: equiposData, autor } = req.body;
+  const modoImportacion = normalizarModoImportacion(req.body.modoImportacion);
   const autorValue = typeof autor === 'string' ? autor.trim().slice(0, 30) : '';
   const registrados = [];
+  const actualizados = [];
   const noRegistrados = [];
   const advertencias = [];
   const procesados = [];
@@ -3651,12 +3930,19 @@ export async function insertarEquiposDesdeJSON(req, res) {
 
   try {
     const existentes = await db.query(
-      `SELECT inventario, s.nombre AS serie FROM equipo e JOIN serie s ON e.id_serie = s.id_serie`,
+      `SELECT e.id_equipo, e.inventario, e.id_periferico, s.nombre AS serie
+       FROM equipo e LEFT JOIN serie s ON e.id_serie = s.id_serie`,
       { type: QueryTypes.SELECT }
     );
-    const inventariosExistentes = new Set(existentes.map((e) => e.inventario));
-    const seriesExistentes = new Set(
-      existentes.map((e) => (e.serie || "").toUpperCase())
+    const inventariosExistentes = new Map(
+      existentes
+        .filter((e) => e.inventario)
+        .map((e) => [String(e.inventario).trim(), e])
+    );
+    const seriesExistentes = new Map(
+      existentes
+        .filter((e) => e.serie)
+        .map((e) => [String(e.serie).trim().toUpperCase(), e])
     );
 
     for (const equipoJson of equiposData) {
@@ -3679,14 +3965,72 @@ export async function insertarEquiposDesdeJSON(req, res) {
           !serieEquipo ||
           serieEquipo.replace(/\s/g, "").toUpperCase() === "S/N";
 
-        if (
-          (!inventarioEsSN && inventariosExistentes.has(inventarioEquipo)) ||
-          (!serieEsSN && serieEquipo && seriesExistentes.has(serieEquipo))
-        ) {
+        const coincidencias = [];
+        if (!inventarioEsSN && inventariosExistentes.has(inventarioEquipo)) {
+          coincidencias.push(inventariosExistentes.get(inventarioEquipo));
+        }
+        if (!serieEsSN && serieEquipo && seriesExistentes.has(serieEquipo)) {
+          coincidencias.push(seriesExistentes.get(serieEquipo));
+        }
+
+        const idsCoincidentes = [...new Set(
+          coincidencias.filter(Boolean).map((equipo) => equipo.id_equipo)
+        )];
+
+        if (idsCoincidentes.length > 1) {
+          noRegistrados.push({
+            inventario: equipoJson.inventario,
+            serie: equipoJson.serie,
+            motivo: "Conflicto: el inventario y la serie pertenecen a equipos distintos; no se actualizó",
+            datos: equipoJson,
+          });
+          continue;
+        }
+
+        if (idsCoincidentes.length === 1) {
+          const equipoExistente = coincidencias.find(
+            (equipo) => equipo?.id_equipo === idsCoincidentes[0]
+          );
+
+          if (modoImportacion === "solo_actualizar" || modoImportacion === "nuevos_y_actualizar") {
+            try {
+              await actualizarEquipoDesdeImportacion(
+                equipoJson,
+                equipoExistente,
+                autorValue
+              );
+              actualizados.push({
+                inventario: equipoJson.inventario,
+                equipoId: equipoExistente.id_equipo,
+                motivo: "Equipo actualizado desde la importación",
+                datos: equipoJson,
+              });
+              continue;
+            } catch (actualizacionError) {
+              noRegistrados.push({
+                inventario: equipoJson.inventario,
+                serie: equipoJson.serie,
+                motivo: actualizacionError.message,
+                datos: equipoJson,
+              });
+              continue;
+            }
+          }
+
           noRegistrados.push({
             inventario: equipoJson.inventario,
             serie: equipoJson.serie,
             motivo: "Ya existe un equipo con el mismo inventario o serie",
+            datos: equipoJson,
+          });
+          continue;
+        }
+
+        if (modoImportacion === "solo_actualizar") {
+          noRegistrados.push({
+            inventario: equipoJson.inventario,
+            serie: equipoJson.serie,
+            motivo: "No existe un equipo coincidente para actualizar",
             datos: equipoJson,
           });
           continue;
@@ -3718,13 +4062,15 @@ export async function insertarEquiposDesdeJSON(req, res) {
               equiposAgregados++;
               seInsertaronNuevos = true;
             }
-            if (!inventarioEsSN) inventariosExistentes.add(inventarioEquipo);
-            if (!serieEsSN && serieEquipo) seriesExistentes.add(serieEquipo);
+            const idInsertado = registrados.find((item) => item.datos === equipoJson)?.equipoId;
+            if (!inventarioEsSN) inventariosExistentes.set(inventarioEquipo, { id_equipo: idInsertado ?? equipoJson.inventario });
+            if (!serieEsSN && serieEquipo) seriesExistentes.set(serieEquipo, { id_equipo: idInsertado ?? equipoJson.inventario });
             continue;
           } else {
             monitorsToProcess.push(equipoJson);
-            if (!inventarioEsSN) inventariosExistentes.add(inventarioEquipo);
-            if (!serieEsSN && serieEquipo) seriesExistentes.add(serieEquipo);
+            const idInsertado = registrados.find((item) => item.datos === equipoJson)?.equipoId;
+            if (!inventarioEsSN) inventariosExistentes.set(inventarioEquipo, { id_equipo: idInsertado ?? equipoJson.inventario });
+            if (!serieEsSN && serieEquipo) seriesExistentes.set(serieEquipo, { id_equipo: idInsertado ?? equipoJson.inventario });
             continue;
           }
         }
@@ -3780,14 +4126,11 @@ export async function insertarEquiposDesdeJSON(req, res) {
         if (fueInsertado) {
           equiposAgregados++;
           seInsertaronNuevos = true;
-          inventariosExistentes.add(inventarioEquipo);
-          if (serieEquipo) seriesExistentes.add(serieEquipo);
+          const idInsertado = registrados.find((item) => item.datos === equipoJson)?.equipoId;
+          inventariosExistentes.set(inventarioEquipo, { id_equipo: idInsertado ?? equipoJson.inventario });
+          if (serieEquipo) seriesExistentes.set(serieEquipo, { id_equipo: idInsertado ?? equipoJson.inventario });
         }
 
-        if (equiposAgregados - 3 === 0) {
-          equiposAgregados = 0;
-          seInsertaronNuevos = false;
-        }
       } catch (equipoError) {
         console.error(
           `Error al procesar equipo ${equipoJson.inventario}:`,
@@ -3838,11 +4181,14 @@ export async function insertarEquiposDesdeJSON(req, res) {
       resumen: {
         totalProcesados: equiposData.length,
         registrados: registrados.length,
+        actualizados: actualizados.length,
         noRegistrados: noRegistrados.length,
+        equiposAgregados: registrados.length,
         seInsertaronNuevos,
       },
       procesados,
       registrados,
+      actualizados,
       noRegistrados,
       advertencias,
     };
