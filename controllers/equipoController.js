@@ -3663,7 +3663,34 @@ async function obtenerCoincidenciasImportacion(equiposData) {
       .map((e) => [String(e.serie).trim().toUpperCase(), e])
   );
 
-  return equiposData.map((equipoJson) => {
+  return Promise.all(equiposData.map(async (equipoJson) => {
+    const tipoLower = normalizarTexto(equipoJson.tipo).toLowerCase();
+    if (tipoLower.includes("monitor")) {
+      const componente = Array.isArray(equipoJson.componentes)
+        ? equipoJson.componentes.find((item) =>
+            normalizarTexto(item?.tipo).toLowerCase().includes("monitor")
+          )
+        : null;
+      const monitorJson = componente
+        ? construirMonitorDesdeComponente(equipoJson, componente)
+        : equipoJson;
+      const serieValidaMonitor = !esSN(monitorJson.serie);
+      const encontradosPorSerie = serieValidaMonitor
+        ? await buscarEquiposPorSerie(monitorJson.serie)
+        : [];
+      const encontradosPorInventario = !serieValidaMonitor
+        ? await buscarEquiposPorInventario(monitorJson.inventario)
+        : [];
+      const encontrados = serieValidaMonitor
+        ? encontradosPorSerie
+        : encontradosPorInventario;
+      return {
+        equipoJson: monitorJson,
+        coincidencias: encontrados,
+        ids: [...new Set(encontrados.map((equipo) => equipo.id_equipo))],
+      };
+    }
+
     const inventario = normalizarTexto(equipoJson.inventario);
     const serie = normalizarTexto(equipoJson.serie).toUpperCase();
     const inventarioValido = inventario && !esSN(inventario);
@@ -3679,7 +3706,7 @@ async function obtenerCoincidenciasImportacion(equiposData) {
 
     const ids = [...new Set(coincidencias.map((equipo) => equipo.id_equipo))];
     return { equipoJson, coincidencias, ids };
-  });
+  }));
 }
 
 export async function previsualizarImportacion(req, res) {
@@ -3717,6 +3744,126 @@ export async function previsualizarImportacion(req, res) {
     console.error("Error al previsualizar importación:", error);
     res.status(500).json({ error: "Error al previsualizar la importación" });
   }
+}
+
+async function procesarMonitorImportadoSinComputadora(
+  equipoJson,
+  registrados,
+  actualizados,
+  noRegistrados,
+  componentesRegistrados,
+  modoImportacion,
+  autor
+) {
+  const componente = Array.isArray(equipoJson.componentes)
+    ? equipoJson.componentes.find((item) =>
+        normalizarTexto(item?.tipo).toLowerCase().includes("monitor")
+      )
+    : null;
+  const monitorImportado = componente
+    ? construirMonitorDesdeComponente(equipoJson, componente)
+    : { ...equipoJson };
+  const serieValida = !esSN(monitorImportado.serie);
+  const serieCoincidente = serieValida
+    ? await buscarEquiposPorSerie(monitorImportado.serie)
+    : [];
+
+  if (serieCoincidente.length > 1) {
+    noRegistrados.push({
+      inventario: monitorImportado.inventario,
+      serie: monitorImportado.serie,
+      tipo: "Monitor",
+      motivo: "Conflicto: la serie del monitor pertenece a más de un equipo",
+      datos: monitorImportado,
+    });
+    return false;
+  }
+
+  let equipoExistente = serieCoincidente[0];
+  if (!serieValida) {
+    const inventarioCoincidente = await buscarEquiposPorInventario(
+      monitorImportado.inventario
+    );
+    if (inventarioCoincidente.length > 1) {
+      noRegistrados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        tipo: "Monitor",
+        motivo: "Conflicto: el inventario pertenece a más de un equipo y el monitor no tiene serie válida",
+        datos: monitorImportado,
+      });
+      return false;
+    }
+    equipoExistente = inventarioCoincidente[0];
+  }
+
+  if (equipoExistente) {
+    if (!esMonitorExistente(equipoExistente)) {
+      noRegistrados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        tipo: "Monitor",
+        motivo: "El inventario o la serie corresponden a un equipo que no es Monitor",
+        datos: monitorImportado,
+      });
+      return false;
+    }
+
+    if (modoImportacion === "solo_actualizar" || modoImportacion === "nuevos_y_actualizar") {
+      await actualizarEquipoDesdeImportacion(
+        monitorImportado,
+        equipoExistente,
+        autor,
+        true
+      );
+      actualizados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        equipoId: equipoExistente.id_equipo,
+        motivo: "Monitor actualizado desde la importación",
+        datos: monitorImportado,
+      });
+    } else {
+      noRegistrados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        tipo: "Monitor",
+        motivo: serieValida
+          ? "Ya existe un monitor con la misma serie"
+          : "Ya existe un monitor con el mismo inventario",
+        datos: monitorImportado,
+      });
+    }
+    return false;
+  }
+
+  if (modoImportacion === "solo_actualizar") {
+    noRegistrados.push({
+      inventario: monitorImportado.inventario,
+      serie: monitorImportado.serie,
+      tipo: "Monitor",
+      motivo: "No existe un monitor coincidente para actualizar",
+      datos: monitorImportado,
+    });
+    return false;
+  }
+
+  const inventarioCoincidente = await buscarEquiposPorInventario(
+    monitorImportado.inventario
+  );
+  if (inventarioCoincidente.length) {
+    monitorImportado.observacion = agregarPendienteRevision(
+      monitorImportado.observacion,
+      "Inventario repetido con otro activo; validar código de inventario."
+    );
+  }
+
+  return procesarMonitorStandalone(
+    monitorImportado,
+    registrados,
+    noRegistrados,
+    componentesRegistrados
+  );
 }
 
 function construirMonitorDesdeComponente(equipoJson, componente) {
@@ -3778,13 +3925,286 @@ async function buscarEquipoPorIdentificadores(inventario, serie) {
   return { equipo: equipos[0] || null, conflicto: false };
 }
 
+async function buscarEquiposPorSerie(serie) {
+  const serieNormalizada = normalizarTexto(serie).toUpperCase();
+  if (!serieNormalizada || esSN(serieNormalizada)) return [];
+
+  return db.query(
+    `SELECT DISTINCT e.id_equipo, e.inventario, e.id_periferico,
+            s.nombre AS serie, p.nombre AS tipo,
+            c.id_computadora AS equipo_principal_id
+       FROM equipo e
+       LEFT JOIN serie s ON s.id_serie = e.id_serie
+       LEFT JOIN periferico p ON p.id_periferico = e.id_periferico
+       LEFT JOIN componente c ON c.id_componente = e.id_equipo
+      WHERE UPPER(TRIM(s.nombre)) = :serie`,
+    { replacements: { serie: serieNormalizada }, type: QueryTypes.SELECT }
+  );
+}
+
+async function buscarEquiposPorInventario(inventario) {
+  const inventarioNormalizado = normalizarTexto(inventario);
+  if (!inventarioNormalizado || esSN(inventarioNormalizado)) return [];
+
+  return db.query(
+    `SELECT DISTINCT e.id_equipo, e.inventario, e.id_periferico,
+            s.nombre AS serie, p.nombre AS tipo,
+            c.id_computadora AS equipo_principal_id
+       FROM equipo e
+       LEFT JOIN serie s ON s.id_serie = e.id_serie
+       LEFT JOIN periferico p ON p.id_periferico = e.id_periferico
+       LEFT JOIN componente c ON c.id_componente = e.id_equipo
+      WHERE UPPER(TRIM(e.inventario)) = UPPER(:inventario)`,
+    { replacements: { inventario: inventarioNormalizado }, type: QueryTypes.SELECT }
+  );
+}
+
+function agregarPendienteRevision(observacion, motivo) {
+  const etiqueta = "[PENDIENTE DE REVISION]";
+  const texto = normalizarTexto(observacion);
+  if (texto.toUpperCase().startsWith(etiqueta)) return texto;
+  return [etiqueta, motivo, texto].filter(Boolean).join(" ");
+}
+
+async function marcarMonitorReemplazado(idMonitor, nuevaSerie) {
+  const existente = await db.query(
+    `SELECT observacion FROM equipo WHERE id_equipo = :idMonitor`,
+    { replacements: { idMonitor }, type: QueryTypes.SELECT }
+  );
+  const observacion = agregarPendienteRevision(
+    existente[0]?.observacion,
+    `Monitor reemplazado por la serie ${nuevaSerie}; validar retiro y ubicación.`
+  );
+
+  await db.query(
+    `UPDATE equipo SET observacion = :observacion WHERE id_equipo = :idMonitor`,
+    { replacements: { idMonitor, observacion }, type: QueryTypes.UPDATE }
+  );
+  await db.query(
+    `DELETE FROM componente WHERE id_componente = :idMonitor`,
+    { replacements: { idMonitor }, type: QueryTypes.DELETE }
+  );
+}
+
+async function asociarMonitorAComputadora(idMonitor, equipoPrincipalId) {
+  const relacionActual = await db.query(
+    `SELECT id_computadora
+       FROM componente
+      WHERE id_componente = :idMonitor`,
+    { replacements: { idMonitor }, type: QueryTypes.SELECT }
+  );
+
+  if (relacionActual[0]?.id_computadora === equipoPrincipalId) return;
+
+  await db.query(
+    `DELETE FROM componente WHERE id_componente = :idMonitor`,
+    { replacements: { idMonitor }, type: QueryTypes.DELETE }
+  );
+  await db.query(
+    `INSERT INTO componente (id_componente, id_computadora)
+     VALUES (:idMonitor, :equipoPrincipalId)`,
+    {
+      replacements: { idMonitor, equipoPrincipalId },
+      type: QueryTypes.INSERT,
+    }
+  );
+}
+
 function esMonitorExistente(equipo) {
   return normalizarTexto(equipo?.tipo).toLowerCase().includes("monitor");
+}
+
+async function procesarMonitorComoComponente(
+  equipoJson,
+  componente,
+  equipoPrincipalId,
+  registrados,
+  componentesRegistrados,
+  actualizados,
+  noRegistrados,
+  modoImportacion,
+  autor
+) {
+  const monitorImportado = construirMonitorDesdeComponente(equipoJson, componente);
+  const serieValida = !esSN(monitorImportado.serie);
+  const seriesCoincidentes = serieValida
+    ? await buscarEquiposPorSerie(monitorImportado.serie)
+    : [];
+
+  if (seriesCoincidentes.length > 1) {
+    noRegistrados.push({
+      inventario: monitorImportado.inventario,
+      serie: monitorImportado.serie,
+      tipo: "componente",
+      equipoPrincipal: equipoJson.inventario,
+      componenteTipo: componente.tipo,
+      motivo: "Conflicto: la serie del monitor pertenece a más de un equipo",
+      datos: componente,
+    });
+    return;
+  }
+
+  const monitorPorSerie = seriesCoincidentes[0];
+  if (monitorPorSerie) {
+    if (!esMonitorExistente(monitorPorSerie)) {
+      noRegistrados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        tipo: "componente",
+        equipoPrincipal: equipoJson.inventario,
+        componenteTipo: componente.tipo,
+        motivo: "La serie corresponde a un equipo que no es Monitor",
+        datos: componente,
+      });
+      return;
+    }
+
+    if (modoImportacion === "solo_actualizar" || modoImportacion === "nuevos_y_actualizar") {
+      await actualizarEquipoDesdeImportacion(
+        monitorImportado,
+        monitorPorSerie,
+        autor,
+        true
+      );
+      await asociarMonitorAComputadora(
+        monitorPorSerie.id_equipo,
+        equipoPrincipalId
+      );
+      actualizados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        equipoId: monitorPorSerie.id_equipo,
+        motivo: "Monitor actualizado desde la importación",
+        datos: monitorImportado,
+      });
+    } else {
+      noRegistrados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        tipo: "componente",
+        equipoPrincipal: equipoJson.inventario,
+        componenteTipo: componente.tipo,
+        motivo: "Ya existe un monitor con la misma serie",
+        datos: componente,
+      });
+    }
+    return;
+  }
+
+  const inventarioCoincidente = await buscarEquiposPorInventario(
+    monitorImportado.inventario
+  );
+  const monitoresRelacionados = inventarioCoincidente.filter(
+    (equipo) =>
+      esMonitorExistente(equipo) &&
+      Number(equipo.equipo_principal_id) === Number(equipoPrincipalId)
+  );
+
+  if (!serieValida && monitoresRelacionados.length === 1) {
+    const monitorExistente = monitoresRelacionados[0];
+    if (modoImportacion === "solo_actualizar" || modoImportacion === "nuevos_y_actualizar") {
+      monitorImportado.serie = monitorExistente.serie || "S/N";
+      await actualizarEquipoDesdeImportacion(
+        monitorImportado,
+        monitorExistente,
+        autor,
+        true
+      );
+      actualizados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        equipoId: monitorExistente.id_equipo,
+        motivo: "Monitor actualizado desde la importación",
+        datos: monitorImportado,
+      });
+    }
+    return;
+  }
+
+  if (monitoresRelacionados.length > 1) {
+    noRegistrados.push({
+      inventario: monitorImportado.inventario,
+      serie: monitorImportado.serie,
+      tipo: "componente",
+      equipoPrincipal: equipoJson.inventario,
+      componenteTipo: componente.tipo,
+      motivo: "Conflicto: hay más de un monitor relacionado con la computadora para ese inventario",
+      datos: componente,
+    });
+    return;
+  }
+
+  if (modoImportacion === "solo_actualizar") {
+    noRegistrados.push({
+      inventario: monitorImportado.inventario,
+      serie: monitorImportado.serie,
+      tipo: "componente",
+      equipoPrincipal: equipoJson.inventario,
+      componenteTipo: componente.tipo,
+      motivo: "No existe un monitor coincidente para actualizar",
+      datos: componente,
+    });
+    return;
+  }
+
+  const inventarioRepetido =
+    inventarioCoincidente.length > 0 && monitoresRelacionados.length === 0;
+  const componenteParaInsertar = {
+    ...componente,
+    observacion: inventarioRepetido
+      ? agregarPendienteRevision(
+          componente.observacion || equipoJson.observacion,
+          "Inventario repetido con otro activo; validar código de inventario."
+        )
+      : componente.observacion || equipoJson.observacion || null,
+  };
+  let ubicacionId = null;
+  let usuarioId = null;
+  if ((equipoJson.tipo_inventario || "activo") === "activo") {
+    ubicacionId = await obtenerOCrearUbicacion(
+      equipoJson.ubicacion,
+      equipoJson.edificio
+    );
+    usuarioId = await obtenerOCrearUsuario(
+      equipoJson.usuario,
+      equipoJson.uso
+    );
+  }
+  const idsInsertados = await agregarComponentesAEquipoPrincipal(
+    [componenteParaInsertar],
+    equipoPrincipalId,
+    equipoJson,
+    ubicacionId,
+    usuarioId,
+    componentesRegistrados,
+    noRegistrados,
+    modoImportacion,
+    actualizados,
+    autor,
+    true
+  );
+
+  if (idsInsertados.length && monitoresRelacionados.length === 1) {
+    await marcarMonitorReemplazado(
+      monitoresRelacionados[0].id_equipo,
+      monitorImportado.serie
+    );
+  }
+  if (idsInsertados.length) {
+    registrados.push({
+      inventario: monitorImportado.inventario,
+      serie: monitorImportado.serie,
+      equipoId: idsInsertados[0],
+      tipo: monitorImportado.tipo,
+      datos: monitorImportado,
+    });
+  }
 }
 
 async function procesarMonitoresDeEquipoActualizado(
   equipoJson,
   equipoPrincipalId,
+  registrados,
   componentesRegistrados,
   actualizados,
   noRegistrados,
@@ -3798,7 +4218,19 @@ async function procesarMonitoresDeEquipoActualizado(
     : [];
 
   for (const componente of componentes) {
-    const monitorImportado = construirMonitorDesdeComponente(equipoJson, componente);
+    await procesarMonitorComoComponente(
+      equipoJson,
+      componente,
+      equipoPrincipalId,
+      registrados,
+      componentesRegistrados,
+      actualizados,
+      noRegistrados,
+      modoImportacion,
+      autor
+    );
+    continue;
+
     const coincidencia = await buscarEquipoPorIdentificadores(
       monitorImportado.inventario,
       monitorImportado.serie
@@ -3921,7 +4353,12 @@ async function procesarMonitoresDeEquipoActualizado(
   }
 }
 
-async function actualizarEquipoDesdeImportacion(equipoJson, equipoExistente, autor) {
+async function actualizarEquipoDesdeImportacion(
+  equipoJson,
+  equipoExistente,
+  autor,
+  permitirInventarioCompartido = false
+) {
   const equipoId = equipoExistente.id_equipo;
   const tipoInventario = equipoJson.tipo_inventario || "activo";
   const tipoLower = normalizarTexto(equipoJson.tipo).toLowerCase();
@@ -4024,7 +4461,7 @@ async function actualizarEquipoDesdeImportacion(equipoJson, equipoExistente, aut
     `SELECT id_equipo FROM equipo WHERE inventario = :inventario AND id_equipo <> :equipoId LIMIT 1`,
     { replacements: { inventario, equipoId }, type: QueryTypes.SELECT }
   );
-  if (conflictoInventario.length && !esSN(inventario)) {
+  if (conflictoInventario.length && !esSN(inventario) && !permitirInventarioCompartido) {
     throw new Error("El nuevo inventario ya pertenece a otro equipo");
   }
 
@@ -4156,6 +4593,24 @@ export async function insertarEquiposDesdeJSON(req, res) {
           modelo: equipoJson.modelo,
           marca: equipoJson.marca
         });
+
+        const tipoLower = (equipoJson.tipo || "").toString().toLowerCase();
+        if (tipoLower.includes("monitor")) {
+          const monitorInsertado = await procesarMonitorImportadoSinComputadora(
+            equipoJson,
+            registrados,
+            actualizados,
+            noRegistrados,
+            componentesRegistrados,
+            modoImportacion,
+            autorValue
+          );
+          if (monitorInsertado) {
+            equiposAgregados++;
+            seInsertaronNuevos = true;
+          }
+          continue;
+        }
         
         const inventarioEquipo = (equipoJson.inventario || "").trim();
         const serieEquipo = (equipoJson.serie || "").trim().toUpperCase();
@@ -4204,6 +4659,7 @@ export async function insertarEquiposDesdeJSON(req, res) {
               await procesarMonitoresDeEquipoActualizado(
                 equipoJson,
                 equipoExistente.id_equipo,
+                registrados,
                 componentesRegistrados,
                 actualizados,
                 noRegistrados,
@@ -4247,7 +4703,6 @@ export async function insertarEquiposDesdeJSON(req, res) {
           continue;
         }
 
-        const tipoLower = (equipoJson.tipo || "").toString().toLowerCase();
         const hasMonitorComponent =
           Array.isArray(equipoJson.componentes) &&
           equipoJson.componentes.some((c) => {
@@ -4437,9 +4892,11 @@ async function agregarComponentesAEquipoPrincipal(
   noRegistrados,
   modoImportacion = "solo_nuevos",
   actualizados = [],
-  autor = ""
+  autor = "",
+  permitirMonitorNuevo = false
 ) {
-  if (!Array.isArray(componentes)) return;
+  if (!Array.isArray(componentes)) return [];
+  const idsInsertados = [];
 
   for (const componente of componentes) {
     if (!componente.inventario || String(componente.inventario).trim() === "") {
@@ -4465,7 +4922,7 @@ async function agregarComponentesAEquipoPrincipal(
           )
         : null;
 
-      if (coincidenciaComponente?.conflicto) {
+      if (!permitirMonitorNuevo && coincidenciaComponente?.conflicto) {
         noRegistrados.push({
           inventario: monitorImportado.inventario,
           serie: monitorImportado.serie,
@@ -4478,12 +4935,17 @@ async function agregarComponentesAEquipoPrincipal(
         continue;
       }
 
-      if (coincidenciaComponente?.equipo) {
+      if (!permitirMonitorNuevo && coincidenciaComponente?.equipo) {
         if (modoImportacion === "nuevos_y_actualizar") {
           await actualizarEquipoDesdeImportacion(
             monitorImportado,
             coincidenciaComponente.equipo,
-            autor
+            autor,
+            true
+          );
+          await asociarMonitorAComputadora(
+            coincidenciaComponente.equipo.id_equipo,
+            equipoId
           );
           actualizados.push({
             inventario: monitorImportado.inventario,
@@ -4566,13 +5028,14 @@ async function agregarComponentesAEquipoPrincipal(
       }
 
       const resultComp = await db.query(
-        `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca) VALUES (:inventario, :serieId, :perifericoId, :id_marca);`,
+        `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca, observacion) VALUES (:inventario, :serieId, :perifericoId, :id_marca, :observacion);`,
         {
           replacements: {
             inventario: componente.inventario,
             serieId: id_serie_componente,
             perifericoId: perifericoIdComponente,
             id_marca: id_marca || null,
+            observacion: componente.observacion || null,
           },
         }
       );
@@ -4616,6 +5079,7 @@ async function agregarComponentesAEquipoPrincipal(
       }
 
       componentesRegistrados.push(componente);
+      idsInsertados.push(idComponente);
     } catch (componenteError) {
       console.error(
         `Error al insertar componente ${componente.serie}:`,
@@ -4632,6 +5096,8 @@ async function agregarComponentesAEquipoPrincipal(
       });
     }
   }
+
+  return idsInsertados;
 }
 
 async function procesarComputadoraOLaptop(
@@ -5729,6 +6195,7 @@ async function procesarEquipoSimple(
     });
     return false;
   }
+
 }
 
 async function asociarEquipoPrincipalImportado(equipoId, equipoJson, tipoInventario) {
@@ -5942,13 +6409,14 @@ async function procesarComponente(
   }
 
   const resultComp = await db.query(
-    `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca) VALUES (:inventario, :serieId, :perifericoId, :id_marca);`,
+    `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca, observacion) VALUES (:inventario, :serieId, :perifericoId, :id_marca, :observacion);`,
     {
       replacements: {
         inventario: componente.inventario,
         serieId: id_serie_componente,
         perifericoId: perifericoIdComponente,
         id_marca: id_marca || null,
+        observacion: componente.observacion || null,
       },
     }
   );
@@ -5984,30 +6452,6 @@ async function procesarComponente(
         replacements: { idComponente },
       }
     );
-  }
-
-  const tipoLower = (componente.tipo || "").toString().toLowerCase();
-  if (tipoLower.includes("monitor") && usuarioId) {
-    const posibles = await db.query(
-      `SELECT ea.id_equipo FROM equipo_activo ea
-         JOIN equipo e ON ea.id_equipo = e.id_equipo
-         WHERE ea.id_usuario = :usuarioId
-           AND e.id_periferico IN (:ids)
-         LIMIT 1`,
-      {
-        replacements: { usuarioId, ids: [1, 2] },
-        type: QueryTypes.SELECT,
-      }
-    );
-    if (posibles.length) {
-      const idComputadora = posibles[0].id_equipo;
-      await db.query(
-        `INSERT INTO componente (id_componente, id_computadora) VALUES (:idComponente, :idComputadora)`,
-        {
-          replacements: { idComponente, idComputadora },
-        }
-      );
-    }
   }
 
   componentesRegistrados.push(componente);
@@ -6053,13 +6497,14 @@ async function procesarMonitorStandalone(
     const usuarioId = await obtenerOCrearUsuario(monitorJson.usuario, monitorJson.uso);
 
     const insertRes = await db.query(
-      `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca) VALUES (:inventario, :serieId, :perifericoId, :id_marca)`,
+      `INSERT INTO equipo (inventario, id_serie, id_periferico, id_marca, observacion) VALUES (:inventario, :serieId, :perifericoId, :id_marca, :observacion)`,
       {
         replacements: {
           inventario: monitorJson.inventario,
           serieId: id_serie,
           perifericoId: perifericoId,
           id_marca: id_marca || null,
+          observacion: monitorJson.observacion || null,
         },
       }
     );
@@ -6082,27 +6527,6 @@ async function procesarMonitorStandalone(
       await db.query(`INSERT INTO equipo_baja (id_equipo) VALUES (:monitorId)`, {
         replacements: { monitorId },
       });
-    }
-
-    if (usuarioId) {
-      const posibles = await db.query(
-        `SELECT ea.id_equipo FROM equipo_activo ea
-           JOIN equipo e ON ea.id_equipo = e.id_equipo
-           WHERE ea.id_usuario = :usuarioId
-             AND e.id_periferico IN (:ids)
-           LIMIT 1`,
-        {
-          replacements: { usuarioId, ids: [1, 2] },
-          type: QueryTypes.SELECT,
-        }
-      );
-      if (posibles.length) {
-        const idComputadora = posibles[0].id_equipo;
-        await db.query(
-          `INSERT INTO componente (id_componente, id_computadora) VALUES (:monitorId, :idComputadora)`,
-          { replacements: { monitorId, idComputadora } }
-        );
-      }
     }
 
     registrados.push({
