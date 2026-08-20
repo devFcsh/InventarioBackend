@@ -4828,7 +4828,10 @@ async function procesarSwitch(
         return false;
       }
 
-      usuarioId = await obtenerOCrearUsuario("Red", "Red");
+      usuarioId = await obtenerOCrearUsuario(
+        equipoJson.usuario && !esSN(equipoJson.usuario) ? equipoJson.usuario : "Por Asignar",
+        equipoJson.uso && !esSN(equipoJson.uso) ? equipoJson.uso : "Por Asignar"
+      );
     }
 
     const perifericoId = await obtenerOCrearPeriferico("Switch");
@@ -4963,7 +4966,10 @@ async function procesarAccessPoint(
         return false;
       }
 
-      usuarioId = await obtenerOCrearUsuario("Red", "Red");
+      usuarioId = await obtenerOCrearUsuario(
+        equipoJson.usuario && !esSN(equipoJson.usuario) ? equipoJson.usuario : "Por Asignar",
+        equipoJson.uso && !esSN(equipoJson.uso) ? equipoJson.uso : "Por Asignar"
+      );
     }
 
     const perifericoId = await obtenerOCrearPeriferico("AccessPoint");
@@ -5096,7 +5102,10 @@ async function procesarProyector(
         return false;
       }
 
-      usuarioId = await obtenerOCrearUsuario("Aula", "Aula");
+      usuarioId = await obtenerOCrearUsuario(
+        equipoJson.usuario && !esSN(equipoJson.usuario) ? equipoJson.usuario : "Por Asignar",
+        equipoJson.uso && !esSN(equipoJson.uso) ? equipoJson.uso : "Por Asignar"
+      );
     }
 
     const perifericoId = await obtenerOCrearPeriferico("Proyector");
