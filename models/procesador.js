@@ -9,7 +9,7 @@ const Procesador = db.define('procesador', {
       primaryKey: true
     },
     nombre: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.STRING(255),
       allowNull: true
     }
   }, {

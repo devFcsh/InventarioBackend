@@ -5913,8 +5913,8 @@ async function obtenerOCrearProcesador(nombreProcesador) {
   if (!nombreProcesador || nombreProcesador.trim().toUpperCase() === "S/N") {
     return 1;
   }
-  if (nombreProcesador.length > 50)
-    throw new Error("El nombre del procesador excede 50 caracteres.");
+  if (nombreProcesador.length > 255)
+    throw new Error("El nombre del procesador excede 255 caracteres.");
   try {
     const nombre = nombreProcesador.trim();
     let procesador = await Procesador.findOne({
