@@ -3764,6 +3764,19 @@ async function procesarMonitorImportadoSinComputadora(
     ? construirMonitorDesdeComponente(equipoJson, componente)
     : { ...equipoJson };
   const serieValida = !esSN(monitorImportado.serie);
+  const inventarioValido = !esSN(monitorImportado.inventario);
+
+  if (!serieValida && !inventarioValido) {
+    noRegistrados.push({
+      inventario: monitorImportado.inventario,
+      serie: monitorImportado.serie,
+      tipo: "Monitor",
+      motivo: "Monitor incompleto: debe tener inventario o serie diferente de S/N",
+      datos: monitorImportado,
+    });
+    return false;
+  }
+
   const serieCoincidente = serieValida
     ? await buscarEquiposPorSerie(monitorImportado.serie)
     : [];
@@ -6465,6 +6478,17 @@ async function procesarMonitorStandalone(
   componentesRegistrados
 ) {
   try {
+    if (esSN(monitorJson.inventario) && esSN(monitorJson.serie)) {
+      noRegistrados.push({
+        inventario: monitorJson.inventario,
+        serie: monitorJson.serie,
+        tipo: "Monitor",
+        motivo: "Monitor incompleto: debe tener inventario o serie diferente de S/N",
+        datos: monitorJson,
+      });
+      return false;
+    }
+
     if (!monitorJson.inventario || String(monitorJson.inventario).trim() === "") {
       monitorJson.inventario = "S/N";
     }
