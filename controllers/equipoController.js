@@ -3719,6 +3719,208 @@ export async function previsualizarImportacion(req, res) {
   }
 }
 
+function construirMonitorDesdeComponente(equipoJson, componente) {
+  const valorOSN = (valor) => {
+    const normalizado = normalizarTexto(valor);
+    return normalizado && !esSN(normalizado) ? normalizado : "S/N";
+  };
+
+  return {
+    ...equipoJson,
+    tipo: componente.tipo || "Monitor",
+    tipo_inventario: componente.tipo_inventario || equipoJson.tipo_inventario || "activo",
+    inventario: valorOSN(componente.inventario),
+    serie: valorOSN(componente.serie),
+    marca: valorOSN(componente.marca),
+    modelo: valorOSN(componente.modelo),
+    observacion: componente.observacion || equipoJson.observacion || null,
+    imagenRuta: componente.imagenRuta || equipoJson.imagenRuta,
+  };
+}
+
+async function buscarEquipoPorIdentificadores(inventario, serie) {
+  const condiciones = [];
+  const replacements = {};
+  const inventarioNormalizado = normalizarTexto(inventario);
+  const serieNormalizada = normalizarTexto(serie).toUpperCase();
+
+  if (inventarioNormalizado && !esSN(inventarioNormalizado)) {
+    condiciones.push("e.inventario = :inventario");
+    replacements.inventario = inventarioNormalizado;
+  }
+  if (serieNormalizada && !esSN(serieNormalizada)) {
+    condiciones.push("UPPER(TRIM(s.nombre)) = :serie");
+    replacements.serie = serieNormalizada;
+  }
+
+  if (!condiciones.length) return { equipo: null, conflicto: false };
+
+  const equipos = await db.query(
+    `SELECT DISTINCT e.id_equipo, e.inventario, e.id_periferico,
+            s.nombre AS serie, p.nombre AS tipo
+       FROM equipo e
+       LEFT JOIN serie s ON s.id_serie = e.id_serie
+       LEFT JOIN periferico p ON p.id_periferico = e.id_periferico
+      WHERE ${condiciones.join(" OR ")}`,
+    { replacements, type: QueryTypes.SELECT }
+  );
+
+  const ids = [...new Set(equipos.map((equipo) => equipo.id_equipo))];
+  if (ids.length > 1) {
+    return {
+      equipo: null,
+      conflicto: true,
+      motivo:
+        "Conflicto de monitor: el inventario y la serie pertenecen a equipos distintos; no se actualizó",
+    };
+  }
+
+  return { equipo: equipos[0] || null, conflicto: false };
+}
+
+function esMonitorExistente(equipo) {
+  return normalizarTexto(equipo?.tipo).toLowerCase().includes("monitor");
+}
+
+async function procesarMonitoresDeEquipoActualizado(
+  equipoJson,
+  equipoPrincipalId,
+  componentesRegistrados,
+  actualizados,
+  noRegistrados,
+  modoImportacion,
+  autor
+) {
+  const componentes = Array.isArray(equipoJson.componentes)
+    ? equipoJson.componentes.filter((componente) =>
+        normalizarTexto(componente?.tipo).toLowerCase().includes("monitor")
+      )
+    : [];
+
+  for (const componente of componentes) {
+    const monitorImportado = construirMonitorDesdeComponente(equipoJson, componente);
+    const coincidencia = await buscarEquipoPorIdentificadores(
+      monitorImportado.inventario,
+      monitorImportado.serie
+    );
+
+    if (coincidencia.conflicto) {
+      noRegistrados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        tipo: "componente",
+        equipoPrincipal: equipoJson.inventario,
+        componenteTipo: componente.tipo,
+        motivo: coincidencia.motivo,
+        datos: componente,
+      });
+      continue;
+    }
+
+    if (coincidencia.equipo) {
+      if (!esMonitorExistente(coincidencia.equipo)) {
+        noRegistrados.push({
+          inventario: monitorImportado.inventario,
+          serie: monitorImportado.serie,
+          tipo: "componente",
+          equipoPrincipal: equipoJson.inventario,
+          componenteTipo: componente.tipo,
+          motivo: "El inventario o la serie corresponden a un equipo que no es Monitor",
+          datos: componente,
+        });
+        continue;
+      }
+
+      if (modoImportacion === "solo_actualizar" || modoImportacion === "nuevos_y_actualizar") {
+        try {
+          await actualizarEquipoDesdeImportacion(
+            monitorImportado,
+            coincidencia.equipo,
+            autor
+          );
+          actualizados.push({
+            inventario: monitorImportado.inventario,
+            serie: monitorImportado.serie,
+            equipoId: coincidencia.equipo.id_equipo,
+            motivo: "Monitor actualizado desde la importación",
+            datos: monitorImportado,
+          });
+        } catch (error) {
+          noRegistrados.push({
+            inventario: monitorImportado.inventario,
+            serie: monitorImportado.serie,
+            tipo: "componente",
+            equipoPrincipal: equipoJson.inventario,
+            componenteTipo: componente.tipo,
+            motivo: error.message,
+            datos: componente,
+          });
+        }
+      } else {
+        noRegistrados.push({
+          inventario: monitorImportado.inventario,
+          serie: monitorImportado.serie,
+          tipo: "componente",
+          equipoPrincipal: equipoJson.inventario,
+          componenteTipo: componente.tipo,
+          motivo: "Ya existe un monitor con el mismo inventario o serie",
+          datos: componente,
+        });
+      }
+      continue;
+    }
+
+    if (modoImportacion === "nuevos_y_actualizar") {
+      let ubicacionId = null;
+      let usuarioId = null;
+      if ((equipoJson.tipo_inventario || "activo") === "activo") {
+        ubicacionId = await obtenerOCrearUbicacion(
+          equipoJson.ubicacion,
+          equipoJson.edificio
+        );
+        usuarioId = await obtenerOCrearUsuario(
+          equipoJson.usuario,
+          equipoJson.uso
+        );
+      }
+      try {
+        await agregarComponentesAEquipoPrincipal(
+          [componente],
+          equipoPrincipalId,
+          equipoJson,
+          ubicacionId,
+          usuarioId,
+          componentesRegistrados,
+          noRegistrados,
+          modoImportacion,
+          actualizados,
+          autor
+        );
+      } catch (error) {
+        noRegistrados.push({
+          inventario: monitorImportado.inventario,
+          serie: monitorImportado.serie,
+          tipo: "componente",
+          equipoPrincipal: equipoJson.inventario,
+          componenteTipo: componente.tipo,
+          motivo: error.message,
+          datos: componente,
+        });
+      }
+    } else {
+      noRegistrados.push({
+        inventario: monitorImportado.inventario,
+        serie: monitorImportado.serie,
+        tipo: "componente",
+        equipoPrincipal: equipoJson.inventario,
+        componenteTipo: componente.tipo,
+        motivo: "No existe un monitor coincidente para actualizar",
+        datos: componente,
+      });
+    }
+  }
+}
+
 async function actualizarEquipoDesdeImportacion(equipoJson, equipoExistente, autor) {
   const equipoId = equipoExistente.id_equipo;
   const tipoInventario = equipoJson.tipo_inventario || "activo";
@@ -3999,6 +4201,15 @@ export async function insertarEquiposDesdeJSON(req, res) {
                 equipoExistente,
                 autorValue
               );
+              await procesarMonitoresDeEquipoActualizado(
+                equipoJson,
+                equipoExistente.id_equipo,
+                componentesRegistrados,
+                actualizados,
+                noRegistrados,
+                modoImportacion,
+                autorValue
+              );
               actualizados.push({
                 inventario: equipoJson.inventario,
                 equipoId: equipoExistente.id_equipo,
@@ -4052,13 +4263,16 @@ export async function insertarEquiposDesdeJSON(req, res) {
 
         if (tipoLower.includes("monitor" || "pantalla interactiva" || "televisor")) {
           if (hasMonitorComponent) {
-            const inserted = await procesarComponenteIndividual(
+            const resultadoComponente = await procesarComponenteIndividual(
               equipoJson,
               registrados,
               componentesRegistrados,
-              noRegistrados
+              noRegistrados,
+              actualizados,
+              modoImportacion,
+              autorValue
             );
-            if (inserted) {
+            if (resultadoComponente.insertado) {
               equiposAgregados++;
               seInsertaronNuevos = true;
             }
@@ -4089,7 +4303,9 @@ export async function insertarEquiposDesdeJSON(req, res) {
             registrados,
             noRegistrados,
             componentesRegistrados,
-            autorValue
+            autorValue,
+            modoImportacion,
+            actualizados
           );
         } else if (tipoLower === "switch") {
           fueInsertado = await procesarSwitch(
@@ -4218,7 +4434,10 @@ async function agregarComponentesAEquipoPrincipal(
   ubicacionId,
   usuarioId,
   componentesRegistrados,
-  noRegistrados
+  noRegistrados,
+  modoImportacion = "solo_nuevos",
+  actualizados = [],
+  autor = ""
 ) {
   if (!Array.isArray(componentes)) return;
 
@@ -4233,6 +4452,60 @@ async function agregarComponentesAEquipoPrincipal(
     if (!tieneDatos) continue;
 
     try {
+      const esComponenteMonitor = normalizarTexto(componente.tipo)
+        .toLowerCase()
+        .includes("monitor");
+      const monitorImportado = esComponenteMonitor
+        ? construirMonitorDesdeComponente(equipoJson, componente)
+        : null;
+      const coincidenciaComponente = monitorImportado
+        ? await buscarEquipoPorIdentificadores(
+            monitorImportado.inventario,
+            monitorImportado.serie
+          )
+        : null;
+
+      if (coincidenciaComponente?.conflicto) {
+        noRegistrados.push({
+          inventario: monitorImportado.inventario,
+          serie: monitorImportado.serie,
+          tipo: "componente",
+          equipoPrincipal: equipoJson.inventario,
+          componenteTipo: componente.tipo,
+          motivo: coincidenciaComponente.motivo,
+          datos: componente,
+        });
+        continue;
+      }
+
+      if (coincidenciaComponente?.equipo) {
+        if (modoImportacion === "nuevos_y_actualizar") {
+          await actualizarEquipoDesdeImportacion(
+            monitorImportado,
+            coincidenciaComponente.equipo,
+            autor
+          );
+          actualizados.push({
+            inventario: monitorImportado.inventario,
+            serie: monitorImportado.serie,
+            equipoId: coincidenciaComponente.equipo.id_equipo,
+            motivo: "Monitor actualizado desde la importación",
+            datos: monitorImportado,
+          });
+        } else {
+          noRegistrados.push({
+            inventario: monitorImportado.inventario,
+            serie: monitorImportado.serie,
+            tipo: "componente",
+            equipoPrincipal: equipoJson.inventario,
+            componenteTipo: componente.tipo,
+            motivo: "Ya existe un monitor con el mismo inventario o serie",
+            datos: componente,
+          });
+        }
+        continue;
+      }
+
       const perifericoIdComponente =
         (await obtenerOCrearPeriferico(componente.tipo)) || componente.perifericoId;
 
@@ -4366,7 +4639,9 @@ async function procesarComputadoraOLaptop(
   registrados,
   noRegistrados,
   componentesRegistrados,
-  autor
+  autor,
+  modoImportacion = "solo_nuevos",
+  actualizados = []
 ) {
   if (equipoJson.nombreEquipo && String(equipoJson.nombreEquipo).length > 30) {
     throw new Error("El nombre del equipo excede 30 caracteres.");
@@ -4502,7 +4777,10 @@ async function procesarComputadoraOLaptop(
     ubicacionId,
     usuarioId,
     componentesRegistrados,
-    noRegistrados
+    noRegistrados,
+    modoImportacion,
+    actualizados,
+    autor
   );
 
   registrados.push({
@@ -4667,13 +4945,81 @@ async function procesarComponenteIndividual(
   equipoJson,
   registrados,
   componentesRegistrados,
-  noRegistrados
+  noRegistrados,
+  actualizados = [],
+  modoImportacion = "solo_nuevos",
+  autor = ""
 ) {
   let insertado = false;
+  let atendido = false;
   if (equipoJson.componentes && Array.isArray(equipoJson.componentes)) {
     for (const componente of equipoJson.componentes) {
-      if (componente.tipo.toLowerCase() === equipoJson.tipo.toLowerCase()) {
+      if (
+        normalizarTexto(componente?.tipo).toLowerCase() ===
+        normalizarTexto(equipoJson.tipo).toLowerCase()
+      ) {
+        atendido = true;
         try {
+          const monitorImportado = construirMonitorDesdeComponente(
+            equipoJson,
+            componente
+          );
+          const coincidencia = await buscarEquipoPorIdentificadores(
+            monitorImportado.inventario,
+            monitorImportado.serie
+          );
+
+          if (coincidencia.conflicto) {
+            noRegistrados.push({
+              inventario: monitorImportado.inventario,
+              serie: monitorImportado.serie,
+              tipo: "componente_individual",
+              componenteTipo: componente.tipo,
+              motivo: coincidencia.motivo,
+              datos: componente,
+            });
+            continue;
+          }
+
+          if (coincidencia.equipo) {
+            if (!esMonitorExistente(coincidencia.equipo)) {
+              noRegistrados.push({
+                inventario: monitorImportado.inventario,
+                serie: monitorImportado.serie,
+                tipo: "componente_individual",
+                componenteTipo: componente.tipo,
+                motivo: "El inventario o la serie corresponden a un equipo que no es Monitor",
+                datos: componente,
+              });
+              continue;
+            }
+
+            if (modoImportacion === "solo_actualizar" || modoImportacion === "nuevos_y_actualizar") {
+              await actualizarEquipoDesdeImportacion(
+                monitorImportado,
+                coincidencia.equipo,
+                autor
+              );
+              actualizados.push({
+                inventario: monitorImportado.inventario,
+                serie: monitorImportado.serie,
+                equipoId: coincidencia.equipo.id_equipo,
+                motivo: "Monitor actualizado desde la importación",
+                datos: monitorImportado,
+              });
+            } else {
+              noRegistrados.push({
+                inventario: monitorImportado.inventario,
+                serie: monitorImportado.serie,
+                tipo: "componente_individual",
+                componenteTipo: componente.tipo,
+                motivo: "Ya existe un monitor con el mismo inventario o serie",
+                datos: componente,
+              });
+            }
+            continue;
+          }
+
           const inventarioComp = (componente.inventario || "").trim();
           const inventarioEsSN =
             !inventarioComp ||
@@ -4778,7 +5124,7 @@ async function procesarComponenteIndividual(
   }
   
   // Si no se insertó ningún equipo, registrar en noRegistrados
-  if (!insertado) {
+  if (!insertado && !atendido) {
     const tipoEquipo = equipoJson.tipo || 'desconocido';
     const tieneComponentes = equipoJson.componentes && Array.isArray(equipoJson.componentes) && equipoJson.componentes.length > 0;
     
@@ -4798,7 +5144,7 @@ async function procesarComponenteIndividual(
     });
   }
   
-  return insertado;
+  return { insertado };
 }
 
 async function procesarSwitch(
