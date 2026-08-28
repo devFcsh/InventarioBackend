@@ -215,8 +215,17 @@ export async function obtenerOpcionesFiltros(req, res) {
   const modeloId = validarIdCatalogo(req.query.modeloId);
   const serieId = validarIdCatalogo(req.query.serieId);
   const usuarioId = validarIdCatalogo(req.query.usuarioId);
-  const estado = req.query.estado === "baja" ? "baja" : req.query.estado === "activo" ? "activo" : null;
+  const estado = ["activo", "bodega", "baja"].includes(req.query.estado) ? req.query.estado : null;
+  const estadoEquipoTable = {
+    activo: "equipo_activo",
+    bodega: "equipo_bodega",
+    baja: "equipo_baja",
+  }[estado];
   const usuarioEstadoTable = estado === "baja" ? "equipo_baja_info" : "equipo_activo";
+  const usuarioEquipoJoin = estado === "baja"
+    ? `JOIN equipo_baja eu_baja ON eu_baja.id_equipo = eu.id_equipo
+           JOIN equipo_baja_info eu_estado ON eu_estado.id_equipo = eu.id_equipo`
+    : `JOIN ${usuarioEstadoTable} eu_estado ON eu_estado.id_equipo = eu.id_equipo`;
 
   const replacements = {
     perifericoId,
@@ -227,7 +236,7 @@ export async function obtenerOpcionesFiltros(req, res) {
   };
 
   const usuarioEquipoCondition = (currentColumn, currentExpression) => {
-    if (!usuarioId || !estado) return "";
+    if (!usuarioId || !estado || estado === "bodega") return "";
 
     const equipmentColumnExpressions = {
       id_periferico: "eu.id_periferico",
@@ -249,7 +258,7 @@ export async function obtenerOpcionesFiltros(req, res) {
     return `AND EXISTS (
            SELECT 1
            FROM equipo eu
-           JOIN ${usuarioEstadoTable} eu_estado ON eu_estado.id_equipo = eu.id_equipo
+           ${usuarioEquipoJoin}
            LEFT JOIN modelo_serie mseu ON mseu.id_serie = eu.id_serie
            WHERE eu_estado.id_usuario = :usuarioId
              AND ${equipmentColumnExpressions[currentColumn]} = ${currentExpression}
@@ -257,67 +266,65 @@ export async function obtenerOpcionesFiltros(req, res) {
          )`;
   };
 
+  const equipoRelacionadoCondition = (candidateCondition) => `
+           AND EXISTS (
+             SELECT 1
+             FROM equipo e
+             LEFT JOIN modelo_serie mse ON mse.id_serie = e.id_serie
+             ${estadoEquipoTable ? `JOIN ${estadoEquipoTable} ee_estado ON ee_estado.id_equipo = e.id_equipo` : ""}
+             WHERE ${candidateCondition}
+               AND (:perifericoId IS NULL OR e.id_periferico = :perifericoId)
+               AND (:marcaId IS NULL OR e.id_marca = :marcaId)
+               AND (:modeloId IS NULL OR mse.id_modelo = :modeloId)
+               AND (:serieId IS NULL OR e.id_serie = :serieId)
+           )`;
+
   try {
     const [perifericos, marcas, modelos, series, usuarios] = await Promise.all([
       db.query(
-        `SELECT DISTINCT p.id_periferico, p.nombre
+         `SELECT DISTINCT p.id_periferico, p.nombre
          FROM periferico p
-         JOIN marca_periferico mp ON mp.id_periferico = p.id_periferico
-         JOIN marca_modelo mm ON mm.id_marca = mp.id_marca
-         JOIN modelo_serie ms ON ms.id_modelo = mm.id_modelo
-         WHERE (:marcaId IS NULL OR mp.id_marca = :marcaId)
-           AND (:modeloId IS NULL OR mm.id_modelo = :modeloId)
-           AND (:serieId IS NULL OR ms.id_serie = :serieId)
+         WHERE 1 = 1
+           ${equipoRelacionadoCondition("e.id_periferico = p.id_periferico")}
            ${usuarioEquipoCondition("id_periferico", "p.id_periferico")}
          ORDER BY p.nombre ASC`,
         { replacements, type: QueryTypes.SELECT },
       ),
       db.query(
-        `SELECT DISTINCT m.id_marca, m.nombre
+         `SELECT DISTINCT m.id_marca, m.nombre
          FROM marca m
-         JOIN marca_periferico mp ON mp.id_marca = m.id_marca
-         JOIN marca_modelo mm ON mm.id_marca = m.id_marca
-         JOIN modelo_serie ms ON ms.id_modelo = mm.id_modelo
-         WHERE (:perifericoId IS NULL OR mp.id_periferico = :perifericoId)
-           AND (:modeloId IS NULL OR mm.id_modelo = :modeloId)
-           AND (:serieId IS NULL OR ms.id_serie = :serieId)
+         WHERE 1 = 1
+           ${equipoRelacionadoCondition("e.id_marca = m.id_marca")}
            ${usuarioEquipoCondition("id_marca", "m.id_marca")}
          ORDER BY m.nombre ASC`,
         { replacements, type: QueryTypes.SELECT },
       ),
       db.query(
-        `SELECT DISTINCT mo.id_modelo, mo.nombre
+         `SELECT DISTINCT mo.id_modelo, mo.nombre
          FROM modelo mo
-         JOIN marca_modelo mm ON mm.id_modelo = mo.id_modelo
-         JOIN marca_periferico mp ON mp.id_marca = mm.id_marca
-         JOIN modelo_serie ms ON ms.id_modelo = mo.id_modelo
-         WHERE (:perifericoId IS NULL OR mp.id_periferico = :perifericoId)
-           AND (:marcaId IS NULL OR mm.id_marca = :marcaId)
-           AND (:serieId IS NULL OR ms.id_serie = :serieId)
+         WHERE 1 = 1
+           ${equipoRelacionadoCondition("mse.id_modelo = mo.id_modelo")}
            ${usuarioEquipoCondition("id_modelo", "mo.id_modelo")}
          ORDER BY mo.nombre ASC`,
         { replacements, type: QueryTypes.SELECT },
       ),
       db.query(
-        `SELECT DISTINCT s.id_serie, s.nombre
+         `SELECT DISTINCT s.id_serie, s.nombre
          FROM serie s
-         JOIN modelo_serie ms ON ms.id_serie = s.id_serie
-         JOIN marca_modelo mm ON mm.id_modelo = ms.id_modelo
-         JOIN marca_periferico mp ON mp.id_marca = mm.id_marca
-         WHERE (:perifericoId IS NULL OR mp.id_periferico = :perifericoId)
-           AND (:marcaId IS NULL OR mm.id_marca = :marcaId)
-           AND (:modeloId IS NULL OR ms.id_modelo = :modeloId)
+         WHERE 1 = 1
+           ${equipoRelacionadoCondition("e.id_serie = s.id_serie")}
            ${usuarioEquipoCondition("id_serie", "s.id_serie")}
          ORDER BY s.nombre ASC`,
         { replacements, type: QueryTypes.SELECT },
        ),
-       estado
+        estado && estado !== "bodega"
          ? db.query(
-             `SELECT DISTINCT u.id_usuario, u.nombre
-              FROM usuario u
-              JOIN ${usuarioEstadoTable} eu_estado ON eu_estado.id_usuario = u.id_usuario
-              JOIN equipo eu ON eu.id_equipo = eu_estado.id_equipo
-              LEFT JOIN modelo_serie mseu ON mseu.id_serie = eu.id_serie
+              `SELECT DISTINCT u.id_usuario, u.nombre
+               FROM usuario u
+               JOIN ${usuarioEstadoTable} eu_estado ON eu_estado.id_usuario = u.id_usuario
+               JOIN equipo eu ON eu.id_equipo = eu_estado.id_equipo
+               ${estado === "baja" ? "JOIN equipo_baja eu_baja ON eu_baja.id_equipo = eu.id_equipo" : ""}
+               LEFT JOIN modelo_serie mseu ON mseu.id_serie = eu.id_serie
               WHERE (:perifericoId IS NULL OR eu.id_periferico = :perifericoId)
                 AND (:marcaId IS NULL OR eu.id_marca = :marcaId)
                 AND (:modeloId IS NULL OR mseu.id_modelo = :modeloId)
