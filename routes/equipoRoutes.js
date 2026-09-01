@@ -1,16 +1,18 @@
 import { Router } from 'express';
 const router = Router();
-import { insertarEquiposDesdeJSON, obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo, sacarEquipoDeBaja, obtenerComputadorasPorPeriferico } from '../controllers/equipoController.js'; 
+import { insertarEquiposDesdeJSON, previsualizarImportacion, obtenerOpcionesFiltros, obtenerEquiposActivos, obtenerEquiposBodega, obtenerEquiposBaja, obtenerComputadora, obtenerEquiposPorUsuario, agregarEquipoSimple ,cambiarUsuarioEquipo,eliminarEquipo, darDeBajaEquipo, editarEquipo, agregarEquipo, agregarComponentes, gestionarComponentesEditados, uploadImage, editarEquipoSimple, obtenerComputadoraBodega, obtenerActivoSimple, obtenerBodegaBajaSimple, eliminarEquipoSimple, obtenerEquiposRed, obtenerEquiposRedBodega, obtenerEquiposRedBaja, agregarEquipoRed, obtenerActivoRed, editarEquipoRed, obtenerBodegaBajaRed, pasarActivoABodega, pasarBodegaAActivo, sacarEquipoDeBaja, obtenerComputadorasPorPeriferico } from '../controllers/equipoController.js';
 import { exportarEquiposActivos, exportarEquiposBaja, exportarEquiposBodega } from '../controllers/exportarController.js';
-import upload from '../middlewares/uploadImageMiddleware.js';
+import uploadImageMiddleware from '../middlewares/uploadImageMiddleware.js';
 
 router.get('/', obtenerEquiposActivos);
 router.get('/bodega', obtenerEquiposBodega);
 router.get('/baja', obtenerEquiposBaja);
+router.get('/opcionesFiltros', obtenerOpcionesFiltros);
 router.get('/red', obtenerEquiposRed);
 router.get('/exportarEquiposActivos', exportarEquiposActivos);
 router.get('/exportarEquiposBodega', exportarEquiposBodega);
 router.post('/importarEquiposActivos', insertarEquiposDesdeJSON);
+router.post('/previsualizarImportacion', previsualizarImportacion);
 router.get('/exportarEquiposBaja', exportarEquiposBaja);
 router.get('/redbodega', obtenerEquiposRedBodega);
 router.get('/redbaja', obtenerEquiposRedBaja);
@@ -31,13 +33,12 @@ router.put('/editarEquipoSimple/:equipoId', editarEquipoSimple);
 router.put('/editarEquipoRed/:equipoId', editarEquipoRed);
 router.put('/activoabodega/:equipoId', pasarActivoABodega);
 router.put('/bodegaactivo/:equipoId', pasarBodegaAActivo);
-router.put('/activoabodega/:equipoId', pasarBodegaAActivo);
 router.post("/agregarEquipoComputadora", agregarEquipo);
 router.post("/agregarEquipoSimple", agregarEquipoSimple);
 router.post("/agregarEquipoRed", agregarEquipoRed);
 router.post("/agregarComponentes", agregarComponentes);
 router.post("/gestionarComponentes", gestionarComponentesEditados);
-router.post("/upload", upload.single("image"), uploadImage);
+router.post("/upload", uploadImageMiddleware, uploadImage);
 router.get('/computadorasPorPeriferico/:id', obtenerComputadorasPorPeriferico);
 
 export default router;
