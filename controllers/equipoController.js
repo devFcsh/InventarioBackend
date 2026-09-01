@@ -4060,6 +4060,60 @@ async function buscarEquiposPorInventario(inventario) {
   );
 }
 
+async function buscarCoincidenciaMonitorPorSerieEInventario(inventario, serie) {
+  const serieNormalizada = normalizarTexto(serie);
+  const inventarioNormalizado = normalizarTexto(inventario);
+  const serieValida = Boolean(serieNormalizada) && !esSN(serieNormalizada);
+  const inventarioValido =
+    Boolean(inventarioNormalizado) && !esSN(inventarioNormalizado);
+
+  const seriesEncontradas = serieValida
+    ? await buscarEquiposPorSerie(serieNormalizada)
+    : [];
+
+  if (seriesEncontradas.length > 1) {
+    return {
+      equipo: null,
+      conflicto: true,
+      motivo: "Conflicto: la serie del monitor pertenece a mas de un equipo",
+      inventarioCoincidente: [],
+      serieValida,
+    };
+  }
+
+  const inventariosEncontrados = inventarioValido
+    ? await buscarEquiposPorInventario(inventarioNormalizado)
+    : [];
+
+  // La serie identifica al monitor. El inventario puede estar compartido.
+  if (seriesEncontradas[0]) {
+    return {
+      equipo: seriesEncontradas[0],
+      conflicto: false,
+      inventarioCoincidente: inventariosEncontrados,
+      serieValida,
+    };
+  }
+
+  if (!serieValida && inventariosEncontrados.length > 1) {
+    return {
+      equipo: null,
+      conflicto: true,
+      motivo:
+        "Conflicto: el inventario pertenece a mas de un equipo y el monitor no tiene serie valida",
+      inventarioCoincidente: inventariosEncontrados,
+      serieValida,
+    };
+  }
+
+  return {
+    equipo: !serieValida ? inventariosEncontrados[0] : null,
+    conflicto: false,
+    inventarioCoincidente: inventariosEncontrados,
+    serieValida,
+  };
+}
+
 function agregarPendienteRevision(observacion, motivo) {
   const etiqueta = "[PENDIENTE DE REVISION]";
   const texto = normalizarTexto(observacion);
@@ -5056,13 +5110,13 @@ async function agregarComponentesAEquipoPrincipal(
         ? construirMonitorDesdeComponente(equipoJson, componente)
         : null;
       const coincidenciaComponente = monitorImportado
-        ? await buscarEquipoPorIdentificadores(
+        ? await buscarCoincidenciaMonitorPorSerieEInventario(
             monitorImportado.inventario,
             monitorImportado.serie
           )
         : null;
 
-      if (!permitirMonitorNuevo && coincidenciaComponente?.conflicto) {
+      if (coincidenciaComponente?.conflicto) {
         noRegistrados.push({
           inventario: monitorImportado.inventario,
           serie: monitorImportado.serie,
@@ -5106,6 +5160,18 @@ async function agregarComponentesAEquipoPrincipal(
           });
         }
         continue;
+      }
+
+      if (
+        monitorImportado &&
+        coincidenciaComponente.serieValida &&
+        !coincidenciaComponente.equipo &&
+        coincidenciaComponente.inventarioCoincidente.length
+      ) {
+        componente.observacion = agregarPendienteRevision(
+          componente.observacion || equipoJson.observacion,
+          "Inventario repetido con otro activo; validar codigo de inventario."
+        );
       }
 
       const perifericoIdComponente =
@@ -5570,10 +5636,11 @@ async function procesarComponenteIndividual(
             equipoJson,
             componente
           );
-          const coincidencia = await buscarEquipoPorIdentificadores(
-            monitorImportado.inventario,
-            monitorImportado.serie
-          );
+          const coincidencia =
+            await buscarCoincidenciaMonitorPorSerieEInventario(
+              monitorImportado.inventario,
+              monitorImportado.serie
+            );
 
           if (coincidencia.conflicto) {
             noRegistrados.push({
@@ -5604,7 +5671,8 @@ async function procesarComponenteIndividual(
               await actualizarEquipoDesdeImportacion(
                 monitorImportado,
                 coincidencia.equipo,
-                autor
+                autor,
+                true
               );
               actualizados.push({
                 inventario: monitorImportado.inventario,
@@ -5626,36 +5694,21 @@ async function procesarComponenteIndividual(
             continue;
           }
 
-          const inventarioComp = (componente.inventario || "").trim();
-          const inventarioEsSN =
-            !inventarioComp ||
-            inventarioComp.replace(/\s/g, "").toUpperCase() === "S/N";
-          
           const serieComp = (componente.serie || "").trim().toUpperCase();
           const serieEsSN =
             !serieComp ||
             serieComp.replace(/\s/g, "").toUpperCase() === "S/N";
-          
-          // Validar inventario si no es S/N
-          if (!inventarioEsSN) {
-            const equipoExistente = await db.query(
-              `SELECT id_equipo FROM equipo WHERE inventario = :inventario`,
-              {
-                replacements: { inventario: inventarioComp },
-                type: QueryTypes.SELECT,
-              }
+
+          if (
+            coincidencia.serieValida &&
+            coincidencia.inventarioCoincidente.length
+          ) {
+            componente.observacion = agregarPendienteRevision(
+              componente.observacion || equipoJson.observacion,
+              "Inventario repetido con otro activo; validar codigo de inventario."
             );
-            if (equipoExistente.length > 0) {
-              noRegistrados.push({
-                inventario: equipoJson.inventario,
-                serie: componente.serie,
-                motivo: "Ya existe un equipo con el mismo inventario",
-                datos: equipoJson,
-              });
-              continue;
-            }
           }
-          
+
           // Validar serie si no es S/N
           if (!serieEsSN && serieComp) {
             const serieExistente = await db.query(
