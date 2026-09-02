@@ -2513,7 +2513,6 @@ export async function editarEquipo(req, res) {
     }
 
     if (imagenRuta && tipo === "activo") {
-      
       const imagenActual = await db.query(
         `SELECT id_imagen, ruta FROM imagen WHERE id_imagen = 
           (SELECT id_imagen FROM equipo_imagen WHERE id_equipo = :equipoId)`,
@@ -2523,10 +2522,14 @@ export async function editarEquipo(req, res) {
         }
       );
 
+      let idImagenAntigua = null;
+      let rutaImagenAntigua = null;
+      let equiposRelacionados = [];
+
       if (imagenActual.length) {
-        const idImagenAntigua = imagenActual[0].id_imagen;
-        const rutaImagenAntigua = imagenActual[0].ruta;
-        const equiposRelacionados = await db.query(
+        idImagenAntigua = imagenActual[0].id_imagen;
+        rutaImagenAntigua = imagenActual[0].ruta;
+        equiposRelacionados = await db.query(
           `SELECT id_equipo FROM equipo_imagen WHERE id_imagen = :idImagenAntigua`,
           {
             replacements: { idImagenAntigua },
@@ -2541,37 +2544,37 @@ export async function editarEquipo(req, res) {
             type: QueryTypes.DELETE,
           }
         );
+      }
 
-        const [result] = await db.query(
-          `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
-          {
-            replacements: { imagenRuta },
-            type: QueryTypes.INSERT,
-          }
-        );
+      const [result] = await db.query(
+        `INSERT INTO imagen (ruta) VALUES (:imagenRuta)`,
+        {
+          replacements: { imagenRuta },
+          type: QueryTypes.INSERT,
+        }
+      );
 
-        const nuevaImagenId = result;
+      const nuevaImagenId = result;
+      await db.query(
+        `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :nuevaImagenId)`,
+        {
+          replacements: { equipoId, nuevaImagenId },
+          type: QueryTypes.INSERT,
+        }
+      );
+
+      if (idImagenAntigua && equiposRelacionados.length === 1) {
         await db.query(
-          `INSERT INTO equipo_imagen (id_equipo, id_imagen) VALUES (:equipoId, :nuevaImagenId)`,
+          `DELETE FROM imagen WHERE id_imagen = :idImagenAntigua`,
           {
-            replacements: { equipoId, nuevaImagenId },
-            type: QueryTypes.INSERT,
+            replacements: { idImagenAntigua },
+            type: QueryTypes.DELETE,
           }
         );
 
-        if (equiposRelacionados.length === 1) {
-          await db.query(
-            `DELETE FROM imagen WHERE id_imagen = :idImagenAntigua`,
-            {
-              replacements: { idImagenAntigua },
-              type: QueryTypes.DELETE,
-            }
-          );
-
-          const imagePath = join(__dirname, "..", rutaImagenAntigua);
-          if (existsSync(imagePath)) {
-            unlinkSync(imagePath);
-          }
+        const imagePath = join(__dirname, "..", rutaImagenAntigua);
+        if (existsSync(imagePath)) {
+          unlinkSync(imagePath);
         }
       }
     }

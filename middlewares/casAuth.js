@@ -4,6 +4,10 @@ import crypto from 'crypto';
 import axios from 'axios';
 import { DOMParser } from 'xmldom';
 
+const isHTTPS = process.env.FORCE_HTTP === 'true'
+  ? false
+  : process.env.NODE_ENV === 'production';
+
 // 1) Configuración de sesión
 export const sessionMiddleware = session({
   secret:
@@ -13,8 +17,8 @@ export const sessionMiddleware = session({
   saveUninitialized: false,
   rolling: false,
   cookie: {
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: isHTTPS,
+    sameSite: isHTTPS ? "none" : "lax",
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 horas
   },
@@ -209,7 +213,7 @@ export const requireAuth = (req, res, next) => {
   });
 
   const isAuth = req.isAuthenticated && req.isAuthenticated();
-  if (isAuth || true) {
+  if (isAuth && req.user) {
     //console.log("✅ Usuario autenticado:", req.user.username);
     return next();
   }
